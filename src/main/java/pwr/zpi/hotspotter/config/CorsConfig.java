@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositorymanagement.config;
+package pwr.zpi.hotspotter.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
