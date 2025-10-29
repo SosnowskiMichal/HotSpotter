@@ -29,10 +29,10 @@ public class RepositoryManagementService {
 
     public RepositoryOperationResult cloneOrUpdateRepository(String repositoryUrl) {
         log.info("Processing repository request for URL: {}", repositoryUrl);
-        return repositoryOperationQueue.executeOperation(repositoryUrl, () -> processRepository(repositoryUrl));
+        return repositoryOperationQueue.executeOperation(repositoryUrl, () -> performCloneOrUpdate(repositoryUrl));
     }
 
-    private RepositoryOperationResult processRepository(String repositoryUrl) {
+    private RepositoryOperationResult performCloneOrUpdate(String repositoryUrl) {
         try {
             RepositoryUrlParser.RepositoryData repositoryData = repositoryUrlParser.parse(repositoryUrl);
             Path localPath = getLocalRepositoryPath(repositoryData);

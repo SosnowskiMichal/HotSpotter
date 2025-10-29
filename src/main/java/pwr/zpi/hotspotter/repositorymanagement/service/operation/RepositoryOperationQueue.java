@@ -19,17 +19,13 @@ public class RepositoryOperationQueue {
             String repositoryUrl,
             Supplier<RepositoryManagementService.RepositoryOperationResult> operation) {
 
-        Lock lock = repositoryLocks.computeIfAbsent(repositoryUrl, url -> new ReentrantLock());
-
-        log.debug("Acquiring lock for repository URL: {}", repositoryUrl);
+        Lock lock = repositoryLocks.computeIfAbsent(repositoryUrl, _ -> new ReentrantLock());
         lock.lock();
 
         try {
-            log.debug("Lock acquired for repository URL: {}", repositoryUrl);
             return operation.get();
 
         } finally {
-            log.debug("Releasing lock for repository URL: {}", repositoryUrl);
             lock.unlock();
 
             if (lock.tryLock()) {

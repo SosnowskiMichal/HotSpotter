@@ -3,12 +3,14 @@ package pwr.zpi.hotspotter.repositorymanagement.service.operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.eclipse.jgit.api.CloneCommand;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
-import pwr.zpi.hotspotter.repositorymanagement.service.command.CommandExecutor;
 import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
 import pwr.zpi.hotspotter.repositorymanagement.service.storage.DiskSpaceManager;
 
@@ -20,7 +22,6 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class RepositoryCloner {
 
-    private final CommandExecutor commandExecutor;
     private final DiskSpaceManager diskSpaceManager;
     private final RepositoryManagementConfig repositoryManagementConfig;
     private final RepositoryInfoRepository repositoryInfoRepository;
@@ -29,22 +30,25 @@ public class RepositoryCloner {
         String repositoryUrl = repositoryData.repositoryUrl();
         log.info("Cloning repository from URL {} to {}", repositoryUrl, localPath);
 
-        if (!createLocalDirectory(localPath)) {
-            return RepositoryManagementService.RepositoryOperationResult.failure("Failed to create local directory for repository.");
-        }
-
         if (!diskSpaceManager.ensureEnoughFreeSpace()) {
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
             return RepositoryManagementService.RepositoryOperationResult.failure("Insufficient disk space or failed cleanup.");
         }
 
-        ProcessBuilder pb = createProcessBuilder(repositoryUrl, localPath);
-        CommandExecutor.CommandResult result = commandExecutor.executeCommand(pb, repositoryManagementConfig.getCloneMonitoringIntervalSeconds());
+        if (!createLocalDirectory(localPath)) {
+            return RepositoryManagementService.RepositoryOperationResult.failure("Failed to create local directory for repository.");
+        }
 
-        if (!result.success()) {
-            log.error("Git clone failed for URL {}: Exit code {}", repositoryUrl, result.exitCode());
+        try {
+            cloneRepository(repositoryUrl, localPath);
+        } catch (GitAPIException e) {
+            log.error("Git clone failed for URL {}: {}", repositoryUrl, e.getMessage(), e);
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
-            return RepositoryManagementService.RepositoryOperationResult.failure("Git clone failed with exit code: " + result.exitCode());
+            return RepositoryManagementService.RepositoryOperationResult.failure("Git clone failed: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during clone for URL {}: {}", repositoryUrl, e.getMessage(), e);
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            return RepositoryManagementService.RepositoryOperationResult.failure("Clone failed: " + e.getMessage());
         }
 
         if (!isValidGitRepository(localPath)) {
@@ -69,11 +73,18 @@ public class RepositoryCloner {
         }
     }
 
-    private ProcessBuilder createProcessBuilder(String repositoryUrl, Path localPath) {
-        ProcessBuilder pb = new ProcessBuilder();
-        pb.command("git", "clone", "--progress", repositoryUrl, localPath.toAbsolutePath().toString());
-        pb.redirectErrorStream(false);
-        return pb;
+    private void cloneRepository(String repositoryUrl, Path localPath) throws GitAPIException {
+        int logIntervalPercentage = repositoryManagementConfig.getCloneMonitoringIntervalPercentage();
+
+        CloneCommand cloneCommand = Git.cloneRepository()
+                .setURI(repositoryUrl)
+                .setDirectory(localPath.toFile())
+                .setProgressMonitor(new ProcessProgressMonitor(logIntervalPercentage))
+                .setCloneAllBranches(false);
+
+        try (Git _ = cloneCommand.call()) {
+            log.debug("Git clone command completed successfully for URL {}", repositoryUrl);
+        }
     }
 
     private boolean isValidGitRepository(Path localPath) {
