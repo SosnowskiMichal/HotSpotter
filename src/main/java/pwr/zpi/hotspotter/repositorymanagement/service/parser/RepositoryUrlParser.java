@@ -25,10 +25,10 @@ public class RepositoryUrlParser {
         String platform = Objects.requireNonNullElse(matcher.group("platformHttps"), matcher.group("platformSsh"));
         String owner = matcher.group("owner");
         String name = matcher.group("name");
-        return new RepositoryData(platform, owner, name);
+        return new RepositoryData(repositoryUrl, platform, owner, name);
     }
 
-    public record RepositoryData(String platform, String owner, String name) {
+    public record RepositoryData(String repositoryUrl, String platform, String owner, String name) {
         public String getPath() {
             return Path.of(platform, owner, name).toString();
         }

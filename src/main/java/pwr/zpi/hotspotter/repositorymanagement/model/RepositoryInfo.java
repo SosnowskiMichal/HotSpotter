@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +25,12 @@ public class RepositoryInfo {
     @Indexed(unique = true)
     private String remoteUrl;
 
+    @NotBlank(message = "Repository name is required")
+    private String name;
+
+    @NotBlank(message = "Repository owner is required")
+    private String owner;
+
     @NotBlank(message = "Local path is required")
     private String localPath;
 
@@ -38,8 +45,10 @@ public class RepositoryInfo {
 
     private Long sizeInBytes;
 
-    public RepositoryInfo(String remoteUrl, String localPath) {
-        this.remoteUrl = remoteUrl;
+    public RepositoryInfo(RepositoryUrlParser.RepositoryData repositoryData, String localPath) {
+        this.remoteUrl = repositoryData.repositoryUrl();
+        this.name = repositoryData.name();
+        this.owner = repositoryData.owner();
         this.localPath = localPath;
         this.clonedAt = LocalDateTime.now();
         this.lastAccessedAt = LocalDateTime.now();

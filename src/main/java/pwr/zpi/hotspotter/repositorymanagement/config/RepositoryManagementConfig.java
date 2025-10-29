@@ -24,6 +24,12 @@ public class RepositoryManagementConfig {
     @NotNull
     private CleanupStrategy cleanupStrategy = CleanupStrategy.LEAST_RECENTLY_USED;
 
+    @Min(value = 0)
+    private Integer cloneMonitoringIntervalSeconds = 30;
+
+    @Min(value = 0)
+    private Integer updateMonitoringIntervalSeconds = 10;
+
     public enum CleanupStrategy {
         LEAST_RECENTLY_USED,
         LEAST_FREQUENTLY_USED

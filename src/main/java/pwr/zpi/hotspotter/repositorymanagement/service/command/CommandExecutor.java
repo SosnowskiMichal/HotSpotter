@@ -11,28 +11,20 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class CommandExecutor {
 
-    private final Thread gitShutdownHook = new Thread(() -> {
-        log.info("Git shutdown hook triggered, terminating all git processes");
-        ProcessHandle.allProcesses()
-                .filter(ph -> ph.info().command().isPresent()
-                        && ph.info().command().get().toLowerCase().contains("git"))
-                .forEach(ProcessHandle::destroyForcibly);
-    });
-
     public CommandResult executeCommand(ProcessBuilder pb, int monitoringInterval) {
         try {
             Process process = pb.start();
-            startProgressMonitoringThread(process, monitoringInterval);
-            Runtime.getRuntime().addShutdownHook(gitShutdownHook);
+            Thread monitoringThread = startProgressMonitoringThread(process, monitoringInterval);
 
             try {
                 int exitCode = process.waitFor();
+                monitoringThread.join();
+
                 boolean success = exitCode == 0;
                 return new CommandResult(success, exitCode);
 
             } finally {
                 process.destroyForcibly();
-                Runtime.getRuntime().removeShutdownHook(gitShutdownHook);
             }
 
         } catch (Exception e) {
@@ -41,7 +33,7 @@ public class CommandExecutor {
         }
     }
 
-    private void startProgressMonitoringThread(Process process, int monitoringInterval) {
+    private Thread startProgressMonitoringThread(Process process, int monitoringInterval) {
         Thread thread = new Thread(() -> {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                 String line, lastProgressLine = null;
@@ -69,7 +61,9 @@ public class CommandExecutor {
                 log.error("Error monitoring git process: {}", e.getMessage());
             }
         }, "git-progress-monitoring-thread");
+
         thread.start();
+        return thread;
     }
 
     private boolean isProgressInfoLine(String line) {

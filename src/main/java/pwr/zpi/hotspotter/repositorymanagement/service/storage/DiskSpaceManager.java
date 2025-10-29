@@ -1,6 +1,6 @@
 package pwr.zpi.hotspotter.repositorymanagement.service.storage;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
@@ -17,47 +17,31 @@ import java.util.List;
 
 @Slf4j
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class DiskSpaceManager {
 
-    private static final int MAX_CLEANUP_ATTEMPTS = 10;
-
-    private final RepositoryInfoRepository repository;
-    private final RepositoryManagementConfig config;
+    private final RepositoryInfoRepository repositoryInfoRepository;
+    private final RepositoryManagementConfig repositoryManagementConfig;
 
     public boolean ensureEnoughFreeSpace() {
-        if (hasEnoughFreeSpace()) {
-            return true;
-        }
+        if (hasEnoughFreeSpace()) return true;
+        log.info("Insufficient disk space, initiating cleanup...");
 
-        log.warn("Insufficient disk space, initiating cleanup...");
+        boolean cleanupSuccess = cleanupRepositories();
 
-        int attempts = 0;
-        while (!hasEnoughFreeSpace() && attempts < MAX_CLEANUP_ATTEMPTS) {
-            attempts++;
-            boolean cleanupSuccess = cleanupRepositories();
-
-            if (!cleanupSuccess) {
-                log.warn("Cleanup attempt {} failed, stopping further attempts.", attempts);
-                break;
-            }
-        }
-
-        if (!hasEnoughFreeSpace()) {
-            log.warn("Not enough free space after {} cleanup attempts.", attempts);
+        if (!cleanupSuccess) {
+            log.warn("Repositories cleanup failed");
             return false;
         }
 
-        log.info("Successfully freed up space after {} cleanup attempts.", attempts);
+        log.info("Successfully freed up space after cleanup");
         return true;
     }
 
     private boolean hasEnoughFreeSpace() {
         try {
-            Path baseDirectory = Path.of(config.getBaseDirectory());
-            FileStore fileStore = Files.getFileStore(baseDirectory);
-            long usableSpace = fileStore.getUsableSpace();
-            long requiredSpace = config.getMinFreeSpaceInBytes();
+            long usableSpace = getUsableSpace();
+            long requiredSpace = repositoryManagementConfig.getMinFreeSpaceInBytes();
 
             log.debug("Usable space: {} bytes, Required space: {} bytes",
                     FileUtils.byteCountToDisplaySize(usableSpace),
@@ -71,8 +55,14 @@ public class DiskSpaceManager {
         }
     }
 
+    private long getUsableSpace() throws IOException {
+        Path baseDirectory = Path.of(repositoryManagementConfig.getBaseDirectory());
+        FileStore fileStore = Files.getFileStore(baseDirectory);
+        return fileStore.getUsableSpace();
+    }
+
     private boolean cleanupRepositories() {
-        log.info("Starting repository cleanup using strategy: {}", config.getCleanupStrategy());
+        log.info("Starting repositories cleanup using strategy: {}", repositoryManagementConfig.getCleanupStrategy());
 
         try {
             List<RepositoryInfo> repositories = getRepositoriesOrderedByStrategy();
@@ -82,24 +72,33 @@ public class DiskSpaceManager {
                 return false;
             }
 
-            RepositoryInfo toRemove = repositories.getFirst();
-            logRemovedRepository(toRemove);
+            long spaceNeeded = repositoryManagementConfig.getMinFreeSpaceInBytes() - getUsableSpace();
+            long spaceFreed = 0L;
 
-            File localPath = new File(toRemove.getLocalPath());
-            deleteRepositoryDirectory(localPath);
-            repository.delete(toRemove);
-            return true;
+            for (RepositoryInfo repositoryInfo : repositories) {
+                if (spaceFreed >= spaceNeeded) break;
 
-        } catch (Exception e) {
+                long repositorySize = repositoryInfo.getSizeInBytes() != null ? repositoryInfo.getSizeInBytes() : 0L;
+                File localPath = new File(repositoryInfo.getLocalPath());
+                if (deleteRepositoryDirectory(localPath)) {
+                    repositoryInfoRepository.delete(repositoryInfo);
+                    logRemovedRepository(repositoryInfo);
+                    spaceFreed += repositorySize;
+                }
+            }
+
+            return spaceFreed >= spaceNeeded;
+
+        } catch (IOException e) {
             log.error("Error during repository cleanup: {}", e.getMessage(), e);
             return false;
         }
     }
 
     private List<RepositoryInfo> getRepositoriesOrderedByStrategy() {
-        return switch (config.getCleanupStrategy()) {
-            case LEAST_RECENTLY_USED -> repository.findAllByOrderByLastAccessedAtAsc();
-            case LEAST_FREQUENTLY_USED -> repository.findAllByOrderByAccessCountAsc();
+        return switch (repositoryManagementConfig.getCleanupStrategy()) {
+            case LEAST_RECENTLY_USED -> repositoryInfoRepository.findAllByOrderByLastAccessedAtAsc();
+            case LEAST_FREQUENTLY_USED -> repositoryInfoRepository.findAllByOrderByAccessCountAsc();
         };
     }
 
@@ -111,15 +110,18 @@ public class DiskSpaceManager {
                 FileUtils.byteCountToDisplaySize(toRemove.getSizeInBytes() != null ? toRemove.getSizeInBytes() : 0L));
     }
 
-    public void deleteRepositoryDirectory(File directory) {
+    public boolean deleteRepositoryDirectory(File directory) {
         try {
             if (directory.exists()) {
                 FileUtils.deleteDirectory(directory);
                 log.info("Successfully removed repository at {}", directory);
+                return true;
             }
+            return false;
 
         } catch (IOException e) {
             log.error("Error removing repository at {}: {}", directory, e.getMessage(), e);
+            return false;
         }
     }
 
