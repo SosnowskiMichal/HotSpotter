@@ -15,7 +15,6 @@ public class SonarAnalysisStatus {
     @NonNull
     private String status; // PENDING, RUNNING, SUCCESS, FAILED
     private String message;
-    private String taskId;
     private long startTime;
     private long endTime;
 

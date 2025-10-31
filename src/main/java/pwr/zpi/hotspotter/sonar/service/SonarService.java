@@ -32,15 +32,14 @@ public class SonarService {
         }
     }
 
-    public String startAnalysis(String projectPath, String projectKey, String projectName) {
+    public SonarAnalysisStatus startAnalysis(String projectPath, String projectKey, String projectName) {
         if (prepareConnection()) {
-            SonarAnalysisStatus status = new SonarAnalysisStatus(projectKey, "PENDING", "Analiza oczekuje na rozpoczęcie");
+            SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), "PENDING", "Analiza oczekuje na rozpoczęcie");
             sonarAnalysisStatusRepository.save(status);
-            String analysisId = status.getId();
 
-            sonarAnalysisExecutor.runAnalysisAsync(analysisId, projectPath, projectKey, projectName, this.sonarToken);
+            sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName, this.sonarToken);
 
-            return analysisId;
+            return status;
         } else {
             log.error("Nie udało się przygotować połączenia z SonarQube. Analiza nie została uruchomiona.");
             return null;
@@ -52,5 +51,9 @@ public class SonarService {
         this.sonarToken = sonarConfig.generateToken(tokenName);
 
         return this.sonarToken != null;
+    }
+
+    private String createValidProjectKey(String projectPath) {
+        return projectPath.replaceAll("[^a-zA-Z0-9_\\-]", "_");
     }
 }

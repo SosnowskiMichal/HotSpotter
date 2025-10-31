@@ -2,18 +2,16 @@ package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -25,13 +23,12 @@ public class SonarAnalysisExecutor {
     @Value("${sonarqube.scanner.path:sonar-scanner}")
     private String scannerPath;
 
-    private final RestTemplate restTemplate;
-
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
+    private final SonarResultDownloader sonarResultDownloader;
 
-    public SonarAnalysisExecutor(RestTemplateBuilder restTemplateBuilder, SonarAnalysisStatusRepository sonarAnalysisStatusRepository) {
-        this.restTemplate = restTemplateBuilder.build();
+    public SonarAnalysisExecutor(SonarAnalysisStatusRepository sonarAnalysisStatusRepository, SonarResultDownloader sonarResultDownloader) {
         this.sonarAnalysisStatusRepository = sonarAnalysisStatusRepository;
+        this.sonarResultDownloader = sonarResultDownloader;
     }
 
 
@@ -48,13 +45,13 @@ public class SonarAnalysisExecutor {
             boolean success = executeSonarScanner(projectPath, projectKey, projectName, token);
 
             if (success) {
+                SonarRepoAnalysisResult saveResult = saveResults(status.getProjectKey(), token);
+                if (saveResult == null) {
+                    throw new RuntimeException("Nie udało się pobrać lub zapisać wyników analizy SonarQube.");
+                }
+
                 status.setStatus("SUCCESS");
                 status.setMessage("Analiza zakończona pomyślnie");
-
-                String taskId = getLatestAnalysisTask(projectKey, token);
-                status.setTaskId(taskId);
-
-                saveResults(status.getId());
             } else {
                 status.setStatus("FAILED");
                 status.setMessage("Analiza zakończona z błędem");
@@ -86,7 +83,7 @@ public class SonarAnalysisExecutor {
 
             Process process = processBuilder.start();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     log.info("[SonarScanner] {}", line);
@@ -102,39 +99,7 @@ public class SonarAnalysisExecutor {
         }
     }
 
-    private String getLatestAnalysisTask(String projectKey, String token) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + token);
-
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            String url = sonarUrl + "/api/ce/component?component=" + projectKey;
-
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    Map.class
-            );
-
-            Map<String, Object> body = response.getBody();
-            if (body != null && body.containsKey("queue")) {
-                return null;
-            }
-
-            if (body != null && body.containsKey("current")) {
-                Map<String, Object> current = (Map<String, Object>) body.get("current");
-                return (String) current.get("id");
-            }
-
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private void saveResults(String analysisId) {
-        // Implementacja zapisywania wyników analizy
+    private SonarRepoAnalysisResult saveResults(String projectKey, String token) {
+        return sonarResultDownloader.fetchAndSaveAnalysisResults(projectKey, token);
     }
 }
