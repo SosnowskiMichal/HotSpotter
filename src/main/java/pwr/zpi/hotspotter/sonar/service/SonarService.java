@@ -2,27 +2,24 @@ package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import pwr.zpi.hotspotter.sonar.config.SonarConfig;
+import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 
 @Slf4j
 @Service
 public class SonarService {
-    @Value("${sonar.host.url}")
-    private String sonarUrl;
-
     private String sonarToken;
 
-    private final RestTemplate restTemplate;
     private final SonarConfig sonarConfig;
+    private final SonarAnalysisExecutor sonarAnalysisExecutor;
+    private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
 
-    public SonarService(RestTemplateBuilder restTemplateBuilder, SonarConfig sonarConfig) {
+    public SonarService(SonarConfig sonarConfig, SonarAnalysisExecutor sonarAnalysisExecutor, SonarAnalysisStatusRepository sonarAnalysisStatusRepository) {
         this.sonarConfig = sonarConfig;
-        this.restTemplate = restTemplateBuilder.build();
+        this.sonarAnalysisExecutor = sonarAnalysisExecutor;
+        this.sonarAnalysisStatusRepository = sonarAnalysisStatusRepository;
     }
 
     @Synchronized
@@ -32,6 +29,21 @@ public class SonarService {
         } else {
             sonarConfig.logIn();
             return setNewSonarToken();
+        }
+    }
+
+    public String startAnalysis(String projectPath, String projectKey, String projectName) {
+        if (prepareConnection()) {
+            SonarAnalysisStatus status = new SonarAnalysisStatus(projectKey, "PENDING", "Analiza oczekuje na rozpoczęcie");
+            sonarAnalysisStatusRepository.save(status);
+            String analysisId = status.getId();
+
+            sonarAnalysisExecutor.runAnalysisAsync(analysisId, projectPath, projectKey, projectName, this.sonarToken);
+
+            return analysisId;
+        } else {
+            log.error("Nie udało się przygotować połączenia z SonarQube. Analiza nie została uruchomiona.");
+            return null;
         }
     }
 
