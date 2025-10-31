@@ -3,9 +3,12 @@ package pwr.zpi.hotspotter.sonar.service;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarConfig;
 import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
+import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 @Slf4j
 @Service
@@ -15,11 +18,23 @@ public class SonarService {
     private final SonarConfig sonarConfig;
     private final SonarAnalysisExecutor sonarAnalysisExecutor;
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
+    private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
 
-    public SonarService(SonarConfig sonarConfig, SonarAnalysisExecutor sonarAnalysisExecutor, SonarAnalysisStatusRepository sonarAnalysisStatusRepository) {
+    public SonarService(SonarConfig sonarConfig, SonarAnalysisExecutor sonarAnalysisExecutor, SonarAnalysisStatusRepository sonarAnalysisStatusRepository, SonarRepoAnalysisRepository sonarRepoAnalysisRepository) {
         this.sonarConfig = sonarConfig;
         this.sonarAnalysisExecutor = sonarAnalysisExecutor;
         this.sonarAnalysisStatusRepository = sonarAnalysisStatusRepository;
+        this.sonarRepoAnalysisRepository = sonarRepoAnalysisRepository;
+    }
+
+    public SonarAnalysisStatus getSonarAnalysisStatus(String statusId) {
+        return sonarAnalysisStatusRepository.findById(statusId).orElseThrow(() ->
+                new ObjectNotFoundException("SonarQube analysis status not found for ID: " + statusId));
+    }
+
+    public SonarRepoAnalysisResult getSonarRepoAnalysisResult(String analysisId) {
+        return sonarRepoAnalysisRepository.findById(analysisId).orElseThrow(() ->
+                new ObjectNotFoundException("SonarQube analysis result not found for ID: " + analysisId));
     }
 
     @Synchronized
@@ -41,7 +56,7 @@ public class SonarService {
 
             return status;
         } else {
-            log.error("Nie udało się przygotować połączenia z SonarQube. Analiza nie została uruchomiona.");
+            log.error("Failed to prepare SonarQube connection. Analysis not started.");
             return null;
         }
     }

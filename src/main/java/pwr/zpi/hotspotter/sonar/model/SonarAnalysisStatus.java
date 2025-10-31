@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class SonarAnalysisStatus {
     @Id
     private String id;
+    private String repoAnalysisId;
     @NonNull
     private String projectKey;
     @NonNull
