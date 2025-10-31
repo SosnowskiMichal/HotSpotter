@@ -8,10 +8,7 @@ import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -22,6 +19,8 @@ public class SonarAnalysisExecutor {
 
     @Value("${sonarqube.scanner.path:sonar-scanner}")
     private String scannerPath;
+
+    private final static int MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS = 10000;
 
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
     private final SonarResultDownloader sonarResultDownloader;
@@ -45,6 +44,7 @@ public class SonarAnalysisExecutor {
             boolean success = executeSonarScanner(projectPath, projectKey, projectName, token);
 
             if (success) {
+                Thread.sleep(MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS);
                 SonarRepoAnalysisResult saveResult = saveResults(status.getProjectKey(), token);
                 if (saveResult == null) {
                     throw new RuntimeException("Nie udało się pobrać lub zapisać wyników analizy SonarQube.");
@@ -82,13 +82,6 @@ public class SonarAnalysisExecutor {
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
-
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    log.info("[SonarScanner] {}", line);
-                }
-            }
 
             int exitCode = process.waitFor();
             return exitCode == 0;
