@@ -5,7 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
