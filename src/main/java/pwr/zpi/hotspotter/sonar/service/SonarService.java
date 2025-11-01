@@ -9,6 +9,8 @@ import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Slf4j
 @Service
@@ -48,8 +50,14 @@ public class SonarService {
     }
 
     public SonarAnalysisStatus startAnalysis(String projectPath, String projectKey, String projectName) {
+        Path path = Path.of(projectPath);
+        if (!Files.exists(path) || !Files.isDirectory(path)) {
+            log.error("Project path does not exist or is not a directory: {}", projectPath);
+            throw new ObjectNotFoundException("Project path does not exist or is not a directory");
+        }
+
         if (prepareConnection()) {
-            SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), "PENDING", "Analiza oczekuje na rozpoczęcie");
+            SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), "PENDING", "SonarQube analysis is pending.");
             sonarAnalysisStatusRepository.save(status);
 
             sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName, this.sonarToken);

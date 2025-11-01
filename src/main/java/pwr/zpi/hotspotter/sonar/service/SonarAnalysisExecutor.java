@@ -4,11 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
-
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -24,21 +26,22 @@ public class SonarAnalysisExecutor {
 
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
     private final SonarResultDownloader sonarResultDownloader;
+    private final JavaProjectCompiler javaProjectCompiler;
 
-    public SonarAnalysisExecutor(SonarAnalysisStatusRepository sonarAnalysisStatusRepository, SonarResultDownloader sonarResultDownloader) {
+    public SonarAnalysisExecutor(SonarAnalysisStatusRepository sonarAnalysisStatusRepository, SonarResultDownloader sonarResultDownloader, JavaProjectCompiler javaProjectCompiler) {
         this.sonarAnalysisStatusRepository = sonarAnalysisStatusRepository;
         this.sonarResultDownloader = sonarResultDownloader;
+        this.javaProjectCompiler = javaProjectCompiler;
     }
-
 
     @Async("sonarQubeAnalysisExecutor")
     public void runAnalysisAsync(String analysisId, String projectPath, String projectKey, String projectName, String token) {
         SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(analysisId).orElseThrow(() ->
-                new RuntimeException("Nie znaleziono statusu analizy o ID: " + analysisId));
+                new ObjectNotFoundException("SonarQube analysis status not found for ID: " + analysisId));
 
         try {
             status.setStatus("RUNNING");
-            status.setMessage("Analiza w toku...");
+            status.setMessage("SonarQube analysis is running.");
             sonarAnalysisStatusRepository.save(status);
 
             boolean success = executeSonarScanner(projectPath, projectKey, projectName, token);
@@ -47,37 +50,43 @@ public class SonarAnalysisExecutor {
                 Thread.sleep(MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS);
                 SonarRepoAnalysisResult saveResult = saveResults(status.getProjectKey(), token);
                 if (saveResult == null) {
-                    throw new RuntimeException("Nie udało się pobrać lub zapisać wyników analizy SonarQube.");
+                    throw new RuntimeException("Failed to fetch/save analysis results for project: " + status.getProjectKey());
                 }
 
+                status.setRepoAnalysisId(saveResult.getId());
                 status.setStatus("SUCCESS");
-                status.setMessage("Analiza zakończona pomyślnie");
+                status.setMessage("SonarQube analysis completed successfully.");
             } else {
                 status.setStatus("FAILED");
-                status.setMessage("Analiza zakończona z błędem");
+                status.setMessage("Error executing SonarQube scanner.");
             }
 
         } catch (Exception e) {
             status.setStatus("FAILED");
-            status.setMessage("Błąd podczas analizy: " + e.getMessage());
+            status.setMessage("Error during analysis: " + e.getMessage());
         } finally {
             status.setEndTime(System.currentTimeMillis());
             sonarAnalysisStatusRepository.save(status);
         }
     }
 
-
     private boolean executeSonarScanner(String projectPath, String projectKey, String projectName, String token) {
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                    scannerPath,
-                    "-Dsonar.projectKey=" + projectKey,
-                    "-Dsonar.projectName=" + projectName,
-                    "-Dsonar.sources=.",
-                    "-Dsonar.host.url=" + sonarUrl,
-                    "-Dsonar.token=" + token
-            );
+            List<String> command = new ArrayList<>();
+            command.add(scannerPath);
+            command.add("-Dsonar.projectKey=" + projectKey);
+            command.add("-Dsonar.projectName=" + projectName);
+            command.add("-Dsonar.sources=.");
+            command.add("-Dsonar.host.url=" + sonarUrl);
+            command.add("-Dsonar.token=" + token);
 
+            if (javaProjectCompiler.isJavaProject(projectPath)) {
+                List<String> binaries = javaProjectCompiler.compileJavaProject(projectPath);
+                String joined = String.join(",", binaries);
+                command.add("-Dsonar.java.binaries=" + joined);
+            }
+
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.directory(new File(projectPath));
             processBuilder.redirectErrorStream(true);
 
@@ -87,7 +96,7 @@ public class SonarAnalysisExecutor {
             return exitCode == 0;
 
         } catch (Exception e) {
-            log.error("Błąd podczas wykonywania sonar-scanner: {}", e.getMessage());
+            log.error("Error executing SonarQube scanner: {}", e.getMessage(), e);
             return false;
         }
     }
