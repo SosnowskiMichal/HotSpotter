@@ -11,6 +11,7 @@ import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -18,6 +19,9 @@ import java.nio.file.Path;
 @Service
 @RequiredArgsConstructor
 public class SonarService {
+    private static final int PENDING_ANALYSIS_TIMEOUT_MS = 60 * 1000;
+    private static final int RUNNING_ANALYSIS_TIMEOUT_MS = PENDING_ANALYSIS_TIMEOUT_MS * 15;
+
     private final SonarClient sonarClient;
     private final SonarProperties sonarProperties;
     private final SonarAnalysisExecutor sonarAnalysisExecutor;
@@ -46,6 +50,12 @@ public class SonarService {
     }
 
     public SonarAnalysisStatus startAnalysis(String projectPath, String projectKey, String projectName) {
+        projectKey = createValidProjectKey(projectKey);
+        if (isAnalysisStarted(projectKey)) {
+            log.info("Analysis already started for project key: {}", projectKey);
+            throw new IllegalStateException("Analysis already started for this project.");
+        }
+
         Path path = Path.of(projectPath);
         if (!Files.exists(path) || !Files.isDirectory(path)) {
             log.error("Project path does not exist or is not a directory: {}", projectPath);
@@ -53,7 +63,7 @@ public class SonarService {
         }
 
         if (prepareConnection()) {
-            SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
+            SonarAnalysisStatus status = new SonarAnalysisStatus(projectKey, SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
             sonarAnalysisStatusRepository.save(status);
 
             sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName);
@@ -63,6 +73,16 @@ public class SonarService {
             log.error("Failed to prepare SonarQube connection. Analysis not started.");
             return null;
         }
+    }
+
+    private boolean isAnalysisStarted(String projectKey) {
+        SonarAnalysisStatus status = sonarAnalysisStatusRepository
+                .findFirstByProjectKeyOrderByStartTimeDesc(projectKey)
+                .orElse(null);
+        return status != null && ((status.getStatus() == SonarAnalysisState.PENDING
+                && System.currentTimeMillis() - status.getStartTime() < PENDING_ANALYSIS_TIMEOUT_MS)
+                || (status.getStatus() == SonarAnalysisState.RUNNING
+                && System.currentTimeMillis() - status.getStartTime() < RUNNING_ANALYSIS_TIMEOUT_MS));
     }
 
     private boolean setNewSonarToken() {
