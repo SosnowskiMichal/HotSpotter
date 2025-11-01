@@ -11,8 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisComponent;
-import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.net.URI;

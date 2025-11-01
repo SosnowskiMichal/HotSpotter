@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.sonar.model;
+package pwr.zpi.hotspotter.sonar.model.analysisstatus;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

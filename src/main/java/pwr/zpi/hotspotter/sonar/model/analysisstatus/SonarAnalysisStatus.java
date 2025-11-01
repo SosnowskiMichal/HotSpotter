@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.sonar.model;
+package pwr.zpi.hotspotter.sonar.model.analysisstatus;
 
 import lombok.Data;
 import lombok.NonNull;
@@ -29,13 +29,5 @@ public class SonarAnalysisStatus {
     @SuppressWarnings("unused")
     public SonarAnalysisStatus() {
         this.startTime = System.currentTimeMillis();
-    }
-
-    public SonarAnalysisStatus(@NonNull String projectKey, @NonNull String status, String message) {
-        this(projectKey, SonarAnalysisState.fromString(status), message);
-    }
-
-    public void setStatus(String status) {
-        this.status = SonarAnalysisState.fromString(status);
     }
 }

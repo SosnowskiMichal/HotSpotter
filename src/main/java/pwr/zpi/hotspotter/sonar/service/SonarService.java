@@ -5,8 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarConfig;
-import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
-import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
+import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 import java.nio.file.Files;
@@ -57,7 +58,7 @@ public class SonarService {
         }
 
         if (prepareConnection()) {
-            SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), "PENDING", "SonarQube analysis is pending.");
+            SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
             sonarAnalysisStatusRepository.save(status);
 
             sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName, this.sonarToken);

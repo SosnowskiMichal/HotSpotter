@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.sonar.model;
+package pwr.zpi.hotspotter.sonar.model.repoanalysis;
 
 import lombok.Data;
 import lombok.NonNull;

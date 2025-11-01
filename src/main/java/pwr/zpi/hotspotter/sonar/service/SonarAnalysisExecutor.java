@@ -5,8 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
-import pwr.zpi.hotspotter.sonar.model.SonarAnalysisStatus;
-import pwr.zpi.hotspotter.sonar.model.SonarRepoAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
+import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import java.io.File;
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ public class SonarAnalysisExecutor {
                 new ObjectNotFoundException("SonarQube analysis status not found for ID: " + analysisId));
 
         try {
-            status.setStatus("RUNNING");
+            status.setStatus(SonarAnalysisState.RUNNING);
             status.setMessage("SonarQube analysis is running.");
             sonarAnalysisStatusRepository.save(status);
 
@@ -54,15 +55,15 @@ public class SonarAnalysisExecutor {
                 }
 
                 status.setRepoAnalysisId(saveResult.getId());
-                status.setStatus("SUCCESS");
+                status.setStatus(SonarAnalysisState.SUCCESS);
                 status.setMessage("SonarQube analysis completed successfully.");
             } else {
-                status.setStatus("FAILED");
+                status.setStatus(SonarAnalysisState.FAILED);
                 status.setMessage("Error executing SonarQube scanner.");
             }
 
         } catch (Exception e) {
-            status.setStatus("FAILED");
+            status.setStatus(SonarAnalysisState.FAILED);
             status.setMessage("Error during analysis: " + e.getMessage());
         } finally {
             status.setEndTime(System.currentTimeMillis());
