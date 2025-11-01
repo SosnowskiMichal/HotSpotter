@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.config;
+package pwr.zpi.hotspotter.common.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -26,4 +26,5 @@ public class CorsConfig {
             }
         };
     }
+
 }
