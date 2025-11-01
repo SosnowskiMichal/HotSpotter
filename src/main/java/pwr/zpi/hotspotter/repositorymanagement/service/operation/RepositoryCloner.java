@@ -26,8 +26,10 @@ public class RepositoryCloner {
     private final RepositoryManagementConfig repositoryManagementConfig;
     private final RepositoryInfoRepository repositoryInfoRepository;
 
-    public RepositoryManagementService.RepositoryOperationResult clone(RepositoryUrlParser.RepositoryData repositoryData, Path localPath) {
+    public RepositoryManagementService.RepositoryOperationResult clone(RepositoryUrlParser.RepositoryData repositoryData) {
         String repositoryUrl = repositoryData.repositoryUrl();
+        Path localPath = getLocalRepositoryPath(repositoryData);
+
         log.info("Cloning repository from URL {} to {}", repositoryUrl, localPath);
 
         if (!diskSpaceManager.ensureEnoughFreeSpace()) {
@@ -37,6 +39,11 @@ public class RepositoryCloner {
 
         if (!createLocalDirectory(localPath)) {
             return RepositoryManagementService.RepositoryOperationResult.failure("Failed to create local directory for repository.");
+        }
+
+        if (!cleanLocalDirectory(localPath)) {
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            return RepositoryManagementService.RepositoryOperationResult.failure("Failed to clean local directory for repository.");
         }
 
         try {
@@ -62,6 +69,10 @@ public class RepositoryCloner {
         return RepositoryManagementService.RepositoryOperationResult.success("Repository cloned successfully.", repositoryInfo);
     }
 
+    private Path getLocalRepositoryPath(RepositoryUrlParser.RepositoryData repositoryData) {
+        return Path.of(repositoryManagementConfig.getBaseDirectory(), repositoryData.getPath());
+    }
+
     private boolean createLocalDirectory(Path localPath) {
         try {
             FileUtils.forceMkdir(localPath.toFile());
@@ -69,6 +80,16 @@ public class RepositoryCloner {
             return true;
         } catch (Exception e) {
             log.error("Error creating directory {}: {}", localPath, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private boolean cleanLocalDirectory(Path localPath) {
+        try {
+            FileUtils.cleanDirectory(localPath.toFile());
+            return true;
+        } catch (Exception e) {
+            log.error("Error cleaning directory {}: {}", localPath, e.getMessage(), e);
             return false;
         }
     }

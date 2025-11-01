@@ -22,14 +22,18 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class RepositoryUpdater {
 
-    private final DiskSpaceManager diskSpaceManager;
     private final RepositoryManagementConfig repositoryManagementConfig;
     private final RepositoryInfoRepository repositoryInfoRepository;
+    private final DiskSpaceManager diskSpaceManager;
 
     public RepositoryManagementService.RepositoryOperationResult update(RepositoryInfo repositoryInfo) {
         log.info("Updating existing repository at {}", repositoryInfo.getLocalPath());
 
         Path localPath = Path.of(repositoryInfo.getLocalPath());
+
+        if (!diskSpaceManager.ensureEnoughFreeSpace()) {
+            return RepositoryManagementService.RepositoryOperationResult.failure("Insufficient disk space or failed cleanup.");
+        }
 
         try {
             PullResult result = updateRepository(localPath);

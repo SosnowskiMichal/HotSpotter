@@ -15,7 +15,7 @@ public class RepositoryUrlParser {
             + "(?<owner>[^/]+)/(?<name>(?!\\.git$)[^/]+?)(?:\\.git)*$"
     );
 
-    public RepositoryData parse(String repositoryUrl) {
+    public RepositoryData parse(String repositoryUrl) throws IllegalArgumentException {
         Matcher matcher = REPOSITORY_URL_PATTERN.matcher(repositoryUrl);
         if (!matcher.matches()) {
             throw new IllegalArgumentException("Invalid repository URL: " + repositoryUrl

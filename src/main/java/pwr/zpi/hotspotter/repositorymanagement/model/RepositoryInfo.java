@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
 
@@ -22,7 +21,6 @@ public class RepositoryInfo {
     private String id;
 
     @NotBlank(message = "Remote URL is required")
-    @Indexed(unique = true)
     private String remoteUrl;
 
     @NotBlank(message = "Repository name is required")
@@ -30,6 +28,9 @@ public class RepositoryInfo {
 
     @NotBlank(message = "Repository owner is required")
     private String owner;
+
+    @NotBlank(message = "Repository platform is required")
+    private String platform;
 
     @NotBlank(message = "Local path is required")
     private String localPath;
@@ -49,6 +50,7 @@ public class RepositoryInfo {
         this.remoteUrl = repositoryData.repositoryUrl();
         this.name = repositoryData.name();
         this.owner = repositoryData.owner();
+        this.platform = repositoryData.platform();
         this.localPath = localPath;
         this.clonedAt = LocalDateTime.now();
         this.lastAccessedAt = LocalDateTime.now();
