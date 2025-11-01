@@ -1,9 +1,8 @@
 package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
@@ -23,26 +23,20 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SonarResultDownloader {
-    @Value("${sonar.host.url}")
-    private String sonarUrl;
-
     private final static String REPO_ANALYSIS_METRICS = "bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity";
 
     private final RestTemplate restTemplate;
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
-
-    public SonarResultDownloader(RestTemplateBuilder restTemplateBuilder, SonarRepoAnalysisRepository sonarRepoAnalysisRepository) {
-        this.restTemplate = restTemplateBuilder.build();
-        this.sonarRepoAnalysisRepository = sonarRepoAnalysisRepository;
-    }
+    private final SonarProperties sonarProperties;
 
 
-    public SonarRepoAnalysisResult fetchAndSaveAnalysisResults(String projectKey, String token) {
+    public SonarRepoAnalysisResult fetchAndSaveAnalysisResults(String projectKey) {
         try {
             log.info("Fetching analysis results for project: {}", projectKey);
 
-            Map<String, Object> componentTree = fetchComponentTree(projectKey, token);
+            Map<String, Object> componentTree = fetchComponentTree(projectKey);
             if (componentTree == null) {
                 log.error("Failed to fetch component tree for project: {}", projectKey);
                 return null;
@@ -60,14 +54,14 @@ public class SonarResultDownloader {
         }
     }
 
-    private Map<String, Object> fetchComponentTree(String projectKey, String token) {
+    private Map<String, Object> fetchComponentTree(String projectKey) {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + token);
+            headers.set("Authorization", "Bearer " + sonarProperties.getToken());
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             URI uri = UriComponentsBuilder
-                    .fromUriString(sonarUrl)
+                    .fromUriString(sonarProperties.getHostUrl())
                     .path("/api/measures/component_tree")
                     .queryParam("component", projectKey)
                     .queryParam("metricKeys", REPO_ANALYSIS_METRICS)

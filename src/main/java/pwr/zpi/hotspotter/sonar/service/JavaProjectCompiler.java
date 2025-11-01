@@ -5,6 +5,9 @@ import org.apache.maven.cli.MavenCli;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.springframework.stereotype.Service;
+
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -48,10 +51,11 @@ public class JavaProjectCompiler {
     private List<String> compileMavenProject(Path projectPath) throws Exception {
         System.setProperty("maven.multiModuleProjectDirectory", projectPath.toString());
         MavenCli cli = new MavenCli();
+        PrintStream nullOut = new PrintStream(OutputStream.nullOutputStream());
         int result = cli.doMain(
                 new String[]{"clean", "compile"},
                 projectPath.toFile().getAbsolutePath(),
-                System.out, System.err
+                nullOut, nullOut
         );
 
         if (result != 0) {

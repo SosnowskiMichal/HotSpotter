@@ -1,16 +1,16 @@
-package pwr.zpi.hotspotter.sonar.config;
+package pwr.zpi.hotspotter.sonar.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.*;
+import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -19,24 +19,16 @@ import java.util.Collections;
 import java.util.Map;
 
 @Slf4j
-@Configuration
-public class SonarConfig {
-
-    @Value("${sonar.host.url}")
-    private String sonarUrl;
-
-    private static final String DEFAULT_LOGIN = "admin";
-    private static final String DEFAULT_PASSWORD = "admin";
-
+@Service
+@RequiredArgsConstructor
+public class SonarClient {
     private final RestTemplate restTemplate;
+    private final SonarProperties sonarProperties;
 
-    public SonarConfig(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder.build();
-    }
 
     public String generateToken(String tokenName) {
         try {
-            String auth = DEFAULT_LOGIN + ":" + DEFAULT_PASSWORD;
+            String auth = sonarProperties.getLogin() + ":" + sonarProperties.getPassword();
             byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes());
             String authHeader = "Basic " + new String(encodedAuth, StandardCharsets.UTF_8);
 
@@ -47,7 +39,7 @@ public class SonarConfig {
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
             URI uri = UriComponentsBuilder
-                    .fromUriString(sonarUrl)
+                    .fromUriString(sonarProperties.getHostUrl())
                     .path("/api/user_tokens/generate")
                     .queryParam("name", tokenName)
                     .build()
@@ -85,7 +77,7 @@ public class SonarConfig {
 
             HttpEntity<String> entity = new HttpEntity<>(headers);
             URI uri = UriComponentsBuilder
-                    .fromUriString(sonarUrl)
+                    .fromUriString(sonarProperties.getHostUrl())
                     .path("/api/authentication/validate")
                     .build()
                     .encode()
@@ -116,13 +108,13 @@ public class SonarConfig {
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("login", DEFAULT_LOGIN);
-            body.add("password", DEFAULT_PASSWORD);
+            body.add("login", sonarProperties.getLogin());
+            body.add("password", sonarProperties.getPassword());
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
             URI uri = UriComponentsBuilder
-                    .fromUriString(sonarUrl)
+                    .fromUriString(sonarProperties.getHostUrl())
                     .path("/api/authentication/login")
                     .build()
                     .encode()

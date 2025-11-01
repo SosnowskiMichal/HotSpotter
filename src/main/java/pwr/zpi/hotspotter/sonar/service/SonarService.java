@@ -1,10 +1,11 @@
 package pwr.zpi.hotspotter.sonar.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
-import pwr.zpi.hotspotter.sonar.config.SonarConfig;
+import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
@@ -15,20 +16,14 @@ import java.nio.file.Path;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SonarService {
-    private String sonarToken;
-
-    private final SonarConfig sonarConfig;
+    private final SonarClient sonarClient;
+    private final SonarProperties sonarProperties;
     private final SonarAnalysisExecutor sonarAnalysisExecutor;
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
 
-    public SonarService(SonarConfig sonarConfig, SonarAnalysisExecutor sonarAnalysisExecutor, SonarAnalysisStatusRepository sonarAnalysisStatusRepository, SonarRepoAnalysisRepository sonarRepoAnalysisRepository) {
-        this.sonarConfig = sonarConfig;
-        this.sonarAnalysisExecutor = sonarAnalysisExecutor;
-        this.sonarAnalysisStatusRepository = sonarAnalysisStatusRepository;
-        this.sonarRepoAnalysisRepository = sonarRepoAnalysisRepository;
-    }
 
     public SonarAnalysisStatus getSonarAnalysisStatus(String statusId) {
         return sonarAnalysisStatusRepository.findById(statusId).orElseThrow(() ->
@@ -42,10 +37,10 @@ public class SonarService {
 
     @Synchronized
     public boolean prepareConnection() {
-        if (sonarConfig.validateToken(this.sonarToken)) {
+        if (sonarClient.validateToken(sonarProperties.getToken())) {
             return true;
         } else {
-            sonarConfig.logIn();
+            sonarClient.logIn();
             return setNewSonarToken();
         }
     }
@@ -61,7 +56,7 @@ public class SonarService {
             SonarAnalysisStatus status = new SonarAnalysisStatus(createValidProjectKey(projectKey), SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
             sonarAnalysisStatusRepository.save(status);
 
-            sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName, this.sonarToken);
+            sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName);
 
             return status;
         } else {
@@ -72,9 +67,9 @@ public class SonarService {
 
     private boolean setNewSonarToken() {
         String tokenName = "hotspotter-token-" + System.currentTimeMillis();
-        this.sonarToken = sonarConfig.generateToken(tokenName);
+        sonarProperties.setToken(sonarClient.generateToken(tokenName));
 
-        return this.sonarToken != null;
+        return sonarProperties.getToken() != null;
     }
 
     private String createValidProjectKey(String projectPath) {

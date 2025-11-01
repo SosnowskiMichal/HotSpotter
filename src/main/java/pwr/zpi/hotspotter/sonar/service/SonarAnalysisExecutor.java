@@ -1,10 +1,11 @@
 package pwr.zpi.hotspotter.sonar.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
@@ -15,28 +16,18 @@ import java.util.List;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SonarAnalysisExecutor {
-
-    @Value("${sonar.host.url}")
-    private String sonarUrl;
-
-    @Value("${sonarqube.scanner.path:sonar-scanner}")
-    private String scannerPath;
-
     private final static int MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS = 10000;
 
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
     private final SonarResultDownloader sonarResultDownloader;
     private final JavaProjectCompiler javaProjectCompiler;
+    private final SonarProperties sonarProperties;
 
-    public SonarAnalysisExecutor(SonarAnalysisStatusRepository sonarAnalysisStatusRepository, SonarResultDownloader sonarResultDownloader, JavaProjectCompiler javaProjectCompiler) {
-        this.sonarAnalysisStatusRepository = sonarAnalysisStatusRepository;
-        this.sonarResultDownloader = sonarResultDownloader;
-        this.javaProjectCompiler = javaProjectCompiler;
-    }
 
     @Async("sonarQubeAnalysisExecutor")
-    public void runAnalysisAsync(String analysisId, String projectPath, String projectKey, String projectName, String token) {
+    public void runAnalysisAsync(String analysisId, String projectPath, String projectKey, String projectName) {
         SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(analysisId).orElseThrow(() ->
                 new ObjectNotFoundException("SonarQube analysis status not found for ID: " + analysisId));
 
@@ -45,11 +36,11 @@ public class SonarAnalysisExecutor {
             status.setMessage("SonarQube analysis is running.");
             sonarAnalysisStatusRepository.save(status);
 
-            boolean success = executeSonarScanner(projectPath, projectKey, projectName, token);
+            boolean success = executeSonarScanner(projectPath, projectKey, projectName);
 
             if (success) {
                 Thread.sleep(MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS);
-                SonarRepoAnalysisResult saveResult = saveResults(status.getProjectKey(), token);
+                SonarRepoAnalysisResult saveResult = saveResults(status.getProjectKey());
                 if (saveResult == null) {
                     throw new RuntimeException("Failed to fetch/save analysis results for project: " + status.getProjectKey());
                 }
@@ -71,15 +62,15 @@ public class SonarAnalysisExecutor {
         }
     }
 
-    private boolean executeSonarScanner(String projectPath, String projectKey, String projectName, String token) {
+    private boolean executeSonarScanner(String projectPath, String projectKey, String projectName) {
         try {
             List<String> command = new ArrayList<>();
-            command.add(scannerPath);
+            command.add(sonarProperties.getScannerPath());
             command.add("-Dsonar.projectKey=" + projectKey);
             command.add("-Dsonar.projectName=" + projectName);
             command.add("-Dsonar.sources=.");
-            command.add("-Dsonar.host.url=" + sonarUrl);
-            command.add("-Dsonar.token=" + token);
+            command.add("-Dsonar.host.url=" + sonarProperties.getHostUrl());
+            command.add("-Dsonar.token=" + sonarProperties.getToken());
 
             if (javaProjectCompiler.isJavaProject(projectPath)) {
                 List<String> binaries = javaProjectCompiler.compileJavaProject(projectPath);
@@ -102,7 +93,7 @@ public class SonarAnalysisExecutor {
         }
     }
 
-    private SonarRepoAnalysisResult saveResults(String projectKey, String token) {
-        return sonarResultDownloader.fetchAndSaveAnalysisResults(projectKey, token);
+    private SonarRepoAnalysisResult saveResults(String projectKey) {
+        return sonarResultDownloader.fetchAndSaveAnalysisResults(projectKey);
     }
 }
