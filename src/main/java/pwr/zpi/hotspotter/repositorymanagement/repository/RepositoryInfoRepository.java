@@ -10,7 +10,7 @@ import java.util.Optional;
 @Repository
 public interface RepositoryInfoRepository extends MongoRepository<RepositoryInfo, String> {
 
-    Optional<RepositoryInfo> findByRemoteUrl(String remoteUrl);
+    Optional<RepositoryInfo> findByNameAndOwnerAndPlatform(String name, String owner, String platform);
 
     List<RepositoryInfo> findAllByOrderByLastAccessedAtAsc();
 
