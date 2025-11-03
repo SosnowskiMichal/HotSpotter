@@ -14,8 +14,8 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .servers(List.of(
-                        new Server().url("https://hotspotter.net.pl/api").description("Production"),
                         new Server().url("https://www.hotspotter.net.pl/api").description("WWW alias"),
+                        new Server().url("https://api.hotspotter.net.pl/api").description("API alias"),
                         new Server().url("http://localhost:8080/api").description("Localhost")
                 ));
     }
