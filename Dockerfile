@@ -7,7 +7,7 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 
-FROM openjdk:25-jdk-slim
+FROM openjdk:25-ea-25-jdk-slim
 
 WORKDIR /app
 
