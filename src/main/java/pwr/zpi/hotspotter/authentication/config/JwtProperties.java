@@ -11,4 +11,5 @@ public class JwtProperties {
     private String secret;
     private long expiration;
     private boolean secure;
+    private String domain;
 }

@@ -36,56 +36,58 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(
-            @RequestBody @Valid RegisterRequestDTO request,
-            HttpServletResponse response) {
+            @RequestBody @Valid RegisterRequestDTO registerRequest,
+            HttpServletResponse response,
+            HttpServletRequest request) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(registerRequest.getEmail())) {
             throw new IllegalArgumentException("Email is already in use");
         }
 
         User user = new User();
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setName(request.getName());
+        user.setEmail(registerRequest.getEmail());
+        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setName(registerRequest.getName());
         user.setProvider(User.AuthProvider.LOCAL);
         user.setRole(User.Role.USER);
 
         userRepository.save(user);
 
         String token = jwtService.generateToken(user);
-        cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token));
+        cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token, request));
 
         return ResponseEntity.ok(new AuthResponseDTO(user));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(
-            @RequestBody @Valid LoginRequestDTO request,
-            HttpServletResponse response) {
+            @RequestBody @Valid LoginRequestDTO loginRequest,
+            HttpServletResponse response,
+            HttpServletRequest request) {
 
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getPassword()
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
                     )
             );
         } catch (BadCredentialsException e) {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ObjectNotFoundException("User with email " + request.getEmail() + " not found"));
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new ObjectNotFoundException("User with email " + loginRequest.getEmail() + " not found"));
 
         String token = jwtService.generateToken(user);
-        cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token));
+        cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token, request));
 
         return ResponseEntity.ok(new AuthResponseDTO(user));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
-        cookieUtil.addCookie(response, cookieUtil.deleteJwtCookie());
+    public ResponseEntity<?> logout(HttpServletResponse response, HttpServletRequest request) {
+        cookieUtil.addCookie(response, cookieUtil.deleteJwtCookie(request));
 
         return ResponseEntity.ok(Map.of("success", true, "message", "Logged out successfully"));
     }

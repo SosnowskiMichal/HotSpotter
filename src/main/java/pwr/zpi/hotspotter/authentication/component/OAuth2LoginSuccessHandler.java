@@ -55,7 +55,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         String token = jwtService.generateToken(user);
-        cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token));
+        cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token, request));
 
         String redirectUrl = googleProperties.getRedirectUri();
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
