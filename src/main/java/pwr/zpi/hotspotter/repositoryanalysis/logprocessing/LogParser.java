@@ -1,16 +1,14 @@
-package pwr.zpi.hotspotter.repositoryanalysis.logparser;
+package pwr.zpi.hotspotter.repositoryanalysis.logprocessing;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositoryanalysis.logparser.model.Commit;
-import pwr.zpi.hotspotter.repositoryanalysis.logparser.model.FileChange;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,7 +17,6 @@ import java.util.stream.StreamSupport;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class LogParser {
 
     private static final Pattern LOG_HEADER_PATTERN = Pattern.compile(
@@ -37,21 +34,13 @@ public class LogParser {
             "\\{(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)}"
     );
 
-    private final LogExtractor logExtractor;
-
-    public LogParsingResult parseLogs(Path repositoryPath, LocalDate afterDate, LocalDate beforeDate) {
-        LogExtractor.LogExtractionResult result = logExtractor.extractLogs(repositoryPath, afterDate, beforeDate);
-        if (!result.success()) {
-            return LogParsingResult.failure("Log extraction failed: " + result.message());
-        }
-
+    public LogParsingResult parseLogs(Path logFilePath) {
         try {
-            Stream<Commit> commitStream = getCommitStream(result.logFilePath());
-            return LogParsingResult.success(commitStream);
+            Stream<Commit> commitStream = getCommitStream(logFilePath);
+            return LogParsingResult.success("Commit stream initialized.", commitStream);
 
         } catch (IOException e) {
-            log.error("Failed to initialize commit stream for log file ({}): {}",
-                    result.logFilePath().toAbsolutePath(), e.getMessage());
+            log.error("Failed to initialize commit stream for log file ({}): {}", logFilePath.toAbsolutePath(), e.getMessage());
             return LogParsingResult.failure("Failed to initialize commit stream.");
         }
     }
@@ -65,8 +54,8 @@ public class LogParser {
     }
 
     public record LogParsingResult(boolean success, String message, Stream<Commit> commits) {
-        public static LogParsingResult success(Stream<Commit> commits) {
-            return new LogParsingResult(true, null, commits);
+        public static LogParsingResult success(String message, Stream<Commit> commits) {
+            return new LogParsingResult(true, message, commits);
         }
 
         public static LogParsingResult failure(String message) {

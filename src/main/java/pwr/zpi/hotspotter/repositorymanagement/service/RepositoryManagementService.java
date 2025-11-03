@@ -100,7 +100,6 @@ public class RepositoryManagementService {
     }
 
     public record RepositoryOperationResult(boolean success, String message, RepositoryInfo repositoryInfo) {
-
         public static RepositoryOperationResult success(String message, RepositoryInfo repositoryInfo) {
             return new RepositoryOperationResult(true, message, repositoryInfo);
         }
@@ -112,7 +111,6 @@ public class RepositoryManagementService {
         public String getLocalPath() {
             return repositoryInfo != null ? repositoryInfo.getLocalPath() : null;
         }
-
     }
 
 }

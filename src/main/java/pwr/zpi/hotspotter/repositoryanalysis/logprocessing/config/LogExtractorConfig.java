@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.logparser.config;
+package pwr.zpi.hotspotter.repositoryanalysis.logprocessing.config;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

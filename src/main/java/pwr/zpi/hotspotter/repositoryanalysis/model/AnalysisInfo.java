@@ -39,17 +39,24 @@ public class AnalysisInfo {
     @NotNull(message = "Analysis status is required")
     private AnalysisStatus status = AnalysisStatus.IN_PROGRESS;
 
-    private LocalDate afterDate;
+    private Long analysisTimeInSeconds;
 
-    private LocalDate beforeDate;
+    private LocalDate startDate;
+
+    private LocalDate endDate;
 
     public enum AnalysisStatus {
         IN_PROGRESS,
-        COMPLETED
+        COMPLETED,
+        FAILED
     }
 
     public void markAsCompleted() {
         this.status = AnalysisStatus.COMPLETED;
+    }
+
+    public void markAsFailed() {
+        this.status = AnalysisStatus.FAILED;
     }
 
 }

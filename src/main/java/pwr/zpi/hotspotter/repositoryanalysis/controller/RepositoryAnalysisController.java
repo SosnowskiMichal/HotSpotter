@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/analysis")
+@RequestMapping("/analysis")
 public class RepositoryAnalysisController {
 
     private final RepositoryAnalysisService repositoryAnalysisService;
@@ -22,18 +22,18 @@ public class RepositoryAnalysisController {
     @PostMapping()
     public ResponseEntity<AnalysisResult> analyzeRepository(@RequestBody AnalysisRequest request) {
         AnalysisResult result = repositoryAnalysisService.runRepositoryAnalysis(
-                request.repositoryUrl(), request.afterDate(), request.beforeDate());
+                request.repositoryUrl(), request.startDate(), request.endDate());
 
         return result.success ?
                 ResponseEntity.ok(result) :
                 ResponseEntity.unprocessableEntity().body(result);
     }
 
-    public record AnalysisRequest(String repositoryUrl, LocalDate afterDate, LocalDate beforeDate) { }
+    public record AnalysisRequest(String repositoryUrl, LocalDate startDate, LocalDate endDate) { }
 
     public record AnalysisResult(boolean success, String message, String analysisId) {
-        public static AnalysisResult success(String analysisId) {
-            return new AnalysisResult(true, null, analysisId);
+        public static AnalysisResult success(String message, String analysisId) {
+            return new AnalysisResult(true, message, analysisId);
         }
 
         public static AnalysisResult failure(String message) {

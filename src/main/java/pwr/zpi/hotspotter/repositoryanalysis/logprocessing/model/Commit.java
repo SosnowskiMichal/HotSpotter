@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.logparser.model;
+package pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model;
 
 import java.util.List;
 
