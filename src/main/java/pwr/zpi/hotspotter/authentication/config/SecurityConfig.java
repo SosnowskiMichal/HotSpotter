@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.web.filter.ForwardedHeaderFilter;
 import pwr.zpi.hotspotter.authentication.component.JwtAuthenticationFilter;
 import pwr.zpi.hotspotter.authentication.component.OAuth2LoginSuccessHandler;
 import pwr.zpi.hotspotter.authentication.service.CustomUserDetailsService;
@@ -92,5 +93,10 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
+    }
+
+    @Bean
+    public ForwardedHeaderFilter forwardedHeaderFilter() {
+        return new ForwardedHeaderFilter();
     }
 }
