@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.authentication.config.CookieProperties;
 import pwr.zpi.hotspotter.authentication.config.JwtProperties;
 
 import java.net.URI;
@@ -15,10 +16,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CookieUtil {
     private final JwtProperties jwtProperties;
+    private final CookieProperties cookieProperties;
 
     private static final String JWT_COOKIE_NAME = "jwt";
     private static final String JWT_COOKIE_PATH = "/";
-    private static final String SAME_SITE_POLICY = "Lax";
 
     public Cookie createJwtCookie(String token, HttpServletRequest request) {
         return createCookie(
@@ -49,7 +50,7 @@ public class CookieUtil {
         cookie.setSecure(shouldBeSecure);
         cookie.setPath(path);
         cookie.setMaxAge(maxAge);
-        cookie.setAttribute("SameSite", SAME_SITE_POLICY);
+        cookie.setAttribute("SameSite", cookieProperties.getSameSite());
 
         if (domain != null && !domain.isEmpty()) {
             cookie.setDomain(domain);
@@ -115,15 +116,15 @@ public class CookieUtil {
     private String extractBaseDomain(String host) {
         if (host == null) return null;
 
-        if (host.endsWith(jwtProperties.getDomain())) {
-            return jwtProperties.getDomain();
+        if (host.endsWith(cookieProperties.getDomain())) {
+            return cookieProperties.getDomain();
         }
 
         return null;
     }
 
     private boolean determineSecure(String origin) {
-        if (origin == null) return jwtProperties.isSecure();
+        if (origin == null) return cookieProperties.isSecure();
 
         if (origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1")) {
             return false;
@@ -133,6 +134,6 @@ public class CookieUtil {
             return true;
         }
 
-        return jwtProperties.isSecure();
+        return cookieProperties.isSecure();
     }
 }

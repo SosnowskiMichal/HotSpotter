@@ -6,8 +6,9 @@ import org.springframework.context.annotation.Configuration;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "jwt")
-public class JwtProperties {
-    private String secret;
-    private long expiration;
+@ConfigurationProperties(prefix = "cookie")
+public class CookieProperties {
+    private boolean secure;
+    private String sameSite;
+    private String domain;
 }
