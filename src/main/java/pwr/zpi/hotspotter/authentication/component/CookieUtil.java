@@ -18,7 +18,6 @@ public class CookieUtil {
     private static final String JWT_COOKIE_NAME = "jwt";
     private static final String JWT_COOKIE_PATH = "/";
     private static final String SAME_SITE_POLICY = "Lax";
-    private static final boolean SECURE_FLAG = false;
 
     public Cookie createJwtCookie(String token) {
         return createCookie(
@@ -41,7 +40,7 @@ public class CookieUtil {
     private Cookie createCookie(String name, String value, int maxAge, String path) {
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);
-        cookie.setSecure(SECURE_FLAG);
+        cookie.setSecure(jwtProperties.isSecure());
         cookie.setPath(path);
         cookie.setMaxAge(maxAge);
 
