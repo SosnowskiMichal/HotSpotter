@@ -116,7 +116,7 @@ public class CookieUtil {
         if (host == null) return null;
 
         if (host.endsWith(jwtProperties.getDomain())) {
-            return "." + jwtProperties.getDomain();
+            return jwtProperties.getDomain();
         }
 
         return null;
