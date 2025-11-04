@@ -3,8 +3,12 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import pwr.zpi.hotspotter.fileanalysis.analyzer.ownership.OwnershipAnalyzer;
+import pwr.zpi.hotspotter.fileanalysis.analyzer.ownership.OwnershipAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.controller.RepositoryAnalysisController;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
@@ -13,8 +17,8 @@ import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementServi
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -24,9 +28,11 @@ public class RepositoryAnalysisService {
     private final RepositoryManagementService repositoryManagementService;
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
+    private final LogParser logParser;
     private final ExecutorService executorService;
 
     // Inject all analyzers here
+    private final OwnershipAnalyzer ownershipAnalyzer;
 
     public RepositoryAnalysisController.AnalysisResult runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate) {
         long analysisStartTime = System.currentTimeMillis();
@@ -51,12 +57,29 @@ public class RepositoryAnalysisService {
         }
 
         Path logFilePath = logExtractionResult.logFilePath();
+        LogParser.LogParsingResult logParsingResult = logParser.parseLogs(logFilePath);
+        if (!logParsingResult.success()) {
+            analysisInfo.markAsFailed();
+            analysisInfoRepository.save(analysisInfo);
+            logExtractor.deleteLogFile(logFilePath);
+            return RepositoryAnalysisController.AnalysisResult.failure("Log parsing failed: " + logParsingResult.message());
+        }
 
         try {
-            CompletableFuture.allOf(
-    //                CompletableFuture.runAsync(() -> analyzer1.analyze(repositoryPath, logFilePath, analysisId), executorService),
-    //                CompletableFuture.runAsync(() -> analyzer2.analyze(repositoryPath, logFilePath, analysisId), executorService)
-            ).join();
+            OwnershipAnalyzerContext ownershipContext = ownershipAnalyzer.startAnalysis(analysisId, repositoryPath);
+
+            try (Stream<Commit> commits = logParsingResult.commits()) {
+                commits.forEach(commit -> {
+                    ownershipAnalyzer.processCommit(commit, ownershipContext);
+                });
+            }
+
+            ownershipAnalyzer.finishAnalysis(ownershipContext);
+
+//            CompletableFuture.allOf(
+//                    CompletableFuture.runAsync(() -> analyzer1.analyze(repositoryPath, analysisId), executorService),
+//                    CompletableFuture.runAsync(() -> analyzer2.analyze(repositoryPath, analysisId), executorService)
+//            ).join();
 
             long analysisEndTime = System.currentTimeMillis();
             long analysisDurationSeconds = (analysisEndTime - analysisStartTime) / 1000;

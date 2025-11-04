@@ -21,11 +21,11 @@ public class LogParser {
 
     private static final Pattern LOG_HEADER_PATTERN = Pattern.compile(
             "\\[(?<hash>[^]]+)]\\s" +
-            "(?<date>(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2}))\\n" +
+            "(?<date>\\d{4}-\\d{2}-\\d{2})\\n" +
             "(?<author>[^<]+)\\s<(?<email>[^>]+)>"
     );
     private static final Pattern FILE_CHANGE_PATTERN = Pattern.compile(
-            "(?<added>\\d+)\\s+(?<removed>\\d+)\\s+(?<file>[^\\n]+)"
+            "(?<added>\\d+|-)\\s+(?<removed>\\d+|-)\\s+(?<file>[^\\n]+)"
     );
     private static final Pattern FULL_RENAME_PATTERN = Pattern.compile(
             "^(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)$"
@@ -177,18 +177,23 @@ public class LogParser {
         Matcher matcher = FILE_CHANGE_PATTERN.matcher(filesBlock);
 
         while (matcher.find()) {
-            try {
-                String filePath = matcher.group("file").trim();
-                int linesAdded = Integer.parseInt(matcher.group("added"));
-                int linesDeleted = Integer.parseInt(matcher.group("removed"));
+            String filePath = matcher.group("file").trim();
+            int linesAdded = parseNumberOfLines(matcher.group("added"));
+            int linesDeleted = parseNumberOfLines(matcher.group("removed"));
 
-                FileChange fileChange = checkForFilePathChange(new FileChange(filePath, linesAdded, linesDeleted));
-                fileChanges.add(fileChange);
-
-            } catch (NumberFormatException _) { }
+            FileChange fileChange = checkForFilePathChange(new FileChange(filePath, linesAdded, linesDeleted));
+            fileChanges.add(fileChange);
         }
 
         return fileChanges;
+    }
+
+    private int parseNumberOfLines(String numberStr) {
+        try {
+            return Integer.parseInt(numberStr);
+        } catch (NumberFormatException _) {
+            return 0;
+        }
     }
 
     private FileChange checkForFilePathChange(FileChange fileChange) {
