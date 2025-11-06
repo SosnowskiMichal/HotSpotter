@@ -3,8 +3,10 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.ownership.OwnershipAnalyzer;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.ownership.OwnershipAnalyzerContext;
+import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.KnowledgeAnalyzer;
+import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzer;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.controller.RepositoryAnalysisController;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
@@ -32,7 +34,8 @@ public class RepositoryAnalysisService {
     private final ExecutorService executorService;
 
     // Inject all analyzers here
-    private final OwnershipAnalyzer ownershipAnalyzer;
+    private final KnowledgeAnalyzer knowledgeAnalyzer;
+    private final AuthorsAnalyzer authorsAnalyzer;
 
     public RepositoryAnalysisController.AnalysisResult runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate) {
         long analysisStartTime = System.currentTimeMillis();
@@ -66,15 +69,21 @@ public class RepositoryAnalysisService {
         }
 
         try {
-            OwnershipAnalyzerContext ownershipContext = ownershipAnalyzer.startAnalysis(analysisId, repositoryPath);
+            KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
+            AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId);
 
             try (Stream<Commit> commits = logParsingResult.commits()) {
                 commits.forEach(commit -> {
-                    ownershipAnalyzer.processCommit(commit, ownershipContext);
+                    knowledgeAnalyzer.processCommit(commit, knowledgeContext);
+                    authorsAnalyzer.processCommit(commit, authorsContext);
                 });
             }
 
-            ownershipAnalyzer.finishAnalysis(ownershipContext);
+            knowledgeAnalyzer.finishAnalysis(knowledgeContext);
+            authorsAnalyzer.finishAnalysis(authorsContext);
+
+            knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
+            authorsAnalyzer.enrichAnalysisData(authorsContext);
 
 //            CompletableFuture.allOf(
 //                    CompletableFuture.runAsync(() -> analyzer1.analyze(repositoryPath, analysisId), executorService),

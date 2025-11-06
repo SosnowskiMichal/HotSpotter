@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.ownership.model;
+package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,7 +18,7 @@ import java.util.List;
 @AllArgsConstructor
 @Document(collection = "file_ownership")
 @CompoundIndex(name = "analysis_file_idx", def = "{'analysisId': 1, 'filePath': 1}", unique = true)
-public class FileOwnership {
+public class FileKnowledge {
 
     @Id
     private String id;
@@ -38,10 +38,16 @@ public class FileOwnership {
     @NotNull(message = "Author contributions are required")
     private List<AuthorContribution> authorContributions;
 
-    @NotNull(message = "Lead authors list is required")
-    private List<String> leadAuthors;
+    private String leadAuthor;
 
     @NotNull(message = "Number of contributors is required")
     private Integer contributors;
+
+    private Integer activeContributors;
+
+    @Builder.Default
+    private Double knowledgeLoss = 0.0;
+
+    // TODO: Risk (one author, too many, significant knowledge loss, etc.)
 
 }

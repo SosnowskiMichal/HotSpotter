@@ -1,26 +1,26 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.ownership;
+package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge;
 
 import lombok.Getter;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.ownership.model.AuthorContribution;
+import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.AuthorContribution;
 
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
 @Getter
-public class OwnershipAnalyzerContext {
+public class KnowledgeAnalyzerContext {
 
     private final String analysisId;
     private final Path repositoryPath;
     private final Map<String, Map<String, AuthorContribution>> fileContributions;
 
-    public OwnershipAnalyzerContext(String analysisId, Path repositoryPath) {
+    public KnowledgeAnalyzerContext(String analysisId, Path repositoryPath) {
         this.analysisId = analysisId;
         this.repositoryPath = repositoryPath;
         this.fileContributions = new HashMap<>();
     }
 
-    public void recordContribution(String filePath, String name, String email, int linesAdded) {
+    public void recordContribution(String filePath, String name, int linesAdded) {
         fileContributions
                 .computeIfAbsent(filePath, _ -> new HashMap<>())
                 .compute(name, (_, contribution) -> {
