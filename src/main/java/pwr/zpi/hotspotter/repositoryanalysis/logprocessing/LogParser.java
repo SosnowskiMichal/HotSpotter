@@ -106,13 +106,20 @@ public class LogParser {
             try {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    if (line.isBlank()) {
-                        nextCommit = parseBlock(block.toString());
-                        block.setLength(0);
-                        if (nextCommit != null) {
-                            hasNextCached = true;
-                            return;
+                    if (line.isBlank()) continue;
+
+                    if (line.startsWith("[")) {
+                        if (!block.isEmpty()) {
+                            nextCommit = parseBlock(block.toString());
+                            block.setLength(0);
+
+                            if (nextCommit != null) {
+                                block.append(line).append("\n");
+                                hasNextCached = true;
+                                return;
+                            }
                         }
+                        block.append(line).append("\n");
                     } else {
                         block.append(line).append("\n");
                     }
