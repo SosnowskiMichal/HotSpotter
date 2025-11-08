@@ -1,6 +1,7 @@
 package pwr.zpi.hotspotter.repositorymanagement.service.parser;
 
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 
 import java.nio.file.Path;
 import java.util.regex.Matcher;
@@ -17,7 +18,7 @@ public class RepositoryUrlParser {
     public RepositoryData parse(String repositoryUrl) throws IllegalArgumentException {
         Matcher matcher = REPOSITORY_URL_PATTERN.matcher(repositoryUrl);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("Invalid repository URL: " + repositoryUrl
+            throw new InvalidRepositoryUrlException("Invalid repository URL: " + repositoryUrl
                     + ", only GitHub and GitLab HTTPS URLs are supported");
         }
 

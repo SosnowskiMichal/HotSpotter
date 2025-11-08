@@ -8,9 +8,9 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
+import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
-import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
 import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
 import pwr.zpi.hotspotter.repositorymanagement.service.storage.DiskSpaceManager;
 
@@ -26,7 +26,7 @@ public class RepositoryCloner {
     private final RepositoryManagementConfig repositoryManagementConfig;
     private final RepositoryInfoRepository repositoryInfoRepository;
 
-    public RepositoryManagementService.RepositoryOperationResult clone(RepositoryUrlParser.RepositoryData repositoryData) {
+    public RepositoryInfo clone(RepositoryUrlParser.RepositoryData repositoryData) {
         String repositoryUrl = repositoryData.repositoryUrl();
         Path localPath = getLocalRepositoryPath(repositoryData);
 
@@ -34,16 +34,16 @@ public class RepositoryCloner {
 
         if (!diskSpaceManager.ensureEnoughFreeSpace()) {
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
-            return RepositoryManagementService.RepositoryOperationResult.failure("Insufficient disk space or failed cleanup.");
+            throw new RepositoryCloneException("Insufficient disk space or failed cleanup.");
         }
 
         if (!createLocalDirectory(localPath)) {
-            return RepositoryManagementService.RepositoryOperationResult.failure("Failed to create local directory for repository.");
+            throw new RepositoryCloneException("Failed to create local directory for repository.");
         }
 
         if (!cleanLocalDirectory(localPath)) {
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
-            return RepositoryManagementService.RepositoryOperationResult.failure("Failed to clean local directory for repository.");
+            throw new RepositoryCloneException("Failed to cleanup local directory for repository.");
         }
 
         try {
@@ -51,22 +51,21 @@ public class RepositoryCloner {
         } catch (GitAPIException e) {
             log.error("Git clone failed for URL {}: {}", repositoryUrl, e.getMessage(), e);
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
-            return RepositoryManagementService.RepositoryOperationResult.failure("Git clone failed: " + e.getMessage());
+            throw new RepositoryCloneException("Git clone failed: " + e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected error during clone for URL {}: {}", repositoryUrl, e.getMessage(), e);
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
-            return RepositoryManagementService.RepositoryOperationResult.failure("Clone failed: " + e.getMessage());
+            throw new RepositoryCloneException("Unexpected error during clone: " + e.getMessage());
         }
 
         if (!isValidGitRepository(localPath)) {
             log.error("Invalid git repository after clone: {}", localPath);
             diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
-            return RepositoryManagementService.RepositoryOperationResult.failure("Invalid git repository after clone.");
+            throw new RepositoryCloneException("Invalid git repository after clone.");
         }
 
         log.info("Successfully cloned repository {} to {}", repositoryUrl, localPath);
-        RepositoryInfo repositoryInfo = createAndSaveRepositoryInfo(repositoryData, localPath);
-        return RepositoryManagementService.RepositoryOperationResult.success("Repository cloned successfully.", repositoryInfo);
+        return createAndSaveRepositoryInfo(repositoryData, localPath);
     }
 
     private Path getLocalRepositoryPath(RepositoryUrlParser.RepositoryData repositoryData) {

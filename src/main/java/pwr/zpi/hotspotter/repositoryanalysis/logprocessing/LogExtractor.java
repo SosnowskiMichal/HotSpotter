@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.config.LogExtractorConfig;
 
 import java.io.IOException;
@@ -22,30 +23,27 @@ import java.util.stream.Stream;
 public class LogExtractor {
 
     private static final String GIT_LOG_FORMAT = "[%h] %ad%n%an <%ae>";
-    private static final int LOG_PROCESS_MONITORING_INTERVAL = 30;
-    private static final int LOG_PROCESS_TIMEOUT_MINUTES = 15;
 
     private final LogExtractorConfig logExtractorConfig;
 
-    public LogExtractionResult extractLogs(Path repositoryPath, String analysisId, LocalDate startDate, LocalDate endDate) {
+    public Path extractLogs(Path repositoryPath, String analysisId, LocalDate startDate, LocalDate endDate) {
         Path logFilePath = repositoryPath.resolve(logExtractorConfig.getLogDirectoryName()).resolve(analysisId + ".log");
 
         if (Files.exists(logFilePath)) {
-            return LogExtractionResult.success("Log file already exists.", logFilePath);
+            log.debug("Log file already exists at {}", logFilePath);
+            return logFilePath;
         }
 
         Path logDirPath = repositoryPath.resolve(logExtractorConfig.getLogDirectoryName());
         if (!createLogDirectory(logDirPath)) {
-            return LogExtractionResult.failure("Failed to create log directory.");
+            throw new LogProcessingException("Failed to creat log directory.");
         }
 
         String startDateStr = getDateString(startDate);
         String endDatePlusOneDayStr = getDatePlusOneDayString(endDate);
 
-        boolean success = executeLogCommand(repositoryPath, logFilePath, startDateStr, endDatePlusOneDayStr);
-        return success ?
-                LogExtractionResult.success("Log extraction completed successfully.", logFilePath) :
-                LogExtractionResult.failure("Error executing git log command.");
+        executeLogCommand(repositoryPath, logFilePath, startDateStr, endDatePlusOneDayStr);
+        return logFilePath;
     }
 
     public void deleteLogFile(Path logFilePath) {
@@ -74,7 +72,7 @@ public class LogExtractor {
         }
     }
 
-    private boolean executeLogCommand(Path repositoryPath, Path logFilePath, String afterDateStr, String beforeDateStr) {
+    private void executeLogCommand(Path repositoryPath, Path logFilePath, String afterDateStr, String beforeDateStr) {
         Process process = null;
         Thread monitoringThread = null;
 
@@ -83,13 +81,14 @@ public class LogExtractor {
             process = pb.start();
             monitoringThread = startLogFileSizeMonitoringThread(process, logFilePath);
 
-            boolean finished = process.waitFor(LOG_PROCESS_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            int timeoutMinutes = logExtractorConfig.getProcessTimeoutMinutes();
+            boolean finished = process.waitFor(timeoutMinutes, TimeUnit.MINUTES);
             if (!finished) {
-                log.error("Log extraction timed out after {} minutes", LOG_PROCESS_TIMEOUT_MINUTES);
+                log.error("Log extraction timed out after {} minutes", timeoutMinutes);
                 process.destroyForcibly();
                 monitoringThread.interrupt();
                 Files.deleteIfExists(logFilePath);
-                return false;
+                throw new LogProcessingException("Log extraction timed out after " + timeoutMinutes + " minutes");
             }
 
             monitoringThread.interrupt();
@@ -99,20 +98,19 @@ public class LogExtractor {
             if (exitCode != 0) {
                 Files.deleteIfExists(logFilePath);
                 log.error("Git log command failed with exit code: {}", exitCode);
-                return false;
+                throw new LogProcessingException("Git log command failed with exit code: " + exitCode);
             }
-            return true;
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Log extraction interrupted for {}: {}", repositoryPath, e.getMessage());
             cleanupResources(process, monitoringThread, logFilePath);
-            return false;
+            throw new LogProcessingException("Log extraction interrupted: " + e.getMessage());
 
         } catch (IOException e) {
             log.error("Error executing git log command for {}: {}", repositoryPath, e.getMessage());
             cleanupResources(process, monitoringThread, logFilePath);
-            return false;
+            throw new LogProcessingException("Error executing git log command: " + e.getMessage());
         }
     }
 
@@ -144,7 +142,7 @@ public class LogExtractor {
                     long fileSize = Files.size(logFilePath);
                     log.info("Log file size: {} bytes.", fileSize);
 
-                    boolean finished = process.waitFor(LOG_PROCESS_MONITORING_INTERVAL, TimeUnit.SECONDS);
+                    boolean finished = process.waitFor(logExtractorConfig.getProcessMonitoringIntervalSeconds(), TimeUnit.SECONDS);
                     if (finished) break;
                 }
 
@@ -170,16 +168,6 @@ public class LogExtractor {
         }
 
         deleteLogFile(logFilePath);
-    }
-
-    public record LogExtractionResult(boolean success, String message, Path logFilePath) {
-        public static LogExtractionResult success(String message, Path logFilePath) {
-            return new LogExtractionResult(true, message, logFilePath);
-        }
-
-        public static LogExtractionResult failure(String message) {
-            return new LogExtractionResult(false, message, null);
-        }
     }
 
 }

@@ -2,6 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.logprocessing;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 
@@ -34,14 +35,12 @@ public class LogParser {
             "\\{(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)}"
     );
 
-    public LogParsingResult parseLogs(Path logFilePath) {
+    public Stream<Commit> parseLogs(Path logFilePath) {
         try {
-            Stream<Commit> commitStream = getCommitStream(logFilePath);
-            return LogParsingResult.success("Commit stream initialized.", commitStream);
-
+            return getCommitStream(logFilePath);
         } catch (IOException e) {
             log.error("Failed to initialize commit stream for log file ({}): {}", logFilePath.toAbsolutePath(), e.getMessage());
-            return LogParsingResult.failure("Failed to initialize commit stream.");
+            throw new LogProcessingException("Failed to initialize commit stream: " + e.getMessage());
         }
     }
 
@@ -51,16 +50,6 @@ public class LogParser {
                 Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
                 false
         ).onClose(iterator::close);
-    }
-
-    public record LogParsingResult(boolean success, String message, Stream<Commit> commits) {
-        public static LogParsingResult success(String message, Stream<Commit> commits) {
-            return new LogParsingResult(true, message, commits);
-        }
-
-        public static LogParsingResult failure(String message) {
-            return new LogParsingResult(false, message, null);
-        }
     }
 
     // ====================================================================================================

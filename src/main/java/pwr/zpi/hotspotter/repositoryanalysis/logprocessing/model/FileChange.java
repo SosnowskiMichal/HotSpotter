@@ -1,6 +1,12 @@
 package pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model;
 
-public record FileChange(String filePath, int linesAdded, int linesDeleted, String oldPath, String newPath) {
+public record FileChange(
+        String filePath,
+        int linesAdded,
+        int linesDeleted,
+        String oldPath,
+        String newPath
+) {
 
     public FileChange(String filePath, int linesAdded, int linesDeleted) {
         this(filePath, linesAdded, linesDeleted, null, null);

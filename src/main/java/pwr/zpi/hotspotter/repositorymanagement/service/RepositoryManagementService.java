@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.springframework.stereotype.Service;
+import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
 import pwr.zpi.hotspotter.repositorymanagement.service.operation.RepositoryCloner;
@@ -28,12 +29,12 @@ public class RepositoryManagementService {
     private final RepositoryOperationQueue repositoryOperationQueue;
     private final DiskSpaceManager diskSpaceManager;
 
-    public RepositoryOperationResult cloneOrUpdateRepository(String repositoryUrl) {
+    public RepositoryInfo cloneOrUpdateRepository(String repositoryUrl) {
         log.info("Processing repository request for URL: {}", repositoryUrl);
         return repositoryOperationQueue.executeOperation(repositoryUrl, () -> performCloneOrUpdate(repositoryUrl));
     }
 
-    private RepositoryOperationResult performCloneOrUpdate(String repositoryUrl) {
+    private RepositoryInfo performCloneOrUpdate(String repositoryUrl) {
         try {
             RepositoryUrlParser.RepositoryData repositoryData = repositoryUrlParser.parse(repositoryUrl);
             Optional<RepositoryInfo> repositoryInfoOptional = repositoryInfoRepository.findByNameAndOwnerAndPlatform(
@@ -52,9 +53,9 @@ public class RepositoryManagementService {
                 }
             };
 
-        } catch (IllegalArgumentException e) {
+        } catch (InvalidRepositoryUrlException e) {
             log.error("Invalid repository URL {}: {}", repositoryUrl, e.getMessage(), e);
-            return RepositoryOperationResult.failure("Error: " + e.getMessage());
+            throw e;
         }
     }
 
@@ -97,20 +98,6 @@ public class RepositoryManagementService {
         CORRUPTED,
         DB_ONLY,
         NONEXISTENT
-    }
-
-    public record RepositoryOperationResult(boolean success, String message, RepositoryInfo repositoryInfo) {
-        public static RepositoryOperationResult success(String message, RepositoryInfo repositoryInfo) {
-            return new RepositoryOperationResult(true, message, repositoryInfo);
-        }
-
-        public static RepositoryOperationResult failure(String message) {
-            return new RepositoryOperationResult(false, message, null);
-        }
-
-        public String getLocalPath() {
-            return repositoryInfo != null ? repositoryInfo.getLocalPath() : null;
-        }
     }
 
 }

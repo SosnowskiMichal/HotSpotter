@@ -7,7 +7,8 @@ import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.KnowledgeAnalyzer;
 import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerContext;
-import pwr.zpi.hotspotter.repositoryanalysis.controller.RepositoryAnalysisController;
+import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
+import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
@@ -37,42 +38,25 @@ public class RepositoryAnalysisService {
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
 
-    public RepositoryAnalysisController.AnalysisResult runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate) {
+    public String runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate) {
         long analysisStartTime = System.currentTimeMillis();
 
-        RepositoryManagementService.RepositoryOperationResult result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
-        if (!result.success()) {
-            return RepositoryAnalysisController.AnalysisResult.failure("Could not clone or update repository: " + result.message());
-        }
-
-        RepositoryInfo repositoryInfo = result.repositoryInfo();
+        RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
         AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate);
         String analysisId = analysisInfo.getId();
         analysisInfoRepository.save(analysisInfo);
 
-        LogExtractor.LogExtractionResult logExtractionResult = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
-        if (!logExtractionResult.success()) {
-            analysisInfo.markAsFailed();
-            analysisInfoRepository.save(analysisInfo);
-            return RepositoryAnalysisController.AnalysisResult.failure("Log extraction failed: " + logExtractionResult.message());
-        }
-
-        Path logFilePath = logExtractionResult.logFilePath();
-        LogParser.LogParsingResult logParsingResult = logParser.parseLogs(logFilePath);
-        if (!logParsingResult.success()) {
-            analysisInfo.markAsFailed();
-            analysisInfoRepository.save(analysisInfo);
-            logExtractor.deleteLogFile(logFilePath);
-            return RepositoryAnalysisController.AnalysisResult.failure("Log parsing failed: " + logParsingResult.message());
-        }
-
+        Path logFilePath = null;
         try {
+            logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
+            Stream<Commit> commits = logParser.parseLogs(logFilePath);
+
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId);
 
-            try (Stream<Commit> commits = logParsingResult.commits()) {
+            try (commits) {
                 commits.forEach(commit -> {
                     knowledgeAnalyzer.processCommit(commit, knowledgeContext);
                     authorsAnalyzer.processCommit(commit, authorsContext);
@@ -97,12 +81,27 @@ public class RepositoryAnalysisService {
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
 
-        } finally {
-            logExtractor.deleteLogFile(logFilePath);
-        }
+            log.info("Analysis completed for repository {} in {} seconds, ID: {}",
+                    repositoryUrl, analysisDurationSeconds, analysisId);
 
-        log.info("Repository analysis completed for repository: {}, ID: {}", repositoryUrl, analysisId);
-        return RepositoryAnalysisController.AnalysisResult.success("Analysis completed successfully.", analysisId);
+            return analysisId;
+
+        } catch (LogProcessingException e) {
+            analysisInfo.markAsFailed();
+            analysisInfoRepository.save(analysisInfo);
+            throw e;
+
+        } catch (Exception e) {
+            analysisInfo.markAsFailed();
+            analysisInfoRepository.save(analysisInfo);
+            log.error("Unexpected error during analysis for repository {}: {}", repositoryUrl, e.getMessage(), e);
+            throw new AnalysisException("Analysis failed: " + e.getMessage());
+
+        } finally {
+            if (logFilePath != null) {
+                logExtractor.deleteLogFile(logFilePath);
+            }
+        }
     }
 
     private AnalysisInfo createAnalysisInfo(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate) {

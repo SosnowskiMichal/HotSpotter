@@ -9,9 +9,9 @@ import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
+import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
-import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
 import pwr.zpi.hotspotter.repositorymanagement.service.storage.DiskSpaceManager;
 
 import java.io.IOException;
@@ -26,13 +26,13 @@ public class RepositoryUpdater {
     private final RepositoryInfoRepository repositoryInfoRepository;
     private final DiskSpaceManager diskSpaceManager;
 
-    public RepositoryManagementService.RepositoryOperationResult update(RepositoryInfo repositoryInfo) {
+    public RepositoryInfo update(RepositoryInfo repositoryInfo) {
         log.info("Updating existing repository at {}", repositoryInfo.getLocalPath());
 
         Path localPath = Path.of(repositoryInfo.getLocalPath());
 
         if (!diskSpaceManager.ensureEnoughFreeSpace()) {
-            return RepositoryManagementService.RepositoryOperationResult.failure("Insufficient disk space or failed cleanup.");
+            throw new RepositoryUpdateException("Insufficient disk space or failed cleanup.");
         }
 
         try {
@@ -40,24 +40,24 @@ public class RepositoryUpdater {
 
             if (!result.isSuccessful()) {
                 log.error("Failed to update existing repository at {}", localPath);
-                return RepositoryManagementService.RepositoryOperationResult.failure("Git pull failed.");
+                throw new RepositoryUpdateException("Git pull failed.");
             }
 
             log.info("Successfully updated existing repository at {}", localPath);
             updateRepositoryMetadata(repositoryInfo, localPath);
-            return RepositoryManagementService.RepositoryOperationResult.success("Repository updated successfully.", repositoryInfo);
+            return repositoryInfo;
 
         } catch (GitAPIException e) {
             log.error("Git pull failed for repository at {}: {}", localPath, e.getMessage(), e);
-            return RepositoryManagementService.RepositoryOperationResult.failure("Git pull failed: " + e.getMessage());
+            throw new RepositoryUpdateException("Git pull failed: " + e.getMessage());
 
         } catch (IOException e) {
             log.error("IO error during git pull for repository at {}: {}", localPath, e.getMessage(), e);
-            return RepositoryManagementService.RepositoryOperationResult.failure("IO error during git pull: " + e.getMessage());
+            throw new RepositoryUpdateException("IO error during git pull: " + e.getMessage());
 
         } catch (Exception e) {
             log.error("Unexpected error during git pull for repository at {}: {}", localPath, e.getMessage(), e);
-            return RepositoryManagementService.RepositoryOperationResult.failure("Git pull failed: " + e.getMessage());
+            throw new RepositoryUpdateException("Unexpected error during git pull: " + e.getMessage());
         }
     }
 
