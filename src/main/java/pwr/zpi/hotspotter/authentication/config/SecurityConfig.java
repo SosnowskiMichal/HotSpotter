@@ -39,7 +39,8 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
-            "/test/**"
+            "/test/**",
+            "/analysis/**"
     );
 
     private final static List<String> ADMIN_ENDPOINTS = List.of(
