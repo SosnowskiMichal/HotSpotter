@@ -1,5 +1,6 @@
 package pwr.zpi.hotspotter.repositorymanagement.service.storage;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -22,6 +23,20 @@ public class DiskSpaceManager {
 
     private final RepositoryInfoRepository repositoryInfoRepository;
     private final RepositoryManagementConfig repositoryManagementConfig;
+
+    @PostConstruct
+    public void init() {
+        try {
+            Path baseDirectory = Path.of(repositoryManagementConfig.getBaseDirectory());
+            if (!Files.exists(baseDirectory)) {
+                Files.createDirectories(baseDirectory);
+                log.info("Created base directory: {}", baseDirectory);
+            }
+
+        } catch (IOException e) {
+            log.error("Failed to create base directory: {}", e.getMessage(), e);
+        }
+    }
 
     public boolean ensureEnoughFreeSpace() {
         if (hasEnoughFreeSpace()) return true;
