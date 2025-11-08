@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.repositorymanagement.service.operation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
+import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
@@ -15,9 +15,9 @@ public class RepositoryOperationQueue {
 
     private final ConcurrentHashMap<String, Lock> repositoryLocks = new ConcurrentHashMap<>();
 
-    public RepositoryManagementService.RepositoryOperationResult executeOperation(
+    public RepositoryInfo executeOperation(
             String repositoryUrl,
-            Supplier<RepositoryManagementService.RepositoryOperationResult> operation) {
+            Supplier<RepositoryInfo> operation) {
 
         Lock lock = repositoryLocks.computeIfAbsent(repositoryUrl, _ -> new ReentrantLock());
         lock.lock();
