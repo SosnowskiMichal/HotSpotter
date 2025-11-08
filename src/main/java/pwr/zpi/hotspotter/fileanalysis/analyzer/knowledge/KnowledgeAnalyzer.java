@@ -2,6 +2,10 @@ package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.dircache.DirCache;
+import org.eclipse.jgit.dircache.DirCacheEntry;
+import org.eclipse.jgit.lib.Repository;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.AuthorContribution;
 import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.FileKnowledge;
@@ -135,30 +139,17 @@ public class KnowledgeAnalyzer {
     private Set<String> getExistingFiles(Path repositoryPath) {
         Set<String> existingFiles = new HashSet<>();
 
-        try {
-            ProcessBuilder pb = new ProcessBuilder("git", "ls-files");
-            pb.directory(repositoryPath.toFile());
-            pb.redirectErrorStream(true);
+        try (Git git = Git.open(repositoryPath.toFile())) {
+            Repository repository = git.getRepository();
+            DirCache dirCache = repository.readDirCache();
 
-            Process process = pb.start();
-
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!line.isBlank()) {
-                        existingFiles.add(line.trim());
-                    }
-                }
+            for (int i = 0; i < dirCache.getEntryCount(); i++) {
+                DirCacheEntry entry = dirCache.getEntry(i);
+                existingFiles.add(entry.getPathString());
             }
 
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                log.error("git ls-files command failed with exit code: {}", exitCode);
-            }
-
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             log.error("Error retrieving existing files from repository at {}: {}", repositoryPath, e.getMessage(), e);
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             return Set.of();
         }
 
