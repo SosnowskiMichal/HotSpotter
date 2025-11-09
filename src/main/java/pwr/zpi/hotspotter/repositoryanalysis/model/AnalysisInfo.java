@@ -51,6 +51,15 @@ public class AnalysisInfo {
         FAILED
     }
 
+    public enum AnalysisSseStatus {
+        INITIALIZING,
+        PROCESSING_DATA,
+        ANALYZING,
+        GENERATING_RESULTS,
+        FINALIZING,
+        COMPLETED
+    }
+
     public void markAsCompleted() {
         this.status = AnalysisStatus.COMPLETED;
     }
