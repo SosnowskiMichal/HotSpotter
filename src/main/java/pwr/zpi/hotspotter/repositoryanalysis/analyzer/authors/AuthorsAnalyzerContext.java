@@ -12,10 +12,12 @@ import java.util.Map;
 public class AuthorsAnalyzerContext {
 
     private final String analysisId;
+    private final LocalDate referenceDate;
     private final Map<String, AuthorStatistics> authorStatistics;
 
-    public AuthorsAnalyzerContext(String analysisId) {
+    public AuthorsAnalyzerContext(String analysisId, LocalDate referenceDate) {
         this.analysisId = analysisId;
+        this.referenceDate = referenceDate != null ? referenceDate : LocalDate.now();
         this.authorStatistics = new HashMap<>();
     }
 
@@ -23,19 +25,18 @@ public class AuthorsAnalyzerContext {
         authorStatistics
                 .compute(name, (_, stats) -> {
                     if (stats == null) {
-                        LocalDate currentDate = LocalDate.now();
-                        int daysSinceFirstCommit = (int) ChronoUnit.DAYS.between(date, currentDate);
-                        int monthsSinceFirstCommit = (int) ChronoUnit.MONTHS.between(date, currentDate);
+                        int daysSinceFirstCommit = (int) ChronoUnit.DAYS.between(date, referenceDate);
+                        int monthsSinceFirstCommit = (int) ChronoUnit.MONTHS.between(date, referenceDate);
 
                         stats = AuthorStatistics.builder()
                                 .analysisId(analysisId)
                                 .name(name)
                                 .firstCommitDate(date)
-                                .lastCommitDate(date)
                                 .daysSinceFirstCommit(daysSinceFirstCommit)
                                 .monthsSinceFirstCommit(monthsSinceFirstCommit)
                                 .build();
                     }
+
                     stats.addEmail(email);
                     stats.setLastCommitDate(date);
                     stats.increaseLinesAdded(linesAdded);

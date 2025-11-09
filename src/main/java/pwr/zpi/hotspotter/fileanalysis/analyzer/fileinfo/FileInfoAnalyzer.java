@@ -52,7 +52,7 @@ public class FileInfoAnalyzer {
     public void finishAnalysis(FileInfoAnalyzerContext context) {
         if (context == null) return;
 
-        Set<String> existingFiles = AnalysisUtils.getFileNames(context.getRepositoryPath());
+        Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
         Map<String, FileLinesData> fileLinesData = getFileLinesData(context.getRepositoryPath());
         Collection<FileInfo> fileInfos = context.getFileInfos().values();
 

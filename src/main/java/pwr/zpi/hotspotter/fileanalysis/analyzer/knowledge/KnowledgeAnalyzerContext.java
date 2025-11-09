@@ -27,6 +27,7 @@ public class KnowledgeAnalyzerContext {
                     if (contribution == null) {
                         contribution = new AuthorContribution(name);
                     }
+
                     contribution.increaseLinesAdded(linesAdded);
                     contribution.incrementCommits();
                     return contribution;

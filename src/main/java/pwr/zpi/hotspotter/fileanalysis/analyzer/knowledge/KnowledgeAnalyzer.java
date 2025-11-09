@@ -2,10 +2,6 @@ package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.dircache.DirCache;
-import org.eclipse.jgit.dircache.DirCacheEntry;
-import org.eclipse.jgit.lib.Repository;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.AuthorContribution;
 import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.FileKnowledge;
@@ -16,9 +12,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -46,7 +39,7 @@ public class KnowledgeAnalyzer {
             int linesAdded = fileChange.linesAdded();
 
             if (fileChange.isRenamed()) {
-                updateFilePath(fileChange.oldPath(), fileChange.newPath(), context);
+                context.updateFilePath(fileChange.oldPath(), fileChange.newPath());
                 filePath = fileChange.newPath();
             }
 
@@ -55,36 +48,21 @@ public class KnowledgeAnalyzer {
     }
 
     public void finishAnalysis(KnowledgeAnalyzerContext context) {
-        if (context == null || context.getRepositoryPath() == null) return;
+        if (context == null) return;
+
+        Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
+
+        List<FileKnowledge> knowledgeData = context.getFileContributions().entrySet().stream()
+                .filter(entry -> existingFiles.contains(entry.getKey()))
+                .map(entry -> calculateFileKnowledge(
+                        context.getAnalysisId(),
+                        entry.getKey(),
+                        entry.getValue()
+                ))
+                .toList();
 
         try {
-            Set<String> existingFiles = getExistingFiles(context.getRepositoryPath());
-            List<FileKnowledge> knowledgeData = new ArrayList<>();
-
-            for (Map.Entry<String, Map<String, AuthorContribution>> entry : context.getFileContributions().entrySet()) {
-                String filePath = entry.getKey();
-                if (!existingFiles.contains(filePath)) continue;
-                Map<String, AuthorContribution> authorContributions = entry.getValue();
-
-                FileKnowledge fileKnowledge = calculateFileKnowledge(
-                        context.getAnalysisId(),
-                        filePath,
-                        authorContributions
-                );
-
-                knowledgeData.add(fileKnowledge);
-
-                if (knowledgeData.size() >= AnalysisUtils.DEFAULT_SAVE_BATCH_SIZE) {
-                    AnalysisUtils.saveDataInBatches(fileKnowledgeRepository, knowledgeData);
-                    knowledgeData.clear();
-                }
-            }
-
-            if (!knowledgeData.isEmpty()) {
-                AnalysisUtils.saveDataInBatches(fileKnowledgeRepository, knowledgeData);
-                log.debug("Saved final batch of {} file knowledge data records", knowledgeData.size());
-            }
-
+            AnalysisUtils.saveDataInBatches(fileKnowledgeRepository, knowledgeData);
         } catch (Exception e) {
             log.error("Error saving knowledge analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
@@ -116,6 +94,11 @@ public class KnowledgeAnalyzer {
                 continue;
             }
 
+            int activeContributors = (int) contributions.stream()
+                    .filter(contribution -> authorActivityMap.getOrDefault(contribution.getName(), false))
+                    .count();
+            fileKnowledge.setActiveContributors(activeContributors);
+
             int linesAddedByInactiveAuthors = contributions.stream()
                     .filter(contribution -> !authorActivityMap.get(contribution.getName()))
                     .mapToInt(AuthorContribution::getLinesAdded)
@@ -130,30 +113,6 @@ public class KnowledgeAnalyzer {
         } catch (Exception e) {
             log.error("Error saving enriched knowledge analysis data for ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
-    }
-
-    private void updateFilePath(String oldPath, String newPath, KnowledgeAnalyzerContext context) {
-        context.updateFilePath(oldPath, newPath);
-    }
-
-    private Set<String> getExistingFiles(Path repositoryPath) {
-        Set<String> existingFiles = new HashSet<>();
-
-        try (Git git = Git.open(repositoryPath.toFile())) {
-            Repository repository = git.getRepository();
-            DirCache dirCache = repository.readDirCache();
-
-            for (int i = 0; i < dirCache.getEntryCount(); i++) {
-                DirCacheEntry entry = dirCache.getEntry(i);
-                existingFiles.add(entry.getPathString());
-            }
-
-        } catch (IOException e) {
-            log.error("Error retrieving existing files from repository at {}: {}", repositoryPath, e.getMessage(), e);
-            return Set.of();
-        }
-
-        return existingFiles;
     }
 
     private FileKnowledge calculateFileKnowledge(String analysisId, String filePath,

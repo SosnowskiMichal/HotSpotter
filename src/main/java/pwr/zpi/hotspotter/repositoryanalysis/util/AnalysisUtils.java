@@ -56,7 +56,7 @@ public class AnalysisUtils {
     // Extracting file names from git repository
     // ==================================================
 
-    public static Set<String> getFileNames(Path repositoryPath) {
+    public static Set<String> getExistingFileNames(Path repositoryPath) {
         Set<String> existingFiles = new HashSet<>();
 
         try (Git git = Git.open(repositoryPath.toFile())) {

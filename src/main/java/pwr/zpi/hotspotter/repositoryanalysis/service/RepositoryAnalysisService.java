@@ -55,7 +55,7 @@ public class RepositoryAnalysisService {
             Stream<Commit> commits = logParser.parseLogs(logFilePath);
 
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
-            AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId);
+            AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
 
             try (commits) {
