@@ -1,14 +1,22 @@
 package pwr.zpi.hotspotter.repositoryanalysis.util;
 
 import lombok.experimental.UtilityClass;
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.dircache.DirCache;
+import org.eclipse.jgit.dircache.DirCacheEntry;
+import org.eclipse.jgit.lib.Repository;
 import org.springframework.data.repository.CrudRepository;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.*;
 
 @UtilityClass
 public class AnalysisUtils {
+
+    // ==================================================
+    // Saving data in batches
+    // ==================================================
 
     public static final int DEFAULT_SAVE_BATCH_SIZE = 500;
 
@@ -42,6 +50,27 @@ public class AnalysisUtils {
         List<T> list = new ArrayList<>();
         data.forEach(list::add);
         return list;
+    }
+
+    // ==================================================
+    // Extracting file names from git repository
+    // ==================================================
+
+    public static Set<String> getFileNames(Path repositoryPath) {
+        Set<String> existingFiles = new HashSet<>();
+
+        try (Git git = Git.open(repositoryPath.toFile())) {
+            Repository repository = git.getRepository();
+            DirCache dirCache = repository.readDirCache();
+
+            for (int i = 0; i < dirCache.getEntryCount(); i++) {
+                DirCacheEntry entry = dirCache.getEntry(i);
+                existingFiles.add(entry.getPathString());
+            }
+
+        } catch (IOException _) { }
+
+        return existingFiles;
     }
 
 }
