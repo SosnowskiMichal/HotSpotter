@@ -1,7 +1,7 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.fileinfo;
+package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo;
 
 import lombok.Getter;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.fileinfo.model.FileInfo;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 
 import java.nio.file.Path;
 import java.time.LocalDate;

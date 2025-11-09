@@ -1,11 +1,11 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge;
+package pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.AuthorContribution;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.FileKnowledge;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.AuthorContribution;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;

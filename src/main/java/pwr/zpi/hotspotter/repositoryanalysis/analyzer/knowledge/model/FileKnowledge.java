@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model;
+package pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

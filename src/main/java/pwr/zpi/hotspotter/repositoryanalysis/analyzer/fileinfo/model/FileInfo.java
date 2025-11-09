@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.fileinfo.model;
+package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
