@@ -16,16 +16,14 @@ import java.util.stream.Stream;
 @Slf4j
 @Service
 public class JavaProjectCompiler {
-    public boolean isJavaProject(String projectPathStr) {
-        Path projectPath = Paths.get(projectPathStr).toAbsolutePath();
+    public boolean isJavaProject(Path projectPath) {
         return Files.exists(projectPath.resolve("pom.xml"))
                 || Files.exists(projectPath.resolve("build.gradle"))
                 || Files.exists(projectPath.resolve("build.gradle.kts"))
                 || Files.exists(projectPath.resolve("src/main/java"));
     }
 
-    public List<String> compileJavaProject(String projectPathStr) throws Exception {
-        Path projectPath = Paths.get(projectPathStr).toAbsolutePath();
+    public List<String> compileJavaProject(Path projectPath) throws Exception {
         log.info("Starting compilation for project: {}", projectPath);
 
         if (!Files.exists(projectPath)) {
