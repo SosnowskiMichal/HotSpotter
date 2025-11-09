@@ -20,10 +20,13 @@ import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
+import pwr.zpi.hotspotter.sonar.service.SonarService;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -36,6 +39,7 @@ public class RepositoryAnalysisService {
     private final LogExtractor logExtractor;
     private final LogParser logParser;
     private final RepositoryAnalysisSsePublisher sse;
+    private final SonarService sonarService;
 
     // Inject all analyzers here
     private final KnowledgeAnalyzer knowledgeAnalyzer;
@@ -57,6 +61,8 @@ public class RepositoryAnalysisService {
             sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.PROCESSING_DATA);
             logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
             Stream<Commit> commits = logParser.parseLogs(logFilePath);
+            CompletableFuture<SonarRepoAnalysisResult> sonarAnalysisFuture =
+                    sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
 
             sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.ANALYZING);
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
@@ -79,6 +85,11 @@ public class RepositoryAnalysisService {
             sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.FINALIZING);
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
+            try {
+                sonarAnalysisFuture.get();
+            } catch (Exception e) {
+                log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
+            }
 
             long analysisEndTime = System.currentTimeMillis();
             long analysisDurationSeconds = (analysisEndTime - analysisStartTime) / 1000;

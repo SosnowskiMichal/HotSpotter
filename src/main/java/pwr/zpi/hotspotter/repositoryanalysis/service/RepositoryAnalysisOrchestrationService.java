@@ -23,7 +23,7 @@ public class RepositoryAnalysisOrchestrationService {
     private final RepositoryAnalysisService repositoryAnalysisService;
     private final RepositoryAnalysisSsePublisher sse;
 
-    @Async("sonarQubeAnalysisExecutor")
+    @Async("repoAnalysisExecutor")
     public void startAsyncAnalysis(String repoUrl, LocalDate start, LocalDate end, SseEmitter emitter) {
         try {
             sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.INITIALIZING);
