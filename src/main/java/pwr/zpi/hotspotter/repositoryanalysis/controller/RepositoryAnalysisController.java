@@ -4,8 +4,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -21,8 +22,8 @@ public class RepositoryAnalysisController {
 
     private final RepositoryAnalysisOrchestrationService repositoryAnalysisOrchestrationService;
 
-    @PostMapping
-    public SseEmitter analyzeRepository(@Valid @RequestBody AnalysisRequest request) {
+    @GetMapping
+    public SseEmitter analyzeRepository(@Valid @ModelAttribute AnalysisRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
         repositoryAnalysisOrchestrationService.startAsyncAnalysis(
                 request.repositoryUrl(), request.startDate(), request.endDate(), emitter);
@@ -33,7 +34,9 @@ public class RepositoryAnalysisController {
     public record AnalysisRequest(
             @NotBlank(message = "Repository URL is required")
             String repositoryUrl,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate startDate,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate endDate
     ) { }
 
