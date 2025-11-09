@@ -3,8 +3,9 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.FileKnowledge;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.AuthorContribution;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
@@ -27,9 +28,9 @@ public class AuthorsAnalyzer {
     private final AuthorStatisticsRepository authorStatisticsRepository;
     private final FileKnowledgeRepository fileKnowledgeRepository;
 
-    public AuthorsAnalyzerContext startAnalysis(String analysisId) {
+    public AuthorsAnalyzerContext startAnalysis(String analysisId, LocalDate referenceDate) {
         log.debug("Starting authors analysis for ID {}", analysisId);
-        return new AuthorsAnalyzerContext(analysisId);
+        return new AuthorsAnalyzerContext(analysisId, referenceDate);
     }
 
     public void processCommit(Commit commit, AuthorsAnalyzerContext context) {
@@ -54,7 +55,7 @@ public class AuthorsAnalyzer {
 
         Collection<AuthorStatistics> authorStatistics = context.getAuthorStatistics().values();
         authorStatistics.forEach(stats -> {
-            calculateInactivityTime(stats);
+            calculateInactivityTime(stats, context.getReferenceDate());
             checkIfInactive(stats);
         });
 
@@ -79,6 +80,14 @@ public class AuthorsAnalyzer {
                     stats.incrementFilesAsLeadAuthor();
                 }
             }
+
+            for (AuthorContribution contribution : fileKnowledge.getAuthorContributions()) {
+                String name = contribution.getName();
+                AuthorStatistics stats = context.getAuthorStatistics().get(name);
+                if (stats != null) {
+                    stats.incrementExistingFilesModified();
+                }
+            }
         }
 
         try {
@@ -88,12 +97,11 @@ public class AuthorsAnalyzer {
         }
     }
 
-    private void calculateInactivityTime(AuthorStatistics authorStatistics) {
+    private void calculateInactivityTime(AuthorStatistics authorStatistics, LocalDate referenceDate) {
         LocalDate lastCommitDate = authorStatistics.getLastCommitDate();
-        LocalDate currentDate = LocalDate.now();
 
-        int daysSinceLastCommit = (int) ChronoUnit.DAYS.between(lastCommitDate, currentDate);
-        int monthsSinceLastCommit = (int) ChronoUnit.MONTHS.between(lastCommitDate, currentDate);
+        int daysSinceLastCommit = (int) ChronoUnit.DAYS.between(lastCommitDate, referenceDate);
+        int monthsSinceLastCommit = (int) ChronoUnit.MONTHS.between(lastCommitDate, referenceDate);
 
         authorStatistics.setDaysSinceLastCommit(daysSinceLastCommit);
         authorStatistics.setMonthsSinceLastCommit(monthsSinceLastCommit);

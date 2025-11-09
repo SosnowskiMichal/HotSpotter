@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model;
+package pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

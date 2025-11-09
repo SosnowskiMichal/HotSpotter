@@ -1,7 +1,7 @@
-package pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge;
+package pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge;
 
 import lombok.Getter;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.model.AuthorContribution;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.AuthorContribution;
 
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -27,6 +27,7 @@ public class KnowledgeAnalyzerContext {
                     if (contribution == null) {
                         contribution = new AuthorContribution(name);
                     }
+
                     contribution.increaseLinesAdded(linesAdded);
                     contribution.incrementCommits();
                     return contribution;

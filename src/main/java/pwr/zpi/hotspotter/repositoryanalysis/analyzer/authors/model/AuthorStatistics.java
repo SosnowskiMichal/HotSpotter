@@ -60,9 +60,8 @@ public class AuthorStatistics {
     @Builder.Default
     private Integer totalLinesDeleted = 0;
 
-    // TODO: Calculate
     @Builder.Default
-    private Integer uniqueModifiedFiles = 0;
+    private Integer existingFilesModified = 0;
 
     @Builder.Default
     private Integer filesAsLeadAuthor = 0;
@@ -81,6 +80,10 @@ public class AuthorStatistics {
 
     public void increaseLinesDeleted(int lines) {
         this.totalLinesDeleted += lines;
+    }
+
+    public void incrementExistingFilesModified() {
+        this.existingFilesModified++;
     }
 
     public void incrementFilesAsLeadAuthor() {

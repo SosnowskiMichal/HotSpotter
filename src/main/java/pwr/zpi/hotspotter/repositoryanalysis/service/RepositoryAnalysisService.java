@@ -3,8 +3,10 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.KnowledgeAnalyzer;
-import pwr.zpi.hotspotter.fileanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzer;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
@@ -20,7 +22,6 @@ import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementServi
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -32,11 +33,11 @@ public class RepositoryAnalysisService {
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
     private final LogParser logParser;
-    private final ExecutorService executorService;
 
     // Inject all analyzers here
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
+    private final FileInfoAnalyzer fileInfoAnalyzer;
 
     public String runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate) {
         long analysisStartTime = System.currentTimeMillis();
@@ -54,25 +55,23 @@ public class RepositoryAnalysisService {
             Stream<Commit> commits = logParser.parseLogs(logFilePath);
 
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
-            AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId);
+            AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
+            FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
 
             try (commits) {
                 commits.forEach(commit -> {
                     knowledgeAnalyzer.processCommit(commit, knowledgeContext);
                     authorsAnalyzer.processCommit(commit, authorsContext);
+                    fileInfoAnalyzer.processCommit(commit, fileInfoContext);
                 });
             }
 
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
+            fileInfoAnalyzer.finishAnalysis(fileInfoContext);
 
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
-
-//            CompletableFuture.allOf(
-//                    CompletableFuture.runAsync(() -> analyzer1.analyze(repositoryPath, analysisId), executorService),
-//                    CompletableFuture.runAsync(() -> analyzer2.analyze(repositoryPath, analysisId), executorService)
-//            ).join();
 
             long analysisEndTime = System.currentTimeMillis();
             long analysisDurationSeconds = (analysisEndTime - analysisStartTime) / 1000;
