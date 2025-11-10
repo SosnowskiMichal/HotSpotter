@@ -14,6 +14,8 @@ public class SonarRepoAnalysisResult {
     @Id
     private String id;
     @NonNull
+    private String repoAnalysisId;
+    @NonNull
     private String projectKey;
     private String projectName;
     private LocalDateTime analysisDate;

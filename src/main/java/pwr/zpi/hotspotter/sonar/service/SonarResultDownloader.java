@@ -13,7 +13,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
-import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -28,11 +27,10 @@ public class SonarResultDownloader {
     private final static String REPO_ANALYSIS_METRICS = "bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,complexity";
 
     private final RestTemplate restTemplate;
-    private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
     private final SonarProperties sonarProperties;
 
 
-    public SonarRepoAnalysisResult fetchAndSaveAnalysisResults(String projectKey) {
+    public SonarRepoAnalysisResult fetchAnalysisResults(String repoAnalysisId, String projectKey) {
         try {
             log.info("Fetching analysis results for project: {}", projectKey);
 
@@ -42,11 +40,7 @@ public class SonarResultDownloader {
                 return null;
             }
 
-            SonarRepoAnalysisResult result = mapToAnalysisResult(projectKey, componentTree);
-            sonarRepoAnalysisRepository.save(result);
-
-            log.info("Successfully saved analysis results for project: {}", projectKey);
-            return result;
+            return mapToAnalysisResult(repoAnalysisId, projectKey, componentTree);
 
         } catch (Exception e) {
             log.error("Error fetching/saving analysis results for {}: {}", projectKey, e.getMessage(), e);
@@ -60,24 +54,62 @@ public class SonarResultDownloader {
             headers.set("Authorization", "Bearer " + sonarProperties.getToken());
             HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            URI uri = UriComponentsBuilder
-                    .fromUriString(sonarProperties.getHostUrl())
-                    .path("/api/measures/component_tree")
-                    .queryParam("component", projectKey)
-                    .queryParam("metricKeys", REPO_ANALYSIS_METRICS)
-                    .queryParam("ps", "500")
-                    .build()
-                    .encode()
-                    .toUri();
+            final int pageSize = 500;
+            int page = 1;
+            List<Map<String, Object>> allComponents = new java.util.ArrayList<>();
+            Map<String, Object> baseComponent = null;
+            Integer total = null;
 
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    uri,
-                    HttpMethod.GET,
-                    entity,
-                    Map.class
-            );
+            while (true) {
+                URI uri = UriComponentsBuilder
+                        .fromUriString(sonarProperties.getHostUrl())
+                        .path("/api/measures/component_tree")
+                        .queryParam("component", projectKey)
+                        .queryParam("metricKeys", REPO_ANALYSIS_METRICS)
+                        .queryParam("ps", pageSize)
+                        .queryParam("p", page)
+                        .build()
+                        .encode()
+                        .toUri();
 
-            return response.getBody();
+                ResponseEntity<Map> response = restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
+                Map<String, Object> body = response.getBody();
+                if (body == null) break;
+
+                if (baseComponent == null && body.get("baseComponent") != null) {
+                    baseComponent = (Map<String, Object>) body.get("baseComponent");
+                }
+
+                List<Map<String, Object>> components = (List<Map<String, Object>>) body.get("components");
+                if (components != null && !components.isEmpty()) {
+                    allComponents.addAll(components);
+                }
+
+                if (total == null) {
+                    Map<String, Object> paging = (Map<String, Object>) body.get("paging");
+                    if (paging != null && paging.get("total") != null) {
+                        try {
+                            total = Integer.parseInt(String.valueOf(paging.get("total")));
+                        } catch (Exception ignored) { }
+                    }
+                }
+
+                if (components == null || components.size() < pageSize) break;
+                if (total != null && allComponents.size() >= total) break;
+
+                page++;
+            }
+
+            Map<String, Object> combined = new java.util.HashMap<>();
+            if (baseComponent != null) combined.put("baseComponent", baseComponent);
+            combined.put("components", allComponents);
+            if (total != null) {
+                Map<String, Object> pagingMap = new java.util.HashMap<>();
+                pagingMap.put("total", total);
+                combined.put("paging", pagingMap);
+            }
+
+            return combined;
 
         } catch (Exception e) {
             log.error("Error fetching component tree: {}", e.getMessage(), e);
@@ -85,8 +117,9 @@ public class SonarResultDownloader {
         }
     }
 
-    private SonarRepoAnalysisResult mapToAnalysisResult(String projectKey, Map<String, Object> data) {
-        SonarRepoAnalysisResult result = new SonarRepoAnalysisResult(projectKey);
+
+    private SonarRepoAnalysisResult mapToAnalysisResult(String repoAnalysisId, String projectKey, Map<String, Object> data) {
+        SonarRepoAnalysisResult result = new SonarRepoAnalysisResult(repoAnalysisId, projectKey);
         result.setProjectKey(projectKey);
         result.setAnalysisDate(LocalDateTime.now());
 

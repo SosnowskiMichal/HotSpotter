@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface SonarAnalysisStatusRepository extends MongoRepository<SonarAnalysisStatus, String> {
     Optional<SonarAnalysisStatus> findFirstByProjectKeyOrderByStartTimeDesc(String projectKey);
+    Optional<SonarAnalysisStatus> findByRepoAnalysisId(String repoAnalysisId);
 }

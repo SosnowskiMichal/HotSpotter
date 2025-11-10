@@ -10,42 +10,52 @@ import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
+import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
+
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SonarAnalysisExecutor {
     private final static int MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS = 10000;
+    private final static int MAX_DOWNLOAD_ATTEMPTS = 15;
+    private final static int DELAY_BETWEEN_DOWNLOAD_ATTEMPTS_MS = 10000;
 
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
     private final SonarResultDownloader sonarResultDownloader;
     private final JavaProjectCompiler javaProjectCompiler;
     private final SonarProperties sonarProperties;
+    private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
 
 
-    @Async("sonarQubeAnalysisExecutor")
-    public void runAnalysisAsync(String analysisId, String projectPath, String projectKey, String projectName) {
-        SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(analysisId).orElseThrow(() ->
-                new ObjectNotFoundException("SonarQube analysis status not found for ID: " + analysisId));
+    @Async("repoAnalysisExecutor")
+    public CompletableFuture<SonarRepoAnalysisResult> runAnalysisAsync(String repoAnalysisId, String sonarAnalysisId, Path projectPath, String projectKey, String projectName) {
+        SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(sonarAnalysisId).orElseThrow(() ->
+                new ObjectNotFoundException("SonarQube analysis status not found for ID: " + sonarAnalysisId));
+
+        SonarRepoAnalysisResult sonarRepoAnalysisResult = null;
 
         try {
             status.setStatus(SonarAnalysisState.RUNNING);
             status.setMessage("SonarQube analysis is running.");
+            log.info("SonarQube analysis is running.");
             sonarAnalysisStatusRepository.save(status);
 
             boolean success = executeSonarScanner(projectPath, projectKey, projectName);
 
             if (success) {
                 Thread.sleep(MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS);
-                SonarRepoAnalysisResult saveResult = saveResults(status.getProjectKey());
-                if (saveResult == null) {
+                sonarRepoAnalysisResult = getAndSaveResults(repoAnalysisId, status.getProjectKey());
+                if (sonarRepoAnalysisResult == null) {
                     throw new RuntimeException("Failed to fetch/save analysis results for project: " + status.getProjectKey());
                 }
 
-                status.setRepoAnalysisId(saveResult.getId());
+                sonarRepoAnalysisResult.setRepoAnalysisId(repoAnalysisId);
                 status.setStatus(SonarAnalysisState.SUCCESS);
                 status.setMessage("SonarQube analysis completed successfully.");
             } else {
@@ -60,9 +70,11 @@ public class SonarAnalysisExecutor {
             status.setEndTime(System.currentTimeMillis());
             sonarAnalysisStatusRepository.save(status);
         }
+
+        return CompletableFuture.completedFuture(sonarRepoAnalysisResult);
     }
 
-    private boolean executeSonarScanner(String projectPath, String projectKey, String projectName) {
+    private boolean executeSonarScanner(Path projectPath, String projectKey, String projectName) {
         try {
             List<String> command = new ArrayList<>();
             command.add(sonarProperties.getScannerPath());
@@ -79,7 +91,7 @@ public class SonarAnalysisExecutor {
             }
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.directory(new File(projectPath));
+            processBuilder.directory(new File(projectPath.toString()));
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
@@ -93,7 +105,30 @@ public class SonarAnalysisExecutor {
         }
     }
 
-    private SonarRepoAnalysisResult saveResults(String projectKey) {
-        return sonarResultDownloader.fetchAndSaveAnalysisResults(projectKey);
+    private SonarRepoAnalysisResult getAndSaveResults(String repoAnalysisId, String projectKey) {
+        int attempts = 0;
+        while (attempts < MAX_DOWNLOAD_ATTEMPTS) {
+            SonarRepoAnalysisResult result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
+
+            if (result != null && result.getComponents() != null && !result.getComponents().isEmpty()) {
+                log.info("Successfully saved analysis results for project: {}", projectKey);
+                sonarRepoAnalysisRepository.save(result);
+                return result;
+            }
+
+            log.info("Failed to fetch analysis results for project: {}", projectKey);
+            attempts++;
+
+            try {
+                Thread.sleep(DELAY_BETWEEN_DOWNLOAD_ATTEMPTS_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Interrupted while waiting to retry fetching analysis results: {}", e.getMessage(), e);
+                break;
+            }
+        }
+
+        log.error("Failed to fetch analysis results for project {} after {} attempts", projectKey, MAX_DOWNLOAD_ATTEMPTS);
+        return null;
     }
 }

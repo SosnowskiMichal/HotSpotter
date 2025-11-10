@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class SonarAnalysisStatus {
     @Id
     private String id;
+    @NonNull
     private String repoAnalysisId;
     @NonNull
     private String projectKey;
@@ -19,7 +20,8 @@ public class SonarAnalysisStatus {
     private long startTime;
     private long endTime;
 
-    public SonarAnalysisStatus(@NonNull String projectKey, @NonNull SonarAnalysisState status, String message) {
+    public SonarAnalysisStatus(@NonNull String repoAnalysisId, @NonNull String projectKey, @NonNull SonarAnalysisState status, String message) {
+        this.repoAnalysisId = repoAnalysisId;
         this.projectKey = projectKey;
         this.status = status;
         this.message = message;

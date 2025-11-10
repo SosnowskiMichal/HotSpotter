@@ -14,6 +14,7 @@ import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -29,14 +30,14 @@ public class SonarService {
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
 
 
-    public SonarAnalysisStatus getSonarAnalysisStatus(String statusId) {
-        return sonarAnalysisStatusRepository.findById(statusId).orElseThrow(() ->
-                new ObjectNotFoundException("SonarQube analysis status not found for ID: " + statusId));
+    public SonarAnalysisStatus getSonarAnalysisStatus(String repoAnalysisId) {
+        return sonarAnalysisStatusRepository.findByRepoAnalysisId(repoAnalysisId).orElseThrow(() ->
+                new ObjectNotFoundException("SonarQube analysis status not found for ID: " + repoAnalysisId));
     }
 
-    public SonarRepoAnalysisResult getSonarRepoAnalysisResult(String analysisId) {
-        return sonarRepoAnalysisRepository.findById(analysisId).orElseThrow(() ->
-                new ObjectNotFoundException("SonarQube analysis result not found for ID: " + analysisId));
+    public SonarRepoAnalysisResult getSonarRepoAnalysisResult(String repoAnalysisId) {
+        return sonarRepoAnalysisRepository.findByRepoAnalysisId(repoAnalysisId).orElseThrow(() ->
+                new ObjectNotFoundException("SonarQube analysis result not found for ID: " + repoAnalysisId));
     }
 
     @Synchronized
@@ -49,26 +50,23 @@ public class SonarService {
         }
     }
 
-    public SonarAnalysisStatus startAnalysis(String projectPath, String projectKey, String projectName) {
+    public CompletableFuture<SonarRepoAnalysisResult> runAnalysis(String repoAnalysisId, Path projectPath, String projectKey, String projectName) {
         projectKey = createValidProjectKey(projectKey);
         if (isAnalysisStarted(projectKey)) {
             log.info("Analysis already started for project key: {}", projectKey);
             throw new IllegalStateException("Analysis already started for this project.");
         }
 
-        Path path = Path.of(projectPath);
-        if (!Files.exists(path) || !Files.isDirectory(path)) {
+        if (!Files.exists(projectPath) || !Files.isDirectory(projectPath)) {
             log.error("Project path does not exist or is not a directory: {}", projectPath);
             throw new ObjectNotFoundException("Project path does not exist or is not a directory");
         }
 
         if (prepareConnection()) {
-            SonarAnalysisStatus status = new SonarAnalysisStatus(projectKey, SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
+            SonarAnalysisStatus status = new SonarAnalysisStatus(repoAnalysisId, projectKey, SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
             sonarAnalysisStatusRepository.save(status);
 
-            sonarAnalysisExecutor.runAnalysisAsync(status.getId(), projectPath, status.getProjectKey(), projectName);
-
-            return status;
+            return sonarAnalysisExecutor.runAnalysisAsync(repoAnalysisId, status.getId(), projectPath, status.getProjectKey(), projectName);
         } else {
             log.error("Failed to prepare SonarQube connection. Analysis not started.");
             return null;
