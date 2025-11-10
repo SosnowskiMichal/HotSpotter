@@ -52,12 +52,10 @@ public class AnalysisInfo {
     }
 
     public enum AnalysisSseStatus {
-        INITIALIZING,
+        DOWNLOADING,
         PROCESSING_DATA,
         ANALYZING,
-        GENERATING_RESULTS,
-        FINALIZING,
-        COMPLETED
+        SONAR
     }
 
     public void markAsCompleted() {

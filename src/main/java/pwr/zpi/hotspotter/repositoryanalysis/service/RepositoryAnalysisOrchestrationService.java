@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
-import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
@@ -26,8 +25,6 @@ public class RepositoryAnalysisOrchestrationService {
     @Async("repoAnalysisExecutor")
     public void startAsyncAnalysis(String repoUrl, LocalDate start, LocalDate end, SseEmitter emitter) {
         try {
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.INITIALIZING);
-
             repositoryAnalysisService.runRepositoryAnalysis(
                     repoUrl, start, end, emitter
             );

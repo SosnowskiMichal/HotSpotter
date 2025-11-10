@@ -49,6 +49,7 @@ public class RepositoryAnalysisService {
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         long analysisStartTime = System.currentTimeMillis();
 
+        sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.DOWNLOADING);
         RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
@@ -77,14 +78,14 @@ public class RepositoryAnalysisService {
                 });
             }
 
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.GENERATING_RESULTS);
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
             fileInfoAnalyzer.finishAnalysis(fileInfoContext);
 
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.FINALIZING);
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
+
+            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {
@@ -96,7 +97,6 @@ public class RepositoryAnalysisService {
 
             analysisInfo.setAnalysisTimeInSeconds(analysisDurationSeconds);
             analysisInfo.markAsCompleted();
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.COMPLETED);
             analysisInfoRepository.save(analysisInfo);
 
             log.info("Analysis completed for repository {} in {} seconds, ID: {}",
