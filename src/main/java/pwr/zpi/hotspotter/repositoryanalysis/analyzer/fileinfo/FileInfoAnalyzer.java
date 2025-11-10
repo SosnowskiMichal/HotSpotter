@@ -2,6 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
@@ -61,6 +62,7 @@ public class FileInfoAnalyzer {
                 .toList();
 
         fileInfosFiltered.forEach(fileInfo -> {
+            calculateFileSize(fileInfo, context.getRepositoryPath());
             calculateCodeAge(fileInfo, context.getReferenceDate());
             addLinesData(fileInfo, fileLinesData);
         });
@@ -125,6 +127,13 @@ public class FileInfoAnalyzer {
         }
 
         return fileLinesData;
+    }
+
+    private void calculateFileSize(FileInfo fileInfo, Path repositoryPath) {
+        Path filePath = repositoryPath.resolve(fileInfo.getFilePath());
+        long fileSizeInBytes = FileUtils.sizeOf(filePath.toFile());
+        String fileSizeStr = FileUtils.byteCountToDisplaySize(fileSizeInBytes);
+        fileInfo.setFileSize(fileSizeStr);
     }
 
     private void calculateCodeAge(FileInfo fileInfo, LocalDate referenceDate) {

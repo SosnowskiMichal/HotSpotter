@@ -1,6 +1,7 @@
 package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,7 +29,12 @@ public class FileInfo {
     @NotBlank(message = "File path is required")
     private String filePath;
 
+    @NotBlank(message = "File name is required")
+    private String fileName;
+
     private String fileType;
+
+    private String fileSize;
 
     private Integer totalLines;
 
@@ -42,7 +48,15 @@ public class FileInfo {
     private Integer commitsLastMonth = 0;
 
     @Builder.Default
+    private Integer commitsInHotSpotAnalysisPeriod = 0;
+
+    @Builder.Default
     private Integer commitsLastYear = 0;
+
+    @Builder.Default
+    private Integer totalCommits = 0;
+
+    private LocalDate firstCommitDate;
 
     private LocalDate lastCommitDate;
 
@@ -50,12 +64,20 @@ public class FileInfo {
 
     private Integer codeAgeMonths;
 
+    public void incrementCommitsInHotSpotAnalysisPeriod() {
+        commitsInHotSpotAnalysisPeriod++;
+    }
+
     public void incrementCommitsLastMonth() {
         commitsLastMonth++;
     }
 
     public void incrementCommitsLastYear() {
         commitsLastYear++;
+    }
+
+    public void incrementTotalCommits() {
+        totalCommits++;
     }
 
 }
