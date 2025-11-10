@@ -4,6 +4,8 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import pwr.zpi.hotspotter.user.model.analysispreferences.UserAnalysisPreferences;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -21,10 +23,13 @@ public class User {
     private Role role = Role.USER;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private UserAnalysisPreferences analysisPreferences;
 
     public User() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        this.analysisPreferences = new UserAnalysisPreferences();
     }
 
     public enum AuthProvider {
