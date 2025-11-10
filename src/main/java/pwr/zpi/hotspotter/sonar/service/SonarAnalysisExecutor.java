@@ -33,7 +33,7 @@ public class SonarAnalysisExecutor {
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
 
 
-    @Async("repoAnalysisExecutor")
+    @Async("sonarExecutor")
     public CompletableFuture<SonarRepoAnalysisResult> runAnalysisAsync(String repoAnalysisId, String sonarAnalysisId, Path projectPath, String projectKey, String projectName) {
         SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(sonarAnalysisId).orElseThrow(() ->
                 new ObjectNotFoundException("SonarQube analysis status not found for ID: " + sonarAnalysisId));
