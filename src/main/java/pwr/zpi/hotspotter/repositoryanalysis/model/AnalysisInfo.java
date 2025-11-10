@@ -51,13 +51,6 @@ public class AnalysisInfo {
         FAILED
     }
 
-    public enum AnalysisSseStatus {
-        DOWNLOADING,
-        PROCESSING_DATA,
-        ANALYZING,
-        SONAR
-    }
-
     public void markAsCompleted() {
         this.status = AnalysisStatus.COMPLETED;
     }

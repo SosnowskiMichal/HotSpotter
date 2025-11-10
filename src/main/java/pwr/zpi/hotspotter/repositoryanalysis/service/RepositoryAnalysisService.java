@@ -38,7 +38,7 @@ public class RepositoryAnalysisService {
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
     private final LogParser logParser;
-    private final RepositoryAnalysisSsePublisher sse;
+    private final RepositoryAnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
 
     // Inject all analyzers here
@@ -49,7 +49,7 @@ public class RepositoryAnalysisService {
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         long analysisStartTime = System.currentTimeMillis();
 
-        sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.DOWNLOADING);
+        ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
         RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
@@ -59,13 +59,14 @@ public class RepositoryAnalysisService {
 
         Path logFilePath = null;
         try {
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.PROCESSING_DATA);
-            logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
-            Stream<Commit> commits = logParser.parseLogs(logFilePath);
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
             CompletableFuture<SonarRepoAnalysisResult> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
 
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.ANALYZING);
+            logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
+            Stream<Commit> commits = logParser.parseLogs(logFilePath);
+
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
@@ -85,7 +86,7 @@ public class RepositoryAnalysisService {
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
 
-            sse.sendProgress(emitter, AnalysisInfo.AnalysisSseStatus.SONAR);
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {
@@ -101,19 +102,19 @@ public class RepositoryAnalysisService {
 
             log.info("Analysis completed for repository {} in {} seconds, ID: {}",
                     repositoryUrl, analysisDurationSeconds, analysisId);
-            sse.sendComplete(emitter, analysisId);
+            ssePublisher.sendComplete(emitter, analysisId);
 
         } catch (LogProcessingException e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
-            sse.sendError(emitter, e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
             throw e;
 
         } catch (Exception e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
             log.error("Unexpected error during analysis for repository {}: {}", repositoryUrl, e.getMessage(), e);
-            sse.sendError(emitter, e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
             throw new AnalysisException("Analysis failed: " + e.getMessage());
 
         } finally {
@@ -133,6 +134,13 @@ public class RepositoryAnalysisService {
                 .startDate(startDate)
                 .endDate(endDate)
                 .build();
+    }
+
+    public enum AnalysisSseStatus {
+        DOWNLOADING,
+        PROCESSING_DATA,
+        ANALYZING,
+        SONAR
     }
 
 }

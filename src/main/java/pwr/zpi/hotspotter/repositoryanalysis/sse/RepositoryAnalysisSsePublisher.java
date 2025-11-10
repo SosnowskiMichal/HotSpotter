@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.sse;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
+import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -11,12 +11,12 @@ import java.util.Map;
 @Component
 public class RepositoryAnalysisSsePublisher {
 
-    public void sendProgress(SseEmitter emitter, AnalysisInfo.AnalysisSseStatus status) {
+    public void sendProgress(SseEmitter emitter, RepositoryAnalysisService.AnalysisSseStatus status) {
         try {
             emitter.send(SseEmitter.event()
                     .name("progress")
                     .data(Map.of("status", status)));
-        } catch (IOException ignored) {}
+        } catch (IOException _) {}
     }
 
     public void sendComplete(SseEmitter emitter, String analysisId) {
@@ -28,7 +28,7 @@ public class RepositoryAnalysisSsePublisher {
                             "data", analysisId,
                             "timestamp", Instant.now().toString()
                     )));
-        } catch (IOException ignored) {}
+        } catch (IOException _) {}
     }
 
     public void sendError(SseEmitter emitter, String message) {
@@ -36,6 +36,7 @@ public class RepositoryAnalysisSsePublisher {
             emitter.send(SseEmitter.event()
                     .name("error")
                     .data(Map.of("message", message)));
-        } catch (IOException ignored) {}
+        } catch (IOException _) {}
     }
+
 }

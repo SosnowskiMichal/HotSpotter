@@ -25,9 +25,7 @@ public class RepositoryAnalysisOrchestrationService {
     @Async("repoAnalysisExecutor")
     public void startAsyncAnalysis(String repoUrl, LocalDate start, LocalDate end, SseEmitter emitter) {
         try {
-            repositoryAnalysisService.runRepositoryAnalysis(
-                    repoUrl, start, end, emitter
-            );
+            repositoryAnalysisService.runRepositoryAnalysis(repoUrl, start, end, emitter);
 
         } catch (InvalidRepositoryUrlException e) {
             log.warn("Invalid repository URL {}: {}", repoUrl, e.getMessage());
@@ -52,4 +50,5 @@ public class RepositoryAnalysisOrchestrationService {
             emitter.complete();
         }
     }
+
 }
