@@ -14,6 +14,8 @@ import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -77,10 +79,19 @@ public class SonarService {
         SonarAnalysisStatus status = sonarAnalysisStatusRepository
                 .findFirstByProjectKeyOrderByStartTimeDesc(projectKey)
                 .orElse(null);
-        return status != null && ((status.getStatus() == SonarAnalysisState.PENDING
-                && System.currentTimeMillis() - status.getStartTime() < PENDING_ANALYSIS_TIMEOUT_MS)
-                || (status.getStatus() == SonarAnalysisState.RUNNING
-                && System.currentTimeMillis() - status.getStartTime() < RUNNING_ANALYSIS_TIMEOUT_MS));
+        if (status == null) {
+            return false;
+        }
+
+        LocalDateTime start = status.getStartTime();
+        if (start == null) {
+            return false;
+        }
+
+        long elapsedMs = Duration.between(start, LocalDateTime.now()).toMillis();
+
+        return (status.getStatus() == SonarAnalysisState.PENDING && elapsedMs < PENDING_ANALYSIS_TIMEOUT_MS)
+                || (status.getStatus() == SonarAnalysisState.RUNNING && elapsedMs < RUNNING_ANALYSIS_TIMEOUT_MS);
     }
 
     private boolean setNewSonarToken() {

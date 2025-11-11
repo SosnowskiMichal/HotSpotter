@@ -14,6 +14,7 @@ import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -58,16 +59,19 @@ public class SonarAnalysisExecutor {
                 sonarRepoAnalysisResult.setRepoAnalysisId(repoAnalysisId);
                 status.setStatus(SonarAnalysisState.SUCCESS);
                 status.setMessage("SonarQube analysis completed successfully.");
+                log.info("SonarQube analysis completed successfully for project: {}", status.getProjectKey());
             } else {
                 status.setStatus(SonarAnalysisState.FAILED);
                 status.setMessage("Error executing SonarQube scanner.");
+                log.error("Error executing SonarQube scanner for project: {}", status.getProjectKey());
             }
 
         } catch (Exception e) {
             status.setStatus(SonarAnalysisState.FAILED);
             status.setMessage("Error during analysis: " + e.getMessage());
+            log.error("Error during SonarQube analysis for project {}: {}", status.getProjectKey(), e.getMessage(), e);
         } finally {
-            status.setEndTime(System.currentTimeMillis());
+            status.setEndTime(LocalDateTime.now());
             sonarAnalysisStatusRepository.save(status);
         }
 
@@ -97,7 +101,12 @@ public class SonarAnalysisExecutor {
             Process process = processBuilder.start();
 
             int exitCode = process.waitFor();
-            return exitCode == 0;
+            boolean success = exitCode == 0;
+            if (!success) {
+                log.error("SonarQube scanner exited with code: {}", exitCode);
+            }
+
+            return success;
 
         } catch (Exception e) {
             log.error("Error executing SonarQube scanner: {}", e.getMessage(), e);
