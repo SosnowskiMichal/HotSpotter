@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsAnalyzer;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzer;
@@ -45,6 +47,7 @@ public class RepositoryAnalysisService {
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
     private final FileInfoAnalyzer fileInfoAnalyzer;
+    private final ActivityTrendsAnalyzer activityTrendsAnalyzer;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         long analysisStartTime = System.currentTimeMillis();
@@ -70,18 +73,21 @@ public class RepositoryAnalysisService {
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
+            ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, 180);
 
             try (commits) {
                 commits.forEach(commit -> {
                     knowledgeAnalyzer.processCommit(commit, knowledgeContext);
                     authorsAnalyzer.processCommit(commit, authorsContext);
                     fileInfoAnalyzer.processCommit(commit, fileInfoContext);
+                    activityTrendsAnalyzer.processCommit(commit, activityTrendsContext);
                 });
             }
 
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
             fileInfoAnalyzer.finishAnalysis(fileInfoContext);
+            activityTrendsAnalyzer.finishAnalysis(activityTrendsContext);
 
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
