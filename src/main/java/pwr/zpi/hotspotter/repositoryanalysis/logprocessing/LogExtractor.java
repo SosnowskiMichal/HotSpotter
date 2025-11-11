@@ -6,6 +6,7 @@ import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.config.LogExtractorConfig;
+import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,19 +25,16 @@ public class LogExtractor {
 
     private static final String GIT_LOG_FORMAT = "[%h] %ad%n%an <%ae>";
 
+    private final RepositoryManagementConfig repositoryManagementConfig;
     private final LogExtractorConfig logExtractorConfig;
 
     public Path extractLogs(Path repositoryPath, String analysisId, LocalDate startDate, LocalDate endDate) {
-        Path logFilePath = repositoryPath.resolve(logExtractorConfig.getLogDirectoryName()).resolve(analysisId + ".log");
+        Path baseDirectoryPath = Path.of(repositoryManagementConfig.getBaseDirectory());
+        Path logDirectoryPath = baseDirectoryPath.resolve(logExtractorConfig.getLogDirectoryName());
+        Path logFilePath = logDirectoryPath.resolve(analysisId + ".log");
 
-        if (Files.exists(logFilePath)) {
-            log.debug("Log file already exists at {}", logFilePath);
-            return logFilePath;
-        }
-
-        Path logDirPath = repositoryPath.resolve(logExtractorConfig.getLogDirectoryName());
-        if (!createLogDirectory(logDirPath)) {
-            throw new LogProcessingException("Failed to creat log directory.");
+        if (!createLogDirectory(logDirectoryPath)) {
+            throw new LogProcessingException("Failed to create log directory.");
         }
 
         String startDateStr = getDateString(startDate);
