@@ -80,7 +80,7 @@ public class FileInfoAnalyzer {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     "bash", "-c",
-                    "cloc --by-file --unix --csv --quiet --skip-uniqueness ."
+                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 0 ."
             );
             pb.directory(repositoryPath.toFile());
             pb.redirectErrorStream(true);
@@ -100,19 +100,23 @@ public class FileInfoAnalyzer {
                     continue;
                 }
                 if (line.startsWith("SUM,")) {
-                    continue;
+                    while (reader.readLine() != null) { }
+                    break;
                 }
 
                 String[] parts = line.split(",", 5);
                 if (parts.length >= 5) {
-                    String language = parts[0].trim();
-                    String filePath = parts[1].trim().replace("./", "");
-                    int blank = Integer.parseInt(parts[2].trim());
-                    int comment = Integer.parseInt(parts[3].trim());
-                    int code = Integer.parseInt(parts[4].trim());
+                    try {
+                        String language = parts[0].trim();
+                        String filePath = parts[1].trim().replace("./", "");
+                        int blank = Integer.parseInt(parts[2].trim());
+                        int comment = Integer.parseInt(parts[3].trim());
+                        int code = Integer.parseInt(parts[4].trim());
 
-                    FileLinesData data = new FileLinesData(language, code, comment, blank);
-                    fileLinesData.put(filePath, data);
+                        FileLinesData data = new FileLinesData(language, code, comment, blank);
+                        fileLinesData.put(filePath, data);
+
+                    } catch (NumberFormatException _) { }
                 }
             }
 
