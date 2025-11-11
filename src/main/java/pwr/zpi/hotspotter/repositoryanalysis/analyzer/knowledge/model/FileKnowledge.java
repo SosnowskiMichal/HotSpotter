@@ -40,6 +40,8 @@ public class FileKnowledge {
 
     private String leadAuthor;
 
+    private Double leadAuthorKnowledgePercentage;
+
     @NotNull(message = "Number of contributors is required")
     private Integer contributors;
 

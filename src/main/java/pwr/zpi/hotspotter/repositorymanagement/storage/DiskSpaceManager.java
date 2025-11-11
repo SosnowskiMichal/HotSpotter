@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositorymanagement.service.storage;
+package pwr.zpi.hotspotter.repositorymanagement.storage;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;

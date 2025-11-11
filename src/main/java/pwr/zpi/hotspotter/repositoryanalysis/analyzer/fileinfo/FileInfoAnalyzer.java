@@ -2,6 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
@@ -61,6 +62,7 @@ public class FileInfoAnalyzer {
                 .toList();
 
         fileInfosFiltered.forEach(fileInfo -> {
+            calculateFileSize(fileInfo, context.getRepositoryPath());
             calculateCodeAge(fileInfo, context.getReferenceDate());
             addLinesData(fileInfo, fileLinesData);
         });
@@ -78,7 +80,7 @@ public class FileInfoAnalyzer {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     "bash", "-c",
-                    "cloc --by-file --unix --csv --quiet --skip-uniqueness ."
+                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 0 ."
             );
             pb.directory(repositoryPath.toFile());
             pb.redirectErrorStream(true);
@@ -98,19 +100,23 @@ public class FileInfoAnalyzer {
                     continue;
                 }
                 if (line.startsWith("SUM,")) {
-                    continue;
+                    while (reader.readLine() != null) { }
+                    break;
                 }
 
                 String[] parts = line.split(",", 5);
                 if (parts.length >= 5) {
-                    String language = parts[0].trim();
-                    String filePath = parts[1].trim().replace("./", "");
-                    int blank = Integer.parseInt(parts[2].trim());
-                    int comment = Integer.parseInt(parts[3].trim());
-                    int code = Integer.parseInt(parts[4].trim());
+                    try {
+                        String language = parts[0].trim();
+                        String filePath = parts[1].trim().replace("./", "");
+                        int blank = Integer.parseInt(parts[2].trim());
+                        int comment = Integer.parseInt(parts[3].trim());
+                        int code = Integer.parseInt(parts[4].trim());
 
-                    FileLinesData data = new FileLinesData(language, code, comment, blank);
-                    fileLinesData.put(filePath, data);
+                        FileLinesData data = new FileLinesData(language, code, comment, blank);
+                        fileLinesData.put(filePath, data);
+
+                    } catch (NumberFormatException _) { }
                 }
             }
 
@@ -125,6 +131,13 @@ public class FileInfoAnalyzer {
         }
 
         return fileLinesData;
+    }
+
+    private void calculateFileSize(FileInfo fileInfo, Path repositoryPath) {
+        Path filePath = repositoryPath.resolve(fileInfo.getFilePath());
+        long fileSizeInBytes = FileUtils.sizeOf(filePath.toFile());
+        String fileSizeStr = FileUtils.byteCountToDisplaySize(fileSizeInBytes);
+        fileInfo.setFileSize(fileSizeStr);
     }
 
     private void calculateCodeAge(FileInfo fileInfo, LocalDate referenceDate) {

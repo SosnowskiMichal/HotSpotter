@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositorymanagement.service.operation;
+package pwr.zpi.hotspotter.repositorymanagement.operation;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,8 +11,8 @@ import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig
 import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
-import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
-import pwr.zpi.hotspotter.repositorymanagement.service.storage.DiskSpaceManager;
+import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
+import pwr.zpi.hotspotter.repositorymanagement.storage.DiskSpaceManager;
 
 import java.io.File;
 import java.nio.file.Path;

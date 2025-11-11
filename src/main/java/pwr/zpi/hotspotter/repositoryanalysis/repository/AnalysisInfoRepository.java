@@ -11,4 +11,10 @@ public interface AnalysisInfoRepository extends MongoRepository<AnalysisInfo, St
 
     List<AnalysisInfo> findByRepositoryUrl(String repositoryUrl);
 
+    boolean existsByIdAndStatus(String id, AnalysisInfo.AnalysisStatus status);
+
+    default boolean isAnalysisCompleted(String id) {
+        return existsByIdAndStatus(id, AnalysisInfo.AnalysisStatus.COMPLETED);
+    }
+
 }

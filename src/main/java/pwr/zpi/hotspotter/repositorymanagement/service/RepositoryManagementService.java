@@ -7,11 +7,11 @@ import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
-import pwr.zpi.hotspotter.repositorymanagement.service.operation.RepositoryCloner;
-import pwr.zpi.hotspotter.repositorymanagement.service.operation.RepositoryOperationQueue;
-import pwr.zpi.hotspotter.repositorymanagement.service.operation.RepositoryUpdater;
-import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
-import pwr.zpi.hotspotter.repositorymanagement.service.storage.DiskSpaceManager;
+import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;
+import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryOperationQueue;
+import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryUpdater;
+import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
+import pwr.zpi.hotspotter.repositorymanagement.storage.DiskSpaceManager;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

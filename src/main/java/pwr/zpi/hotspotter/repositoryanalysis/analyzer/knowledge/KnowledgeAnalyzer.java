@@ -136,7 +136,9 @@ public class KnowledgeAnalyzer {
                 .sorted(Comparator.comparingDouble(AuthorContribution::getContributionPercentage).reversed())
                 .toList();
 
-        String leadAuthor = determineLeadAuthor(contributions);
+        AuthorContribution leadAuthorContribution = determineLeadAuthorContribution(contributions);
+        String leadAuthorName = leadAuthorContribution != null ? leadAuthorContribution.getName() : null;
+        Double leadAuthorPercentage = leadAuthorContribution != null ? leadAuthorContribution.getContributionPercentage() : null;
 
         return FileKnowledge.builder()
                 .analysisId(analysisId)
@@ -144,12 +146,13 @@ public class KnowledgeAnalyzer {
                 .linesAdded(linesAdded)
                 .commits(commits)
                 .authorContributions(contributions)
-                .leadAuthor(leadAuthor)
+                .leadAuthor(leadAuthorName)
+                .leadAuthorKnowledgePercentage(leadAuthorPercentage)
                 .contributors(contributions.size())
                 .build();
     }
 
-    private String determineLeadAuthor(List<AuthorContribution> contributions) {
+    private AuthorContribution determineLeadAuthorContribution(List<AuthorContribution> contributions) {
         double maxPercentage = contributions.stream()
                 .mapToDouble(AuthorContribution::getContributionPercentage)
                 .max()
@@ -158,7 +161,6 @@ public class KnowledgeAnalyzer {
         return maxPercentage < 1.0 ? null : contributions.stream()
                 .filter(c -> c.getContributionPercentage() == maxPercentage)
                 .max(Comparator.comparingInt(AuthorContribution::getCommits))
-                .map(AuthorContribution::getName)
                 .orElse(null);
     }
 

@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import pwr.zpi.hotspotter.repositorymanagement.service.parser.RepositoryUrlParser;
+import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
 
 import java.time.LocalDateTime;
 

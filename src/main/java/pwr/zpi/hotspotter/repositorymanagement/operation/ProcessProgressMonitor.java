@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositorymanagement.service.operation;
+package pwr.zpi.hotspotter.repositorymanagement.operation;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
