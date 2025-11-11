@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositorymanagement.service.parser;
+package pwr.zpi.hotspotter.repositorymanagement.parser;
 
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
