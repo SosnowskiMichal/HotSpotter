@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.model.repositorystructure.RepositoryStructureResponse;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 
@@ -18,17 +16,13 @@ import java.util.Collection;
 public class RepositoryAnalysisResultsService {
 
     private final AnalysisInfoRepository analysisInfoRepository;
-    private final FileKnowledgeRepository fileKnowledgeRepository;
     private final FileInfoRepository fileInfoRepository;
     private final RepositoryStructureService repositoryStructureService;
 
     public RepositoryStructureResponse getRepositoryStructure(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-
         Collection<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
-        Collection<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
-
-        return repositoryStructureService.buildRepositoryStructure(fileInfoData, fileKnowledgeData);
+        return repositoryStructureService.buildRepositoryStructure(fileInfoData);
     }
 
     private void checkIfAnalysisCompleted(String analysisId) {

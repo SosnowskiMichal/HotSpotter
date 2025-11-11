@@ -3,28 +3,23 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
 import pwr.zpi.hotspotter.repositoryanalysis.model.repositorystructure.RepositoryStructureNode;
 import pwr.zpi.hotspotter.repositoryanalysis.model.repositorystructure.RepositoryStructureResponse;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 public class RepositoryStructureService {
 
-    public RepositoryStructureResponse buildRepositoryStructure(
-            Collection<FileInfo> fileInfoData,
-            Collection<FileKnowledge> fileKnowledgeData) {
-
+    public RepositoryStructureResponse buildRepositoryStructure(Collection<FileInfo> fileInfoData) {
         Map<String, FileInfo> fileInfoMap = fileInfoData.stream()
                 .collect(Collectors.toMap(FileInfo::getFilePath, fi -> fi));
-        Map<String, FileKnowledge> fileKnowledgeMap = fileKnowledgeData.stream()
-                .collect(Collectors.toMap(FileKnowledge::getFilePath, fi -> fi));
 
-        RepositoryStructureNode root = buildTree(fileInfoMap, fileKnowledgeMap);
+        RepositoryStructureNode root = buildTree(fileInfoMap);
 
         MaxFileValues maxFileValues = calculateMaxFileValues(fileInfoData);
         setFileDimensions(root, maxFileValues);
@@ -42,10 +37,7 @@ public class RepositoryStructureService {
                 .build();
     }
 
-    private RepositoryStructureNode buildTree(
-            Map<String, FileInfo> fileInfoMap,
-            Map<String, FileKnowledge> fileKnowledgeMap) {
-
+    private RepositoryStructureNode buildTree(Map<String, FileInfo> fileInfoMap) {
         RepositoryStructureNode root = RepositoryStructureNode.builder()
                 .name("root")
                 .type("dir")
@@ -55,10 +47,9 @@ public class RepositoryStructureService {
         Map<String, RepositoryStructureNode> directoryNodesMap = new HashMap<>();
         directoryNodesMap.put("", root);
 
-        fileInfoMap.forEach((filePath, fileInfo) -> {
-            FileKnowledge fileKnowledge = fileKnowledgeMap.get(filePath);
-            addFileToTree(filePath, fileInfo, fileKnowledge, root, directoryNodesMap);
-        });
+        fileInfoMap.forEach((filePath, fileInfo) ->
+            addFileToTree(filePath, fileInfo, root, directoryNodesMap)
+        );
 
         return root;
     }
@@ -66,7 +57,6 @@ public class RepositoryStructureService {
     private void addFileToTree(
             String filePath,
             FileInfo fileInfo,
-            FileKnowledge fileKnowledge,
             RepositoryStructureNode root,
             Map<String, RepositoryStructureNode> directoryNodesMap) {
 
@@ -74,7 +64,7 @@ public class RepositoryStructureService {
         RepositoryStructureNode parentNode = ensureDirectoryPath(pathSegments, root, directoryNodesMap);
 
         String fileName = fileInfo.getFileName();
-        RepositoryStructureNode fileNode = createFileNode(fileName, filePath, fileInfo, fileKnowledge);
+        RepositoryStructureNode fileNode = createFileNode(fileName, filePath, fileInfo);
         parentNode.addChild(fileNode);
     }
 
@@ -116,42 +106,28 @@ public class RepositoryStructureService {
                 .build();
     }
 
-    private RepositoryStructureNode createFileNode(
-            String fileName,
-            String filePath,
-            FileInfo fileInfo,
-            FileKnowledge fileKnowledge) {
-
+    private RepositoryStructureNode createFileNode(String fileName, String filePath, FileInfo fileInfo) {
         return RepositoryStructureNode.builder()
                 .name(fileName)
                 .path(filePath)
                 .type("file")
-                .fileType(fileInfo.getFileType())
-                .fileSize(fileInfo.getFileSize())
                 .linesOfCode(fileInfo.getCodeLines())
                 .commits(fileInfo.getTotalCommits())
                 .commitsInHotSpotAnalysisPeriod(fileInfo.getCommitsInHotSpotAnalysisPeriod())
-                .commitsLastYear(fileInfo.getCommitsLastYear())
-                .firstCommitDate(fileInfo.getFirstCommitDate())
-                .lastCommitDate(fileInfo.getLastCommitDate())
-                .leadAuthor(fileKnowledge.getLeadAuthor())
-                .leadAuthorKnowledgePercentage(fileKnowledge.getLeadAuthorKnowledgePercentage())
-                .contributors(fileKnowledge.getContributors())
-                .activeContributors(fileKnowledge.getActiveContributors())
                 .build();
     }
 
     private MaxFileValues calculateMaxFileValues(Collection<FileInfo> fileInfoData) {
         int maxCommits = fileInfoData.stream()
-                .mapToInt(fi -> fi.getTotalCommits() != null ? fi.getTotalCommits() : 0)
+                .mapToInt(fi -> Objects.requireNonNullElse(fi.getTotalCommits(), 0))
                 .max()
                 .orElse(0);
         int maxCommitsInHotSpotAnalysisPeriod = fileInfoData.stream()
-                .mapToInt(fi -> fi.getCommitsInHotSpotAnalysisPeriod() != null ? fi.getCommitsInHotSpotAnalysisPeriod() : 0)
+                .mapToInt(fi -> Objects.requireNonNullElse(fi.getCommitsInHotSpotAnalysisPeriod(), 0))
                 .max()
                 .orElse(0);
         int maxLinesOfCode = fileInfoData.stream()
-                .mapToInt(fi -> fi.getCodeLines() != null ? fi.getCodeLines() : 0)
+                .mapToInt(fi -> Objects.requireNonNullElse(fi.getCodeLines(), 0))
                 .max()
                 .orElse(0);
 
@@ -186,8 +162,8 @@ public class RepositoryStructureService {
         if (node.getType().equals("file")) {
             return new NodeStats(
                     1,
-                    node.getLinesOfCode() != null ? node.getLinesOfCode() : 0,
-                    node.getCommits() != null ? node.getCommits() : 0
+                    Objects.requireNonNullElse(node.getLinesOfCode(), 0),
+                    Objects.requireNonNullElse(node.getCommits(), 0)
             );
         }
 
@@ -200,10 +176,15 @@ public class RepositoryStructureService {
                 aggregatedStats.totalLinesOfCode += childStats.totalLinesOfCode;
                 aggregatedStats.totalCommits += childStats.totalCommits;
             });
+        }
 
-            node.setNumberOfFiles(aggregatedStats.numberOfFiles);
-            node.setLinesOfCode(aggregatedStats.totalLinesOfCode);
+        node.setNumberOfFiles(aggregatedStats.numberOfFiles);
+        node.setLinesOfCode(aggregatedStats.totalLinesOfCode);
+
+        if (aggregatedStats.numberOfFiles > 0) {
             node.setAverageCommits(aggregatedStats.totalCommits / aggregatedStats.numberOfFiles);
+        } else {
+            node.setAverageCommits(0);
         }
 
         return aggregatedStats;

@@ -7,7 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,12 +26,6 @@ public class RepositoryStructureNode {
     @JsonProperty("t")
     private String type;
 
-    @JsonProperty("ft")
-    private String fileType;
-
-    @JsonProperty("fs")
-    private String fileSize;
-
     @JsonProperty("nf")
     private Integer numberOfFiles;
 
@@ -47,27 +40,6 @@ public class RepositoryStructureNode {
 
     @JsonProperty("chs")
     private Integer commitsInHotSpotAnalysisPeriod;
-
-    @JsonProperty("cly")
-    private Integer commitsLastYear;
-
-    @JsonProperty("fcd")
-    private LocalDate firstCommitDate;
-
-    @JsonProperty("lcd")
-    private LocalDate lastCommitDate;
-
-    @JsonProperty("la")
-    private String leadAuthor;
-
-    @JsonProperty("lak")
-    private Double leadAuthorKnowledgePercentage;
-
-    @JsonProperty("ct")
-    private Integer contributors;
-
-    @JsonProperty("act")
-    private Integer activeContributors;
 
     @JsonProperty("ch")
     private List<RepositoryStructureNode> children = new ArrayList<>();
