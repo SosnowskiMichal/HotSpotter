@@ -6,6 +6,7 @@ import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.*;
@@ -21,6 +22,43 @@ public class JavaProjectCompiler {
                 || Files.exists(projectPath.resolve("build.gradle"))
                 || Files.exists(projectPath.resolve("build.gradle.kts"))
                 || Files.exists(projectPath.resolve("src/main/java"));
+    }
+
+    public Optional<Path> findCommonJavaSourceRoot(Path projectPath) throws IOException {
+        if (projectPath == null || !Files.exists(projectPath)) {
+            return Optional.empty();
+        }
+
+        if (isJavaProject(projectPath)) {
+            return Optional.of(projectPath);
+        }
+
+        List<Path> javaParents;
+        try (Stream<Path> walk = Files.walk(projectPath)) {
+            javaParents = walk
+                    .filter(p -> Files.isRegularFile(p) && p.toString().endsWith(".java"))
+                    .map(Path::toAbsolutePath)
+                    .map(Path::normalize)
+                    .map(Path::getParent)
+                    .distinct()
+                    .toList();
+        }
+
+        if (javaParents.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Path candidate = javaParents.getFirst();
+        while (candidate != null) {
+            final Path cand = candidate;
+            boolean allUnder = javaParents.stream().allMatch(p -> p.startsWith(cand));
+            if (allUnder) {
+                return Optional.of(candidate);
+            }
+            candidate = candidate.getParent();
+        }
+
+        return Optional.empty();
     }
 
     public List<String> compileJavaProject(Path projectPath) throws Exception {

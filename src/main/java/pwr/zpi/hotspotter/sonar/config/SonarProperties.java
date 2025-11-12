@@ -14,6 +14,7 @@ public class SonarProperties {
     private String password = "admin";
     private String token;
     private String scannerPath;
+    private boolean logSonarOutput;
 
     @Synchronized
     public void setToken(String token) {

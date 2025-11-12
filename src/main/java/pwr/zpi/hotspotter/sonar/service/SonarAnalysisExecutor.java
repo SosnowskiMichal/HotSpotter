@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -88,10 +89,16 @@ public class SonarAnalysisExecutor {
             command.add("-Dsonar.host.url=" + sonarProperties.getHostUrl());
             command.add("-Dsonar.token=" + sonarProperties.getToken());
 
-            if (javaProjectCompiler.isJavaProject(projectPath)) {
-                List<String> binaries = javaProjectCompiler.compileJavaProject(projectPath);
-                String joined = String.join(",", binaries);
-                command.add("-Dsonar.java.binaries=" + joined);
+            Optional<Path> commonJavaSourceRoot = javaProjectCompiler.findCommonJavaSourceRoot(projectPath);
+            if (commonJavaSourceRoot.isPresent()) {
+                try {
+                    List<String> binaries = javaProjectCompiler.compileJavaProject(commonJavaSourceRoot.get());
+                    String joined = String.join(",", binaries);
+                    command.add("-Dsonar.java.binaries=" + joined);
+                } catch (Exception e) {
+                    log.error("Error compiling Java project at {}: {}", commonJavaSourceRoot.get(), e.getMessage());
+                    command.add("-Dsonar.exclusions=**/*.java");
+                }
             }
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
@@ -99,6 +106,10 @@ public class SonarAnalysisExecutor {
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
+
+            if (sonarProperties.isLogSonarOutput()) {
+                logSonarOutput(process);
+            }
 
             int exitCode = process.waitFor();
             boolean success = exitCode == 0;
@@ -112,6 +123,19 @@ public class SonarAnalysisExecutor {
             log.error("Error executing SonarQube scanner: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    private static void logSonarOutput(Process process) {
+        new Thread(() -> {
+            try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    log.info("[SonarQube Scanner] {}", line);
+                }
+            } catch (Exception e) {
+                log.error("Error reading SonarQube scanner output: {}", e.getMessage(), e);
+            }
+        }).start();
     }
 
     private SonarRepoAnalysisResult getAndSaveResults(String repoAnalysisId, String projectKey) {
