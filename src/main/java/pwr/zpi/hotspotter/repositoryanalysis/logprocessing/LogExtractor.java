@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class LogExtractor {
 
-    private static final String GIT_LOG_FORMAT = "[%h] %ad%n%an <%ae>";
+    private static final String GIT_LOG_FORMAT = "[%h] %cd%n%an <%ae>";
 
     private final LogExtractorConfig logExtractorConfig;
 

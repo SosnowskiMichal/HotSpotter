@@ -14,8 +14,8 @@ public class ActivityTrendsAnalyzer {
 
     private final ActivityTrendsRepository activityTrendsRepository;
 
-    public ActivityTrendsContext startAnalysis(String analysisId, int activeWindowDays) {
-        return new ActivityTrendsContext(analysisId, activeWindowDays);
+    public ActivityTrendsContext startAnalysis(String analysisId, int activeWindowMonths) {
+        return new ActivityTrendsContext(analysisId, activeWindowMonths);
     }
 
     public void processCommit(Commit commit, ActivityTrendsContext context) {

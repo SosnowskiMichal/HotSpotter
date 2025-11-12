@@ -73,7 +73,7 @@ public class RepositoryAnalysisService {
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
-            ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, 180);
+            ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, 6);
 
             try (commits) {
                 commits.forEach(commit -> {

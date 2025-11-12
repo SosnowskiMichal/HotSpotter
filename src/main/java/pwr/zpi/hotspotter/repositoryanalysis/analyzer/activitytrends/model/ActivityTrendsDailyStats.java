@@ -5,18 +5,9 @@ import lombok.Data;
 
 import java.time.LocalDate;
 
-/*public class ActivityTrendsDailyStats{
-        LocalDate date,
-        long commitsCount,
-        int uniqueAuthorsCount,
-        int activeAuthorsCount,
-        int linesAdded,
-        int linesDeleted
-) {}*/
-
 @Data
 @Builder
-public class ActivityTrendsDailyStats  {
+public class ActivityTrendsDailyStats {
     private LocalDate date;
     private long commitsCount;
     private int uniqueAuthorsCount;
@@ -24,4 +15,3 @@ public class ActivityTrendsDailyStats  {
     private int linesAdded;
     private int linesDeleted;
 }
-
