@@ -13,7 +13,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
@@ -38,7 +37,7 @@ public class AuthorsAnalyzer {
 
         String author = commit.author();
         String email = commit.email();
-        LocalDate date = LocalDate.parse(commit.date(), DateTimeFormatter.ISO_LOCAL_DATE);
+        LocalDate date = commit.getCommitDateAsLocalDate();
 
         int linesAdded = commit.changedFiles().stream()
                 .mapToInt(FileChange::linesAdded)

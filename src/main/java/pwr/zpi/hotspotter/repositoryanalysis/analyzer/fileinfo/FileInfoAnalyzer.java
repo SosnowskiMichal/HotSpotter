@@ -16,7 +16,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -36,7 +35,7 @@ public class FileInfoAnalyzer {
     public void processCommit(Commit commit, FileInfoAnalyzerContext context) {
         if (commit == null || context == null) return;
 
-        LocalDate date = LocalDate.parse(commit.date(), DateTimeFormatter.ISO_LOCAL_DATE);
+        LocalDate date = commit.getCommitDateAsLocalDate();
 
         for (FileChange fileChange : commit.changedFiles()) {
             String filePath = fileChange.filePath();
