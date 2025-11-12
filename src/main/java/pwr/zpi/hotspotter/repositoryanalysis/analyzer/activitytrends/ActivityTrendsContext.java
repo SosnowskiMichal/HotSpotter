@@ -2,96 +2,93 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends;
 
 import lombok.Getter;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.ActivityTrendsDailyStats;
-import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
-import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 
 import java.time.LocalDate;
 import java.util.*;
 
+@Getter
 public class ActivityTrendsContext {
 
-    @Getter
     private final String analysisId;
-    private final int activeWindowMonths;
+    private final LocalDate referenceDate;
+    private final int authorInactivityThresholdMonths;
+    private final Map<LocalDate, ActivityTrendsDailyStats> activityTrendsDailyStats;
 
-    private final Map<LocalDate, Integer> commitsPerDate = new HashMap<>();
-    private final Map<LocalDate, Set<String>> authorsPerDate = new HashMap<>();
-    private final Map<LocalDate, Integer> linesAddedPerDate = new HashMap<>();
-    private final Map<LocalDate, Integer> linesDeletedPerDate = new HashMap<>();
+    private LocalDate lastDate;
+    private final Set<String> uniqueAuthors;
+    private final Map<String, LocalDate> authorLastActivity;
 
-    @Getter
-    private List<ActivityTrendsDailyStats> dailyStats = Collections.emptyList();
-
-    public ActivityTrendsContext(String analysisId, int activeWindowMonths) {
+    public ActivityTrendsContext(String analysisId, LocalDate referenceDate, int authorInactivityThresholdMonths) {
         this.analysisId = analysisId;
-        this.activeWindowMonths = activeWindowMonths;
+        this.referenceDate = referenceDate != null ? referenceDate : LocalDate.now();
+        this.authorInactivityThresholdMonths = authorInactivityThresholdMonths;
+        this.activityTrendsDailyStats = new LinkedHashMap<>();
+
+        this.lastDate = null;
+        this.uniqueAuthors = new HashSet<>();
+        this.authorLastActivity = new HashMap<>();
     }
 
-    public void recordCommit(Commit commit) {
-        LocalDate date = commit.getCommitDateAsLocalDate();
-        String author = commit.author();
-
-        commitsPerDate.merge(date, 1, Integer::sum);
-        authorsPerDate.computeIfAbsent(date, _ -> new HashSet<>()).add(author);
-
-        int totalLinesAdded = 0;
-        int totalLinesDeleted = 0;
-        if (commit.changedFiles() != null) {
-            for (FileChange fileChange : commit.changedFiles()) {
-                totalLinesAdded += fileChange.linesAdded();
-                totalLinesDeleted += fileChange.linesDeleted();
-            }
+    public void recordContribution(LocalDate date, String author, int linesAdded, int linesDeleted) {
+        if (lastDate != null && date.isAfter(lastDate)) {
+            aggregateStatsForDaysBetween(lastDate, date);
         }
-        linesAddedPerDate.merge(date, totalLinesAdded, Integer::sum);
-        linesDeletedPerDate.merge(date, totalLinesDeleted, Integer::sum);
+
+        activityTrendsDailyStats
+                .compute(date, (_, dailyStats) -> {
+                    if (dailyStats == null) {
+                        dailyStats = ActivityTrendsDailyStats.builder()
+                                .date(date)
+                                .build();
+                    }
+
+                    dailyStats.incrementCommits();
+                    dailyStats.increaseLinesAdded(linesAdded);
+                    dailyStats.increaseLinesDeleted(linesDeleted);
+                    return dailyStats;
+                });
+
+        uniqueAuthors.add(author);
+        authorLastActivity.put(author, date);
+        lastDate = date;
     }
 
-    public void computeDailyStats() {
-        if (commitsPerDate.isEmpty()) {
-            dailyStats = Collections.emptyList();
-            return;
-        }
-
-        Set<LocalDate> dates = commitsPerDate.keySet();
-
-        LocalDate minDate = Collections.min(dates);
-        LocalDate maxDate = Collections.max(dates);
-
-        List<LocalDate> allDates = minDate.datesUntil(maxDate.plusDays(1)).toList();
-
-        Map<LocalDate, Set<String>> authorsByDateAll = new HashMap<>();
-        for (LocalDate date : allDates) {
-            authorsByDateAll.put(date, authorsPerDate.getOrDefault(date, Collections.emptySet()));
-        }
-
-        Map<LocalDate, Integer> activeAuthorsChangePerDate = new HashMap<>();
-        for (LocalDate date : allDates) {
-            Set<String> authors = authorsByDateAll.get(date);
-            activeAuthorsChangePerDate.merge(date, authors.size(), Integer::sum);
-            LocalDate endDate = date.plusMonths(activeWindowMonths);
-            activeAuthorsChangePerDate.merge(endDate, -authors.size(), Integer::sum);
-        }
-
-        int activeAuthors = 0;
-        List<ActivityTrendsDailyStats> stats = new ArrayList<>(allDates.size());
-        for (LocalDate date : allDates) {
-            int commits = commitsPerDate.getOrDefault(date, 0);
-            int uniqueAuthors = authorsByDateAll.getOrDefault(date, Collections.emptySet()).size();
-
-            int added = linesAddedPerDate.getOrDefault(date, 0);
-            int deleted = linesDeletedPerDate.getOrDefault(date, 0);
-            activeAuthors += activeAuthorsChangePerDate.getOrDefault(date, 0);
-
-            stats.add(ActivityTrendsDailyStats.builder()
-                    .date(date)
-                    .commitsCount(commits)
-                    .uniqueAuthorsCount(uniqueAuthors)
-                    .activeAuthorsCount(activeAuthors)
-                    .linesAdded(added)
-                    .linesDeleted(deleted)
-                    .build());
-        }
-
-        this.dailyStats = stats;
+    public void finishAnalysis() {
+        aggregateStatsForDaysBetween(lastDate, referenceDate);
     }
+
+    private void aggregateStatsForDaysBetween(LocalDate startDate, LocalDate endDate) {
+        LocalDate date = startDate;
+
+        while (date.isBefore(endDate)) {
+            final LocalDate currentDate = date;
+            removeInactiveAuthors(currentDate);
+
+            int activeAuthorsCount = authorLastActivity.size();
+            int uniqueAuthorsCount = uniqueAuthors.size();
+
+            activityTrendsDailyStats.compute(date, (_, dailyStats) -> {
+                if (dailyStats == null) {
+                    dailyStats = ActivityTrendsDailyStats.builder()
+                            .date(currentDate)
+                            .build();
+                }
+
+                dailyStats.setUniqueAuthors(uniqueAuthorsCount);
+                dailyStats.setActiveAuthors(activeAuthorsCount);
+                return dailyStats;
+            });
+
+            uniqueAuthors.clear();
+            date = date.plusDays(1);
+        }
+    }
+
+    private void removeInactiveAuthors(LocalDate date) {
+        LocalDate inactivityThreshold = date.minusMonths(authorInactivityThresholdMonths);
+        authorLastActivity.entrySet().removeIf(entry ->
+                entry.getValue().isBefore(inactivityThreshold)
+        );
+    }
+
 }
