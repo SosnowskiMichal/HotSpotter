@@ -1,10 +1,8 @@
 package pwr.zpi.hotspotter.repositoryanalysis.service;
 
-import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
-import pwr.zpi.hotspotter.repositoryanalysis.model.repositorystructure.RepositoryStructureNode;
-import pwr.zpi.hotspotter.repositoryanalysis.model.repositorystructure.RepositoryStructureResponse;
+import pwr.zpi.hotspotter.repositoryanalysis.model.RepositoryStructureNode;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -15,26 +13,16 @@ import java.util.stream.Collectors;
 @Service
 public class RepositoryStructureService {
 
-    public RepositoryStructureResponse buildRepositoryStructure(Collection<FileInfo> fileInfoData) {
+    public RepositoryStructureNode buildRepositoryStructure(Collection<FileInfo> fileInfoData) {
         Map<String, FileInfo> fileInfoMap = fileInfoData.stream()
                 .collect(Collectors.toMap(FileInfo::getFilePath, fi -> fi));
 
         RepositoryStructureNode root = buildTree(fileInfoMap);
 
         MaxFileValues maxFileValues = calculateMaxFileValues(fileInfoData);
-        setFileDimensions(root, maxFileValues);
-        calculateDirectoryStatistics(root);
+        setFileDimensions(root, maxFileValues, fileInfoMap);
 
-        RepositoryStructureResponse.ReferenceData referenceData = RepositoryStructureResponse.ReferenceData.builder()
-                .maxCommits(maxFileValues.maxCommits)
-                .maxCommitsInHotSpotAnalysisPeriod(maxFileValues.maxCommitsInHotSpotAnalysisPeriod)
-                .maxLinesOfCode(maxFileValues.maxLinesOfCode)
-                .build();
-
-        return RepositoryStructureResponse.builder()
-                .structure(root)
-                .referenceData(referenceData)
-                .build();
+        return root;
     }
 
     private RepositoryStructureNode buildTree(Map<String, FileInfo> fileInfoMap) {
@@ -64,7 +52,7 @@ public class RepositoryStructureService {
         RepositoryStructureNode parentNode = ensureDirectoryPath(pathSegments, root, directoryNodesMap);
 
         String fileName = fileInfo.getFileName();
-        RepositoryStructureNode fileNode = createFileNode(fileName, filePath, fileInfo);
+        RepositoryStructureNode fileNode = createFileNode(fileName, filePath);
         parentNode.addChild(fileNode);
     }
 
@@ -106,14 +94,11 @@ public class RepositoryStructureService {
                 .build();
     }
 
-    private RepositoryStructureNode createFileNode(String fileName, String filePath, FileInfo fileInfo) {
+    private RepositoryStructureNode createFileNode(String fileName, String filePath) {
         return RepositoryStructureNode.builder()
                 .name(fileName)
                 .path(filePath)
                 .type("file")
-                .linesOfCode(fileInfo.getCodeLines())
-                .commits(fileInfo.getTotalCommits())
-                .commitsInHotSpotAnalysisPeriod(fileInfo.getCommitsInHotSpotAnalysisPeriod())
                 .build();
     }
 
@@ -122,81 +107,47 @@ public class RepositoryStructureService {
                 .mapToInt(fi -> Objects.requireNonNullElse(fi.getTotalCommits(), 0))
                 .max()
                 .orElse(0);
-        int maxCommitsInHotSpotAnalysisPeriod = fileInfoData.stream()
-                .mapToInt(fi -> Objects.requireNonNullElse(fi.getCommitsInHotSpotAnalysisPeriod(), 0))
-                .max()
-                .orElse(0);
         int maxLinesOfCode = fileInfoData.stream()
                 .mapToInt(fi -> Objects.requireNonNullElse(fi.getCodeLines(), 0))
                 .max()
                 .orElse(0);
 
-        return new MaxFileValues(maxCommits, maxCommitsInHotSpotAnalysisPeriod, maxLinesOfCode);
+        return new MaxFileValues(maxCommits, maxLinesOfCode);
     }
 
-    private void setFileDimensions(RepositoryStructureNode node, MaxFileValues maxFileValues) {
+    private void setFileDimensions(RepositoryStructureNode node, MaxFileValues maxFileValues, Map<String, FileInfo> fileInfoMap) {
         if (node.getType().equals("dir")) {
             if (node.getChildren() != null) {
-                node.getChildren().forEach(child -> setFileDimensions(child, maxFileValues));
+                node.getChildren().forEach(child -> setFileDimensions(child, maxFileValues, fileInfoMap));
             }
             return;
         }
 
-        if (node.getCommits() != null && maxFileValues.maxCommits > 0) {
-            double normalizedValue = (double) node.getCommits() / maxFileValues.maxCommits;
+        FileInfo fileInfo = fileInfoMap.get(node.getPath());
+        if (fileInfo == null) {
+            node.setHeight(0.0);
+            node.setWidth(0.0);
+            return;
+        }
+
+        Integer commits = fileInfo.getTotalCommits();
+        if (commits != null && maxFileValues.maxCommits > 0) {
+            double normalizedValue = (double) commits / maxFileValues.maxCommits;
             double height = Math.round((Math.exp(2 * normalizedValue) - 1) / (Math.exp(2) - 1) * 100.0) / 100.0;
             node.setHeight(height);
         } else {
             node.setHeight(0.0);
         }
 
-        if (node.getLinesOfCode() != null && maxFileValues.maxLinesOfCode > 0) {
-            double width = Math.round(node.getLinesOfCode() * 100.0 / maxFileValues.maxLinesOfCode) / 100.0;
+        Integer linesOfCode = fileInfo.getCodeLines();
+        if (linesOfCode != null && maxFileValues.maxLinesOfCode > 0) {
+            double width = Math.round(linesOfCode * 100.0 / maxFileValues.maxLinesOfCode) / 100.0;
             node.setWidth(width);
         } else {
             node.setWidth(0.0);
         }
     }
 
-    private NodeStats calculateDirectoryStatistics(RepositoryStructureNode node) {
-        if (node.getType().equals("file")) {
-            return new NodeStats(
-                    1,
-                    Objects.requireNonNullElse(node.getLinesOfCode(), 0),
-                    Objects.requireNonNullElse(node.getCommits(), 0)
-            );
-        }
-
-        NodeStats aggregatedStats = new NodeStats(0, 0, 0);
-
-        if (node.getChildren() != null) {
-            node.getChildren().forEach(child -> {
-                NodeStats childStats = calculateDirectoryStatistics(child);
-                aggregatedStats.numberOfFiles += childStats.numberOfFiles;
-                aggregatedStats.totalLinesOfCode += childStats.totalLinesOfCode;
-                aggregatedStats.totalCommits += childStats.totalCommits;
-            });
-        }
-
-        node.setNumberOfFiles(aggregatedStats.numberOfFiles);
-        node.setLinesOfCode(aggregatedStats.totalLinesOfCode);
-
-        if (aggregatedStats.numberOfFiles > 0) {
-            node.setAverageCommits(aggregatedStats.totalCommits / aggregatedStats.numberOfFiles);
-        } else {
-            node.setAverageCommits(0);
-        }
-
-        return aggregatedStats;
-    }
-
-    private record MaxFileValues(int maxCommits, int maxCommitsInHotSpotAnalysisPeriod, int maxLinesOfCode) { }
-
-    @AllArgsConstructor
-    private static class NodeStats {
-        public int numberOfFiles;
-        public int totalLinesOfCode;
-        public int totalCommits;
-    }
+    private record MaxFileValues(int maxCommits, int maxLinesOfCode) { }
 
 }

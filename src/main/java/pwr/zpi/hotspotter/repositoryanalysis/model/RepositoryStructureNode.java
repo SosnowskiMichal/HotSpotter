@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.model.repositorystructure;
+package pwr.zpi.hotspotter.repositoryanalysis.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,21 +25,6 @@ public class RepositoryStructureNode {
 
     @JsonProperty("t")
     private String type;
-
-    @JsonProperty("nf")
-    private Integer numberOfFiles;
-
-    @JsonProperty("loc")
-    private Integer linesOfCode;
-
-    @JsonProperty("cm")
-    private Integer commits;
-
-    @JsonProperty("acm")
-    private Integer averageCommits;
-
-    @JsonProperty("chs")
-    private Integer commitsInHotSpotAnalysisPeriod;
 
     @JsonProperty("ch")
     private List<RepositoryStructureNode> children = new ArrayList<>();
