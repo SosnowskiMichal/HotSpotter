@@ -12,7 +12,6 @@ import java.util.List;
 @Document(collection = "activity_trends")
 public class ActivityTrends {
     @Id
-    private String id;
     private String analysisId;
     private List<ActivityTrendsDailyStats> dailyStats;
 }
