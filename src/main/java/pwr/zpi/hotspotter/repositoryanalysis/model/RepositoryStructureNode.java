@@ -17,22 +17,16 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class RepositoryStructureNode {
 
-    @JsonProperty("n")
     private String name;
 
-    @JsonProperty("p")
     private String path;
 
-    @JsonProperty("t")
     private String type;
 
-    @JsonProperty("ch")
     private List<RepositoryStructureNode> children = new ArrayList<>();
 
-    @JsonProperty("h")
     private Double height;
 
-    @JsonProperty("w")
     private Double width;
 
     public void addChild(RepositoryStructureNode child) {
