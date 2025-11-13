@@ -79,7 +79,7 @@ public class FileInfoAnalyzer {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     "bash", "-c",
-                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 0 ."
+                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 120 ."
             );
             pb.directory(repositoryPath.toFile());
             pb.redirectErrorStream(true);

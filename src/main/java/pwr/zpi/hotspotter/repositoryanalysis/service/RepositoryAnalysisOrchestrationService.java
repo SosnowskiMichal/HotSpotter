@@ -46,6 +46,7 @@ public class RepositoryAnalysisOrchestrationService {
         } catch (Exception e) {
             log.error("Unexpected error during analysis of repository {}: {}", repoUrl, e.getMessage());
             sse.sendError(emitter, e.getMessage());
+
         } finally {
             emitter.complete();
         }
