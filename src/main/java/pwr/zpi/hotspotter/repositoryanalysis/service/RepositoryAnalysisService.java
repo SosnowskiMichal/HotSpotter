@@ -53,7 +53,7 @@ public class RepositoryAnalysisService {
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         LocalDateTime analysisStartedAt = LocalDateTime.now();
 
-        ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
+        ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.DOWNLOADING);
         RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
@@ -63,14 +63,14 @@ public class RepositoryAnalysisService {
 
         Path logFilePath = null;
         try {
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
+            ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.PROCESSING_DATA);
             CompletableFuture<SonarRepoAnalysisResult> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
 
             logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
             Stream<Commit> commits = logParser.parseLogs(logFilePath);
 
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
+            ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.ANALYZING);
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
@@ -93,7 +93,7 @@ public class RepositoryAnalysisService {
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
 
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
+            ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {
@@ -142,13 +142,6 @@ public class RepositoryAnalysisService {
                 .endDate(endDate)
                 .analysisStartedAt(analysisStartedAt)
                 .build();
-    }
-
-    public enum AnalysisSseStatus {
-        DOWNLOADING,
-        PROCESSING_DATA,
-        ANALYZING,
-        SONAR
     }
 
 }
