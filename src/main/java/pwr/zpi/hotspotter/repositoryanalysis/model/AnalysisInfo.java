@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -33,7 +34,9 @@ public class AnalysisInfo {
 
     @Builder.Default
     @NotNull(message = "Analysis date is required")
-    private LocalDateTime analyzedAt = LocalDateTime.now();
+    private LocalDateTime analysisStartedAt = LocalDateTime.now();
+
+    private LocalDateTime analysisFinishedAt;
 
     @Builder.Default
     @NotNull(message = "Analysis status is required")
@@ -53,6 +56,8 @@ public class AnalysisInfo {
 
     public void markAsCompleted() {
         this.status = AnalysisStatus.COMPLETED;
+        this.analysisFinishedAt = LocalDateTime.now();
+        this.analysisTimeInSeconds = Duration.between(analysisStartedAt, analysisFinishedAt).getSeconds();
     }
 
     public void markAsFailed() {

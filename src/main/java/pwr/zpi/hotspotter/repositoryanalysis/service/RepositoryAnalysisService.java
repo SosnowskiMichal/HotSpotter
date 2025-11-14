@@ -27,6 +27,7 @@ import pwr.zpi.hotspotter.sonar.service.SonarService;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -50,13 +51,13 @@ public class RepositoryAnalysisService {
     private final ActivityTrendsAnalyzer activityTrendsAnalyzer;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
-        long analysisStartTime = System.currentTimeMillis();
+        LocalDateTime analysisStartedAt = LocalDateTime.now();
 
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
         RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
-        AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate);
+        AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
         String analysisId = analysisInfo.getId();
         analysisInfoRepository.save(analysisInfo);
 
@@ -99,15 +100,10 @@ public class RepositoryAnalysisService {
                 log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
             }
 
-            long analysisEndTime = System.currentTimeMillis();
-            long analysisDurationSeconds = (analysisEndTime - analysisStartTime) / 1000;
-
-            analysisInfo.setAnalysisTimeInSeconds(analysisDurationSeconds);
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
 
-            log.info("Analysis completed for repository {} in {} seconds, ID: {}",
-                    repositoryUrl, analysisDurationSeconds, analysisId);
+            log.info("Analysis completed for repository {}, ID: {}", repositoryUrl, analysisId);
             ssePublisher.sendComplete(emitter, analysisId);
 
         } catch (LogProcessingException e) {
@@ -130,7 +126,12 @@ public class RepositoryAnalysisService {
         }
     }
 
-    private AnalysisInfo createAnalysisInfo(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate) {
+    private AnalysisInfo createAnalysisInfo(
+            RepositoryInfo repositoryInfo,
+            LocalDate startDate,
+            LocalDate endDate,
+            LocalDateTime analysisStartedAt
+    ) {
         String analysisId = UUID.randomUUID().toString();
         return AnalysisInfo.builder()
                 .id(analysisId)
@@ -139,6 +140,7 @@ public class RepositoryAnalysisService {
                 .repositoryOwner(repositoryInfo.getOwner())
                 .startDate(startDate)
                 .endDate(endDate)
+                .analysisStartedAt(analysisStartedAt)
                 .build();
     }
 
