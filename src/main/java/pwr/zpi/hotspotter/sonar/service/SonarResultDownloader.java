@@ -190,7 +190,8 @@ public class SonarResultDownloader {
     }
 
     private SonarRepoAnalysisResult mapToAnalysisResult(String repoAnalysisId, String projectKey, Map<String, Object> data) {
-        SonarRepoAnalysisResult result = new SonarRepoAnalysisResult(projectKey);
+        SonarRepoAnalysisResult result = new SonarRepoAnalysisResult();
+        result.setProjectKey(projectKey);
         result.setRepoAnalysisId(repoAnalysisId);
         result.setAnalysisDate(LocalDateTime.now());
 
