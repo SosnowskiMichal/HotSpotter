@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.sonar.model.repoanalysis;
+package pwr.zpi.hotspotter.sonar.model.fileanalysis;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,21 +11,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@Document(collection = "sonar_repo_analysis_results")
+@Document(collection = "sonar_file_analysis_results")
 @NoArgsConstructor
 @AllArgsConstructor
-public class SonarRepoAnalysisResult {
+public class SonarFileAnalysisResult {
     @Id
     private String repoAnalysisId;
     @NonNull
     private String projectKey;
     private String projectName;
     private LocalDateTime analysisDate;
-    private Integer bugs;
-    private Integer vulnerabilities;
-    private Integer codeSmells;
-    private Double coverage;
-    private Double duplicatedLinesDensity;
-    private Integer complexity;
-    private List<SonarRepoAnalysisComponent> components;
+    private List<SonarIssue> issues;
 }
+

@@ -3,11 +3,13 @@ package pwr.zpi.hotspotter.sonar.service;
 import lombok.RequiredArgsConstructor;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
@@ -52,7 +54,7 @@ public class SonarService {
         }
     }
 
-    public CompletableFuture<SonarRepoAnalysisResult> runAnalysis(String repoAnalysisId, Path projectPath, String projectKey, String projectName) {
+    public CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> runAnalysis(String repoAnalysisId, Path projectPath, String projectKey, String projectName) {
         projectKey = createValidProjectKey(projectKey);
         if (isAnalysisStarted(projectKey)) {
             log.info("Analysis already started for project key: {}", projectKey);

@@ -2,6 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsAnalyzer;
@@ -22,6 +23,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
 
@@ -63,7 +65,7 @@ public class RepositoryAnalysisService {
         Path logFilePath = null;
         try {
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
-            CompletableFuture<SonarRepoAnalysisResult> sonarAnalysisFuture =
+            CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
 
             logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
