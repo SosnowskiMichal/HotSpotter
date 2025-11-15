@@ -268,7 +268,8 @@ public class SonarResultDownloader {
             String projectKey,
             List<Map<String, Object>> issuesList) {
 
-        SonarFileAnalysisResult result = new SonarFileAnalysisResult(projectKey);
+        SonarFileAnalysisResult result = new SonarFileAnalysisResult();
+        result.setProjectKey(projectKey);
         result.setRepoAnalysisId(repoAnalysisId);
         result.setAnalysisDate(LocalDateTime.now());
 
