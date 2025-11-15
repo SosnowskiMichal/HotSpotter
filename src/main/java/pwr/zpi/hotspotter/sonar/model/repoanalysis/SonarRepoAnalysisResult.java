@@ -12,8 +12,6 @@ import java.util.List;
 @Document(collection = "sonar_repo_analysis_results")
 public class SonarRepoAnalysisResult {
     @Id
-    private String id;
-    @NonNull
     private String repoAnalysisId;
     @NonNull
     private String projectKey;
