@@ -2,14 +2,17 @@ package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Pair;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
+import pwr.zpi.hotspotter.sonar.repository.SonarFileAnalysisRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.io.File;
@@ -33,14 +36,15 @@ public class SonarAnalysisExecutor {
     private final JavaProjectCompiler javaProjectCompiler;
     private final SonarProperties sonarProperties;
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
+    private final SonarFileAnalysisRepository sonarFileAnalysisRepository;
 
 
     @Async("sonarExecutor")
-    public CompletableFuture<SonarRepoAnalysisResult> runAnalysisAsync(String repoAnalysisId, String sonarAnalysisId, Path projectPath, String projectKey, String projectName) {
+    public CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> runAnalysisAsync(String repoAnalysisId, String sonarAnalysisId, Path projectPath, String projectKey, String projectName) {
         SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(sonarAnalysisId).orElseThrow(() ->
                 new ObjectNotFoundException("SonarQube analysis status not found for ID: " + sonarAnalysisId));
 
-        SonarRepoAnalysisResult sonarRepoAnalysisResult = null;
+        Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> sonarAnalysisResult = null;
 
         try {
             status.setStatus(SonarAnalysisState.RUNNING);
@@ -52,12 +56,11 @@ public class SonarAnalysisExecutor {
 
             if (success) {
                 Thread.sleep(MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS);
-                sonarRepoAnalysisResult = getAndSaveResults(repoAnalysisId, status.getProjectKey());
-                if (sonarRepoAnalysisResult == null) {
+                sonarAnalysisResult = getAndSaveResults(repoAnalysisId, status.getProjectKey());
+                if (sonarAnalysisResult == null) {
                     throw new RuntimeException("Failed to fetch/save analysis results for project: " + status.getProjectKey());
                 }
 
-                sonarRepoAnalysisResult.setRepoAnalysisId(repoAnalysisId);
                 status.setStatus(SonarAnalysisState.SUCCESS);
                 status.setMessage("SonarQube analysis completed successfully.");
                 log.info("SonarQube analysis completed successfully for project: {}", status.getProjectKey());
@@ -76,7 +79,7 @@ public class SonarAnalysisExecutor {
             sonarAnalysisStatusRepository.save(status);
         }
 
-        return CompletableFuture.completedFuture(sonarRepoAnalysisResult);
+        return CompletableFuture.completedFuture(sonarAnalysisResult);
     }
 
     private boolean executeSonarScanner(Path projectPath, String projectKey, String projectName) {
@@ -138,14 +141,18 @@ public class SonarAnalysisExecutor {
         }).start();
     }
 
-    private SonarRepoAnalysisResult getAndSaveResults(String repoAnalysisId, String projectKey) {
+    private Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> getAndSaveResults(String repoAnalysisId, String projectKey) {
         int attempts = 0;
         while (attempts < MAX_DOWNLOAD_ATTEMPTS) {
-            SonarRepoAnalysisResult result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
+            Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
 
-            if (result != null && result.getComponents() != null && !result.getComponents().isEmpty()) {
+            if (result != null && result.getFirst().getComponents() != null && !result.getFirst().getComponents().isEmpty()) {
+                SonarRepoAnalysisResult repoAnalysisResult = result.getFirst();
+                SonarFileAnalysisResult sonarFileAnalysisResult = result.getSecond();
+                sonarRepoAnalysisRepository.save(repoAnalysisResult);
+                sonarFileAnalysisRepository.save(sonarFileAnalysisResult);
                 log.info("Successfully saved analysis results for project: {}", projectKey);
-                sonarRepoAnalysisRepository.save(result);
+
                 return result;
             }
 
