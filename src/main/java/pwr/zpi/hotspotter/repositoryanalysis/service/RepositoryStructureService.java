@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 @Service
 public class RepositoryStructureService {
 
+    private static final double DIMENSION_STEP = 0.05;
+
     public RepositoryStructureNode buildRepositoryStructure(Collection<FileInfo> fileInfoData) {
         Map<String, FileInfo> fileInfoMap = fileInfoData.stream()
                 .collect(Collectors.toMap(FileInfo::getFilePath, fi -> fi));
@@ -134,7 +136,7 @@ public class RepositoryStructureService {
         if (commits != null && maxFileValues.maxCommits > 0) {
             double normalizedValue = (double) commits / maxFileValues.maxCommits;
             double height = Math.round((Math.exp(2 * normalizedValue) - 1) / (Math.exp(2) - 1) * 100.0) / 100.0;
-            node.setHeight(height);
+            node.setHeight(roundToStep(height, DIMENSION_STEP));
         } else {
             node.setHeight(0.0);
         }
@@ -142,10 +144,14 @@ public class RepositoryStructureService {
         Integer linesOfCode = fileInfo.getCodeLines();
         if (linesOfCode != null && maxFileValues.maxLinesOfCode > 0) {
             double width = Math.round(linesOfCode * 100.0 / maxFileValues.maxLinesOfCode) / 100.0;
-            node.setWidth(width);
+            node.setWidth(roundToStep(width, DIMENSION_STEP));
         } else {
             node.setWidth(0.0);
         }
+    }
+
+    private double roundToStep(double value, double step) {
+        return Math.round(value / step) * step;
     }
 
     private record MaxFileValues(int maxCommits, int maxLinesOfCode) { }
