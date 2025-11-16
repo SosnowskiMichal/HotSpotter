@@ -53,13 +53,14 @@ public class CouplingAnalyzer {
     public void finishAnalysis(CouplingAnalyzerContext context) {
         if (context == null) return;
 
-        log.info("Finishing coupling analysis for ID: {}", context.getAnalysisId());
+        log.debug("Finishing coupling analysis for ID: {}", context.getAnalysisId());
+
         List<FileCoupling> fileCouplings = computeFileCouplings(context);
 
         try {
             AnalysisUtils.saveDataInBatches(fileCouplingRepository, fileCouplings);
         } catch (Exception e) {
-            log.error("Error saving file coupling data for analysis ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            log.error("Error saving file coupling data for analysis ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 

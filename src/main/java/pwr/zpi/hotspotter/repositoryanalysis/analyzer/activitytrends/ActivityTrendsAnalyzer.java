@@ -20,7 +20,7 @@ public class ActivityTrendsAnalyzer {
     private final ActivityTrendsRepository activityTrendsRepository;
 
     public ActivityTrendsContext startAnalysis(String analysisId, LocalDate referenceDate, int authorInactivityThresholdMonths) {
-        log.debug("Starting activity trends analysis for ID {}", analysisId);
+        log.debug("Starting activity trends analysis for ID: {}", analysisId);
         return new ActivityTrendsContext(analysisId, referenceDate, authorInactivityThresholdMonths);
     }
 
@@ -43,6 +43,8 @@ public class ActivityTrendsAnalyzer {
     public void finishAnalysis(ActivityTrendsContext context) {
         if (context == null) return;
 
+        log.debug("Finishing activity trends analysis for ID: {}", context.getAnalysisId());
+
         context.finishAnalysis();
 
         List<ActivityTrendsDailyStats> dailyStats = context.getActivityTrendsDailyStats().values().stream().toList();
@@ -54,7 +56,7 @@ public class ActivityTrendsAnalyzer {
         try {
             activityTrendsRepository.save(activityTrends);
         } catch (Exception e) {
-            log.error("Error saving activity trends data for ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            log.error("Error saving activity trends data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 

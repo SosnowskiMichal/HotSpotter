@@ -29,7 +29,7 @@ public class RepositoryStructureService {
         RepositoryStructureNode root = RepositoryStructureNode.builder()
                 .name("root")
                 .type("dir")
-                .path("")
+                .path("/")
                 .build();
 
         Map<String, RepositoryStructureNode> directoryNodesMap = new HashMap<>();

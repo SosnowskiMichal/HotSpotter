@@ -25,7 +25,7 @@ public class KnowledgeAnalyzer {
     private final AuthorStatisticsRepository authorStatisticsRepository;
 
     public KnowledgeAnalyzerContext startAnalysis(String analysisId, Path repositoryPath) {
-        log.debug("Starting knowledge analysis for ID {}", analysisId);
+        log.debug("Starting knowledge analysis for ID: {}", analysisId);
         return new KnowledgeAnalyzerContext(analysisId, repositoryPath);
     }
 
@@ -49,6 +49,8 @@ public class KnowledgeAnalyzer {
 
     public void finishAnalysis(KnowledgeAnalyzerContext context) {
         if (context == null) return;
+
+        log.debug("Finishing knowledge analysis for ID: {}", context.getAnalysisId());
 
         Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
 
@@ -111,13 +113,15 @@ public class KnowledgeAnalyzer {
         try {
             AnalysisUtils.saveDataInBatches(fileKnowledgeRepository, fileKnowledgeData);
         } catch (Exception e) {
-            log.error("Error saving enriched knowledge analysis data for ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            log.error("Error saving enriched knowledge analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 
-    private FileKnowledge calculateFileKnowledge(String analysisId, String filePath,
-                                                 Map<String, AuthorContribution> authorContributions) {
-
+    private FileKnowledge calculateFileKnowledge(
+            String analysisId,
+            String filePath,
+            Map<String, AuthorContribution> authorContributions
+    ) {
         int linesAdded = authorContributions.values().stream()
                 .mapToInt(AuthorContribution::getLinesAdded)
                 .sum();
