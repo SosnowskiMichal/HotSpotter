@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.AuthorContribution;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.KnowledgeRisk;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
@@ -20,6 +21,10 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class KnowledgeAnalyzer {
+
+    private static final double ABANDONED_THRESHOLD = 75.0;
+    private static final double SINGLE_OWNER_THRESHOLD = 75.0;
+    private static final int DIFFUSED_CONTRIBUTOR_THRESHOLD = 6;
 
     private final FileKnowledgeRepository fileKnowledgeRepository;
     private final AuthorStatisticsRepository authorStatisticsRepository;
@@ -87,12 +92,14 @@ public class KnowledgeAnalyzer {
 
             if (totalLinesAdded == 0) {
                 fileKnowledge.setKnowledgeLoss(0.0);
+                fileKnowledge.setKnowledgeRisk(KnowledgeRisk.UNKNOWN);
                 continue;
             }
 
             List<AuthorContribution> contributions = fileKnowledge.getAuthorContributions();
             if (contributions == null || contributions.isEmpty()) {
                 fileKnowledge.setKnowledgeLoss(0.0);
+                fileKnowledge.setKnowledgeRisk(KnowledgeRisk.UNKNOWN);
                 continue;
             }
 
@@ -106,8 +113,11 @@ public class KnowledgeAnalyzer {
                     .mapToInt(AuthorContribution::getLinesAdded)
                     .sum();
 
-            double knowledgeLoss = linesAddedByInactiveAuthors * 100.0 / totalLinesAdded;
+            double knowledgeLoss = Math.round(linesAddedByInactiveAuthors * 10000.0 / totalLinesAdded) / 100.0;
             fileKnowledge.setKnowledgeLoss(knowledgeLoss);
+
+            KnowledgeRisk risk = calculateKnowledgeRisk(fileKnowledge);
+            fileKnowledge.setKnowledgeRisk(risk);
         }
 
         try {
@@ -133,7 +143,7 @@ public class KnowledgeAnalyzer {
         List<AuthorContribution> contributions = authorContributions.values().stream()
                 .peek(contribution -> {
                     double contributionPercentage = linesAdded > 0
-                            ? contribution.getLinesAdded() * 100.0 / linesAdded
+                            ? Math.round(contribution.getLinesAdded() * 10000.0 / linesAdded) / 100.0
                             : 0.0;
                     contribution.setContributionPercentage(contributionPercentage);
                 })
@@ -166,6 +176,43 @@ public class KnowledgeAnalyzer {
                 .filter(c -> c.getContributionPercentage() == maxPercentage)
                 .max(Comparator.comparingInt(AuthorContribution::getCommits))
                 .orElse(null);
+    }
+
+    private KnowledgeRisk calculateKnowledgeRisk(FileKnowledge fileKnowledge) {
+        Integer contributors = fileKnowledge.getContributors();
+        Integer activeContributors = fileKnowledge.getActiveContributors();
+        Double leadAuthorPercentage = fileKnowledge.getLeadAuthorKnowledgePercentage();
+        Double knowledgeLoss = fileKnowledge.getKnowledgeLoss();
+
+        if (activeContributors != null && activeContributors == 0) {
+            return KnowledgeRisk.ABANDONED;
+        }
+        if (knowledgeLoss != null && knowledgeLoss >= ABANDONED_THRESHOLD) {
+            return KnowledgeRisk.ABANDONED;
+        }
+
+        if (leadAuthorPercentage != null && leadAuthorPercentage >= SINGLE_OWNER_THRESHOLD) {
+            return KnowledgeRisk.SINGLE_OWNER;
+        }
+
+        if (contributors != null && contributors >= DIFFUSED_CONTRIBUTOR_THRESHOLD) {
+            return KnowledgeRisk.DIFFUSED;
+        }
+        if (activeContributors != null && activeContributors >= DIFFUSED_CONTRIBUTOR_THRESHOLD) {
+            return KnowledgeRisk.DIFFUSED;
+        }
+
+        if (contributors == null || contributors == 0) {
+            return KnowledgeRisk.UNKNOWN;
+        }
+        if (activeContributors == null) {
+            return KnowledgeRisk.UNKNOWN;
+        }
+        if (leadAuthorPercentage == null || leadAuthorPercentage < 1.0) {
+            return KnowledgeRisk.UNKNOWN;
+        }
+
+        return KnowledgeRisk.BALANCED;
     }
 
 }

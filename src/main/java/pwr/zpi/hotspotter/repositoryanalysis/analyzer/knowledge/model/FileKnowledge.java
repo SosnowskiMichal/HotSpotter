@@ -50,6 +50,6 @@ public class FileKnowledge {
     @Builder.Default
     private Double knowledgeLoss = 0.0;
 
-    // TODO: Risk (one author, too many, significant knowledge loss, etc.)
+    private KnowledgeRisk knowledgeRisk;
 
 }
