@@ -42,10 +42,10 @@ public class FileKnowledge {
 
     private Double leadAuthorKnowledgePercentage;
 
-    @NotNull(message = "Number of contributors is required")
-    private Integer contributors;
+    @NotNull(message = "Number of authors is required")
+    private Integer authors;
 
-    private Integer activeContributors;
+    private Integer activeAuthors;
 
     @Builder.Default
     private Double knowledgeLoss = 0.0;

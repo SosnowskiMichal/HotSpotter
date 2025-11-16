@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
-import pwr.zpi.hotspotter.repositoryanalysis.model.RepositoryStructureNode;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.RepositoryStructureNode;
 
 import java.util.Collection;
 import java.util.HashMap;

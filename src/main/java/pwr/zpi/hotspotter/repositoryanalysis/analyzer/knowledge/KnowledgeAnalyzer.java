@@ -24,7 +24,7 @@ public class KnowledgeAnalyzer {
 
     private static final double ABANDONED_THRESHOLD = 75.0;
     private static final double SINGLE_OWNER_THRESHOLD = 75.0;
-    private static final int DIFFUSED_CONTRIBUTOR_THRESHOLD = 6;
+    private static final int DIFFUSED_AUTHOR_THRESHOLD = 6;
 
     private final FileKnowledgeRepository fileKnowledgeRepository;
     private final AuthorStatisticsRepository authorStatisticsRepository;
@@ -106,7 +106,7 @@ public class KnowledgeAnalyzer {
             int activeContributors = (int) contributions.stream()
                     .filter(contribution -> authorActivityMap.getOrDefault(contribution.getName(), false))
                     .count();
-            fileKnowledge.setActiveContributors(activeContributors);
+            fileKnowledge.setActiveAuthors(activeContributors);
 
             int linesAddedByInactiveAuthors = contributions.stream()
                     .filter(contribution -> !authorActivityMap.get(contribution.getName()))
@@ -163,7 +163,7 @@ public class KnowledgeAnalyzer {
                 .authorContributions(contributions)
                 .leadAuthor(leadAuthorName)
                 .leadAuthorKnowledgePercentage(leadAuthorPercentage)
-                .contributors(contributions.size())
+                .authors(contributions.size())
                 .build();
     }
 
@@ -180,12 +180,12 @@ public class KnowledgeAnalyzer {
     }
 
     private KnowledgeRisk calculateKnowledgeRisk(FileKnowledge fileKnowledge) {
-        Integer contributors = fileKnowledge.getContributors();
-        Integer activeContributors = fileKnowledge.getActiveContributors();
+        Integer authors = fileKnowledge.getAuthors();
+        Integer activeAuthors = fileKnowledge.getActiveAuthors();
         Double leadAuthorPercentage = fileKnowledge.getLeadAuthorKnowledgePercentage();
         Double knowledgeLoss = fileKnowledge.getKnowledgeLoss();
 
-        if (activeContributors != null && activeContributors == 0) {
+        if (activeAuthors != null && activeAuthors == 0) {
             return KnowledgeRisk.ABANDONED;
         }
         if (knowledgeLoss != null && knowledgeLoss >= ABANDONED_THRESHOLD) {
@@ -196,17 +196,17 @@ public class KnowledgeAnalyzer {
             return KnowledgeRisk.SINGLE_OWNER;
         }
 
-        if (contributors != null && contributors >= DIFFUSED_CONTRIBUTOR_THRESHOLD) {
+        if (authors != null && authors >= DIFFUSED_AUTHOR_THRESHOLD) {
             return KnowledgeRisk.DIFFUSED;
         }
-        if (activeContributors != null && activeContributors >= DIFFUSED_CONTRIBUTOR_THRESHOLD) {
+        if (activeAuthors != null && activeAuthors >= DIFFUSED_AUTHOR_THRESHOLD) {
             return KnowledgeRisk.DIFFUSED;
         }
 
-        if (contributors == null || contributors == 0) {
+        if (authors == null || authors == 0) {
             return KnowledgeRisk.UNKNOWN;
         }
-        if (activeContributors == null) {
+        if (activeAuthors == null) {
             return KnowledgeRisk.UNKNOWN;
         }
         if (leadAuthorPercentage == null || leadAuthorPercentage < 1.0) {
