@@ -16,9 +16,9 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "file_couplings")
-@CompoundIndex(name = "analysis_file_idx", def = "{'analysisId': 1, 'filePath': 1}", unique = true)
-public class FileCoupling {
+@Document(collection = "author_couplings")
+@CompoundIndex(name = "analysis_author_idx", def = "{'analysisId': 1, 'author': 1}", unique = true)
+public class AuthorCoupling {
 
     @Id
     private String id;
@@ -26,10 +26,16 @@ public class FileCoupling {
     @NotBlank(message = "Analysis ID is required")
     private String analysisId;
 
-    @NotBlank(message = "File path is required")
-    private String filePath;
+    @NotBlank(message = "Author name is required")
+    private String author;
 
     @Builder.Default
-    private List<CoupledFile> coupledFiles = new ArrayList<>();
+    private Integer filesChanged = 0;
+
+    @Builder.Default
+    private Integer totalChanges = 0;
+
+    @Builder.Default
+    private List<CoupledAuthor> coupledAuthors = new ArrayList<>();
 
 }

@@ -3,18 +3,18 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.CoupledAuthor;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.CoupledFile;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -26,7 +26,14 @@ public class CouplingAnalyzer {
     private static final int MIN_SHARED_COMMITS = 5;
     private static final double MIN_FILE_COUPLING_PERCENTAGE = 20.0;
 
+    private static final int MIN_AUTHOR_FILES = 3;
+    private static final int MIN_AUTHOR_CHANGES = 10;
+    private static final int MIN_SHARED_FILES = 3;
+    private static final int MIN_SHARED_CHANGES = 5;
+    private static final double MIN_AUTHOR_COUPLING_PERCENTAGE = 10.0;
+
     private final FileCouplingRepository fileCouplingRepository;
+    private final AuthorCouplingRepository authorCouplingRepository;
 
     public CouplingAnalyzerContext startAnalysis(String analysisId, Path repositoryPath, LocalDate referenceDate) {
         log.debug("Starting coupling analysis for ID: {}", analysisId);
@@ -35,6 +42,9 @@ public class CouplingAnalyzer {
 
     public void processCommit(Commit commit, CouplingAnalyzerContext context) {
         if (commit == null || context == null) return;
+
+        String author = commit.author();
+        LocalDate date = commit.getCommitDateAsLocalDate();
 
         List<String> changedFiles = commit.changedFiles().stream()
                 .map(fileChange -> {
@@ -47,7 +57,7 @@ public class CouplingAnalyzer {
                 })
                 .toList();
 
-        context.recordCoupling(changedFiles);
+        context.recordCoupling(author, date, changedFiles);
     }
 
     public void finishAnalysis(CouplingAnalyzerContext context) {
@@ -56,11 +66,19 @@ public class CouplingAnalyzer {
         log.debug("Finishing coupling analysis for ID: {}", context.getAnalysisId());
 
         List<FileCoupling> fileCouplings = computeFileCouplings(context);
-
         try {
             AnalysisUtils.saveDataInBatches(fileCouplingRepository, fileCouplings);
+            log.debug("Saved {} file coupling analysis data records for analysis ID: {}", fileCouplings.size(), context.getAnalysisId());
         } catch (Exception e) {
             log.error("Error saving file coupling data for analysis ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
+        }
+
+        List<AuthorCoupling> authorCouplings = computeAuthorCouplings(context);
+        try {
+            AnalysisUtils.saveDataInBatches(authorCouplingRepository, authorCouplings);
+            log.debug("Saved {} author coupling analysis data records for analysis ID: {}", authorCouplings.size(), context.getAnalysisId());
+        } catch (Exception e) {
+            log.error("Error saving author coupling data for analysis ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 
@@ -130,6 +148,103 @@ public class CouplingAnalyzer {
             int percentageCompare = Double.compare(b.getCouplingPercentage(), a.getCouplingPercentage());
             if (percentageCompare != 0) return percentageCompare;
             return Integer.compare(b.getSharedCommits(), a.getSharedCommits());
+        });
+    }
+
+    private List<AuthorCoupling> computeAuthorCouplings(CouplingAnalyzerContext context) {
+        List<AuthorCoupling> result = new ArrayList<>();
+
+        Map<String, Map<String, Integer>> allAuthorsFileChanges = context.getAuthorFileChanges();
+
+        for (Map.Entry<String, Map<String, Integer>> entry : allAuthorsFileChanges.entrySet()) {
+            String author = entry.getKey();
+            Map<String, Integer> fileChanges = entry.getValue();
+
+            int filesChanged = fileChanges.size();
+            if (filesChanged < MIN_AUTHOR_FILES) continue;
+
+            int totalChanges = fileChanges.values().stream()
+                    .mapToInt(Integer::intValue)
+                    .sum();
+            if (totalChanges < MIN_AUTHOR_CHANGES) continue;
+
+            List<CoupledAuthor> coupledAuthors = buildCoupledAuthorsList(
+                    author,
+                    fileChanges,
+                    totalChanges,
+                    allAuthorsFileChanges
+            );
+
+            if (coupledAuthors.isEmpty()) continue;
+            sortCoupledAuthors(coupledAuthors);
+
+            AuthorCoupling authorCoupling = AuthorCoupling.builder()
+                    .analysisId(context.getAnalysisId())
+                    .author(author)
+                    .filesChanged(filesChanged)
+                    .totalChanges(totalChanges)
+                    .coupledAuthors(coupledAuthors)
+                    .build();
+
+            result.add(authorCoupling);
+        }
+
+        return result;
+    }
+
+    private List<CoupledAuthor> buildCoupledAuthorsList(
+            String author,
+            Map<String, Integer> changedFiles,
+            int totalChanges,
+            Map<String, Map<String, Integer>> allAuthorsFileChanges
+    ) {
+        List<CoupledAuthor> coupledAuthors = new ArrayList<>();
+
+        for (Map.Entry<String, Map<String, Integer>> entry : allAuthorsFileChanges.entrySet()) {
+            String otherAuthor = entry.getKey();
+            if (otherAuthor.equals(author)) continue;
+            Set<String> authorFiles = changedFiles.keySet();
+
+            Map<String, Integer> otherFileChanges = entry.getValue();
+            if (otherFileChanges.size() < MIN_AUTHOR_FILES) continue;
+
+            int otherTotalChanges = otherFileChanges.values().stream()
+                    .mapToInt(Integer::intValue)
+                    .sum();
+            if (otherTotalChanges < MIN_AUTHOR_CHANGES) continue;
+
+            Set<String> sharedFiles = new HashSet<>(authorFiles);
+            sharedFiles.retainAll(otherFileChanges.keySet());
+
+            int sharedFilesCount = sharedFiles.size();
+            if (sharedFilesCount < MIN_SHARED_FILES) continue;
+
+            int sharedChanges = sharedFiles.stream()
+                    .mapToInt(changedFiles::get)
+                    .sum();
+            if (sharedChanges < MIN_SHARED_CHANGES) continue;
+
+            double couplingPercentage = Math.round(sharedChanges * 10000.0 / totalChanges) / 100.0;
+            if (couplingPercentage < MIN_AUTHOR_COUPLING_PERCENTAGE) continue;
+
+            CoupledAuthor coupledAuthor = CoupledAuthor.builder()
+                    .author(otherAuthor)
+                    .sharedFilesChanged(sharedFilesCount)
+                    .sharedChanges(sharedChanges)
+                    .couplingPercentage(couplingPercentage)
+                    .build();
+
+            coupledAuthors.add(coupledAuthor);
+        }
+
+        return coupledAuthors;
+    }
+
+    private void sortCoupledAuthors(List<CoupledAuthor> coupledAuthors) {
+        coupledAuthors.sort((a, b) -> {
+            int percentageCompare = Double.compare(b.getCouplingPercentage(), a.getCouplingPercentage());
+            if (percentageCompare != 0) return percentageCompare;
+            return Integer.compare(b.getSharedChanges(), a.getSharedChanges());
         });
     }
 

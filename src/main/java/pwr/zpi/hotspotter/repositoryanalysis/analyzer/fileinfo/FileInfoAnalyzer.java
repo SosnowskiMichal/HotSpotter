@@ -70,6 +70,7 @@ public class FileInfoAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(fileInfoRepository, fileInfosFiltered);
+            log.debug("Saved {} file info analysis data records for ID: {}", fileInfosFiltered.size(), context.getAnalysisId());
         } catch (Exception e) {
             log.error("Error saving file info data for analysis ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }

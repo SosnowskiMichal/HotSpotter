@@ -62,6 +62,7 @@ public class AuthorsAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(authorStatisticsRepository, authorStatistics);
+            log.debug("Saved {} authors analysis data records for ID: {}", authorStatistics.size(), context.getAnalysisId());
         } catch (Exception e) {
             log.error("Error saving authors analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
@@ -95,6 +96,7 @@ public class AuthorsAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(authorStatisticsRepository, authorStatistics);
+            log.debug("Saved enriched authors analysis data for ID: {}", context.getAnalysisId());
         } catch (Exception e) {
             log.error("Error saving enriched authors analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }

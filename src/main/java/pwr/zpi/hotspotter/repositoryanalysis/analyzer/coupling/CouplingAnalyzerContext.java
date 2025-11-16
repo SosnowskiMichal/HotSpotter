@@ -13,21 +13,26 @@ public class CouplingAnalyzerContext {
 
     // TODO: Temporary constants, replace with user preferences
     private static final int MAX_FILES_PER_COMMIT = 25;
+    private static final int AUTHOR_COUPLING_ANALYSIS_PERIOD_MONTHS = 12;
 
     private final String analysisId;
     private final Path repositoryPath;
     private final LocalDate referenceDate;
+    private final LocalDate authorCouplingAnalysisStartDate;
 
     private final Map<String, Integer> fileCommits = new HashMap<>();
     private final Map<String, Map<String, Integer>> fileCouplings = new HashMap<>();
+
+    private final Map<String, Map<String, Integer>> authorFileChanges = new HashMap<>();
 
     public CouplingAnalyzerContext(String analysisId, Path repositoryPath, LocalDate referenceDate) {
         this.analysisId = analysisId;
         this.repositoryPath = repositoryPath;
         this.referenceDate = referenceDate != null ? referenceDate : LocalDate.now();
+        this.authorCouplingAnalysisStartDate = this.referenceDate.minusMonths(AUTHOR_COUPLING_ANALYSIS_PERIOD_MONTHS);
     }
 
-    public void recordCoupling(List<String> changedFiles) {
+    public void recordCoupling(String author, LocalDate date, List<String> changedFiles) {
         if (changedFiles == null || changedFiles.isEmpty()) return;
         if (changedFiles.size() > MAX_FILES_PER_COMMIT) return;
 
@@ -42,6 +47,15 @@ public class CouplingAnalyzerContext {
 
                 recordCouplingPair(filePath1, filePath2);
                 recordCouplingPair(filePath2, filePath1);
+            }
+        }
+
+        if (author != null && !author.isBlank() && date != null) {
+            if (!date.isBefore(authorCouplingAnalysisStartDate)) {
+                Map<String, Integer> fileChanges = authorFileChanges.computeIfAbsent(author, _ -> new HashMap<>());
+                for (String file : changedFiles) {
+                    fileChanges.merge(file, 1, Integer::sum);
+                }
             }
         }
     }
@@ -71,6 +85,13 @@ public class CouplingAnalyzerContext {
             if (couplings.containsKey(oldPath)) {
                 int commits = couplings.remove(oldPath);
                 couplings.put(newPath, commits);
+            }
+        }
+
+        for (Map<String, Integer> fileChanges : authorFileChanges.values()) {
+            if (fileChanges.containsKey(oldPath)) {
+                int changes = fileChanges.remove(oldPath);
+                fileChanges.put(newPath, changes);
             }
         }
     }

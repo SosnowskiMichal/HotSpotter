@@ -122,6 +122,7 @@ public class KnowledgeAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(fileKnowledgeRepository, fileKnowledgeData);
+            log.debug("Saved {} knowledge analysis data records for ID: {}", fileKnowledgeData.size(), context.getAnalysisId());
         } catch (Exception e) {
             log.error("Error saving enriched knowledge analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }

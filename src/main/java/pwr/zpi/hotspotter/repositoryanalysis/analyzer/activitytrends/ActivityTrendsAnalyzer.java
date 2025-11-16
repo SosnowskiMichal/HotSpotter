@@ -55,6 +55,7 @@ public class ActivityTrendsAnalyzer {
 
         try {
             activityTrendsRepository.save(activityTrends);
+            log.debug("Saved activity trends data ({} days) for ID: {}", dailyStats.size(), context.getAnalysisId());
         } catch (Exception e) {
             log.error("Error saving activity trends data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
