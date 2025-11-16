@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.CouplingAnalyzer;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.CouplingAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzer;
@@ -49,6 +51,7 @@ public class RepositoryAnalysisService {
     private final AuthorsAnalyzer authorsAnalyzer;
     private final FileInfoAnalyzer fileInfoAnalyzer;
     private final ActivityTrendsAnalyzer activityTrendsAnalyzer;
+    private final CouplingAnalyzer couplingAnalyzer;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         LocalDateTime analysisStartedAt = LocalDateTime.now();
@@ -75,6 +78,7 @@ public class RepositoryAnalysisService {
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
             ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, endDate, 6);
+            CouplingAnalyzerContext couplingContext = couplingAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
 
             try (commits) {
                 commits.forEach(commit -> {
@@ -82,6 +86,7 @@ public class RepositoryAnalysisService {
                     authorsAnalyzer.processCommit(commit, authorsContext);
                     fileInfoAnalyzer.processCommit(commit, fileInfoContext);
                     activityTrendsAnalyzer.processCommit(commit, activityTrendsContext);
+                    couplingAnalyzer.processCommit(commit, couplingContext);
                 });
             }
 
@@ -89,6 +94,7 @@ public class RepositoryAnalysisService {
             authorsAnalyzer.finishAnalysis(authorsContext);
             fileInfoAnalyzer.finishAnalysis(fileInfoContext);
             activityTrendsAnalyzer.finishAnalysis(activityTrendsContext);
+            couplingAnalyzer.finishAnalysis(couplingContext);
 
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
