@@ -50,12 +50,10 @@ public class CouplingAnalyzerContext {
             }
         }
 
-        if (author != null && !author.isBlank() && date != null) {
-            if (!date.isBefore(authorCouplingAnalysisStartDate)) {
-                Map<String, Integer> fileChanges = authorFileChanges.computeIfAbsent(author, _ -> new HashMap<>());
-                for (String file : changedFiles) {
-                    fileChanges.merge(file, 1, Integer::sum);
-                }
+        if (author != null && !author.isBlank() && date != null && !date.isBefore(authorCouplingAnalysisStartDate)) {
+            Map<String, Integer> fileChanges = authorFileChanges.computeIfAbsent(author, _ -> new HashMap<>());
+            for (String file : changedFiles) {
+                fileChanges.merge(file, 1, Integer::sum);
             }
         }
     }
