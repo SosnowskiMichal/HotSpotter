@@ -4,15 +4,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.FileDataDTO;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.FilePathNameDTO;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.RepositoryStructureNode;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.*;
+import pwr.zpi.hotspotter.repositoryanalysis.mapper.AuthorCouplingMapper;
+import pwr.zpi.hotspotter.repositoryanalysis.mapper.AuthorStatisticsMapper;
 import pwr.zpi.hotspotter.repositoryanalysis.mapper.FileDataMapper;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 
@@ -28,8 +32,14 @@ public class RepositoryAnalysisResultsService {
     private final FileInfoRepository fileInfoRepository;
     private final FileCouplingRepository fileCouplingRepository;
     private final FileKnowledgeRepository fileKnowledgeRepository;
+    private final AuthorStatisticsRepository authorStatisticsRepository;
+    private final AuthorCouplingRepository authorCouplingRepository;
+
     private final RepositoryStructureService repositoryStructureService;
+
     private final FileDataMapper fileDataMapper;
+    private final AuthorStatisticsMapper authorStatisticsMapper;
+    private final AuthorCouplingMapper authorCouplingMapper;
 
     public RepositoryStructureNode getRepositoryStructure(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
@@ -37,7 +47,7 @@ public class RepositoryAnalysisResultsService {
         return repositoryStructureService.buildRepositoryStructure(fileInfoData);
     }
 
-    public List<FilePathNameDTO> getFilesInRepository(String analysisId) {
+    public List<FilePathNameDTO> getAllFilesInRepository(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
         List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
 
@@ -55,7 +65,7 @@ public class RepositoryAnalysisResultsService {
         FileInfo fileInfo = fileInfoRepository.findByAnalysisIdAndFilePath(analysisId, path)
                 .orElseThrow(() -> {
                     log.warn("File with path '{}' not found in analysis with ID '{}'.", path, analysisId);
-                    return new ObjectNotFoundException("File with path '" + path + "' not found in analysis with ID '" + analysisId + "'");
+                    return new ObjectNotFoundException("File with path '" + path + "' not found in analysis.");
                 });
 
         FileCoupling fileCoupling = fileCouplingRepository.findByAnalysisIdAndFilePath(analysisId, path)
@@ -65,6 +75,49 @@ public class RepositoryAnalysisResultsService {
                 .orElse(null);
 
         return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge);
+    }
+
+    public List<AuthorSummaryDTO> getAllAuthors(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<AuthorStatistics> authorStatistics = authorStatisticsRepository.findAllByAnalysisId(analysisId);
+
+        return authorStatistics.stream()
+                .map(stats -> new AuthorSummaryDTO(
+                        stats.getName(),
+                        stats.getEmails(),
+                        stats.getIsActive()
+                ))
+                .toList();
+    }
+
+    public List<AuthorStatisticsDTO> getAllAuthorsStatistics(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<AuthorStatistics> authorStatistics = authorStatisticsRepository.findAllByAnalysisId(analysisId);
+
+        return authorStatistics.stream()
+                .map(authorStatisticsMapper::toDTO)
+                .toList();
+    }
+
+    public AuthorStatisticsDTO getAuthorStatistics(String analysisId, String name) {
+        checkIfAnalysisCompleted(analysisId);
+
+        AuthorStatistics authorStatistics = authorStatisticsRepository.findByAnalysisIdAndName(analysisId, name)
+                .orElseThrow(() -> {
+                    log.warn("Author with name '{}' not found in analysis with ID '{}'.", name, analysisId);
+                    return new ObjectNotFoundException("Author with name '" + name + "' not found in analysis.");
+                });
+
+        return authorStatisticsMapper.toDTO(authorStatistics);
+    }
+
+    public List<AuthorCouplingDTO> getAllAuthorsCouplings(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<AuthorCoupling> authorsCouplings = authorCouplingRepository.findAllByAnalysisId(analysisId);
+
+        return authorsCouplings.stream()
+                .map(authorCouplingMapper::toDTO)
+                .toList();
     }
 
     private void checkIfAnalysisCompleted(String analysisId) {
