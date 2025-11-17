@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.RepositoryStructureNode;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -134,8 +136,7 @@ public class RepositoryStructureService {
 
         Integer commits = fileInfo.getTotalCommits();
         if (commits != null && maxFileValues.maxCommits > 0) {
-            double normalizedValue = (double) commits / maxFileValues.maxCommits;
-            double height = Math.round((Math.exp(2 * normalizedValue) - 1) / (Math.exp(2) - 1) * 100.0) / 100.0;
+            double height = calculateHeight(commits, maxFileValues.maxCommits);
             node.setHeight(roundToStep(height));
         } else {
             node.setHeight(0.0);
@@ -143,15 +144,30 @@ public class RepositoryStructureService {
 
         Integer linesOfCode = fileInfo.getCodeLines();
         if (linesOfCode != null && maxFileValues.maxLinesOfCode > 0) {
-            double width = Math.round(linesOfCode * 100.0 / maxFileValues.maxLinesOfCode) / 100.0;
+            double width = calculateWidth(linesOfCode, maxFileValues.maxLinesOfCode);
             node.setWidth(roundToStep(width));
         } else {
             node.setWidth(0.0);
         }
     }
 
+    private double calculateHeight(int commits, int maxCommits) {
+        double normalizedValue = (double) commits / maxCommits;
+        double height = (Math.exp(2 * normalizedValue) - 1) / (Math.exp(2) - 1);
+        return Math.round(height * 100.0) / 100.0;
+    }
+
+    private double calculateWidth(int linesOfCode, int maxLinesOfCode) {
+        double normalizedValue = (double) linesOfCode / maxLinesOfCode;
+        double width = Math.sqrt(Math.log1p(normalizedValue) / Math.log(2));
+        return Math.round(width * 100.0) / 100.0;
+    }
+
     private double roundToStep(double value) {
-        return Math.round(value / DIMENSION_STEP) * DIMENSION_STEP;
+        double rounded = Math.round(value / DIMENSION_STEP) * DIMENSION_STEP;
+        return new BigDecimal(rounded)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     private record MaxFileValues(int maxCommits, int maxLinesOfCode) { }
