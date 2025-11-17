@@ -3,12 +3,10 @@ package pwr.zpi.hotspotter.sonar.model.repoanalysis;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @Document(collection = "sonar_repo_analysis_results")
@@ -17,9 +15,6 @@ import java.util.List;
 public class SonarRepoAnalysisResult {
     @Id
     private String repoAnalysisId;
-    @NonNull
-    private String projectKey;
-    private String projectName;
     private LocalDateTime analysisDate;
     private Integer bugs;
     private Integer vulnerabilities;
@@ -27,5 +22,4 @@ public class SonarRepoAnalysisResult {
     private Double coverage;
     private Double duplicatedLinesDensity;
     private Integer complexity;
-    private List<SonarRepoAnalysisComponent> components;
 }

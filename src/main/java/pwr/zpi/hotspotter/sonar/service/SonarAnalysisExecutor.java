@@ -2,7 +2,6 @@ package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.util.Pair;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
@@ -10,9 +9,11 @@ import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarFileAnalysisRepository;
+import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisComponentRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.io.File;
@@ -37,14 +38,15 @@ public class SonarAnalysisExecutor {
     private final SonarProperties sonarProperties;
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
     private final SonarFileAnalysisRepository sonarFileAnalysisRepository;
+    private final SonarRepoAnalysisComponentRepository sonarRepoAnalysisComponentRepository;
 
 
     @Async("sonarExecutor")
-    public CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> runAnalysisAsync(String repoAnalysisId, String sonarAnalysisId, Path projectPath, String projectKey, String projectName) {
+    public CompletableFuture<SonarResultDownloader.SonarAnalysisResults> runAnalysisAsync(String repoAnalysisId, String sonarAnalysisId, Path projectPath, String projectKey, String projectName) {
         SonarAnalysisStatus status = sonarAnalysisStatusRepository.findById(sonarAnalysisId).orElseThrow(() ->
                 new ObjectNotFoundException("SonarQube analysis status not found for ID: " + sonarAnalysisId));
 
-        Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> sonarAnalysisResult = null;
+        SonarResultDownloader.SonarAnalysisResults sonarAnalysisResult = null;
 
         try {
             status.setStatus(SonarAnalysisState.RUNNING);
@@ -141,15 +143,17 @@ public class SonarAnalysisExecutor {
         }).start();
     }
 
-    private Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> getAndSaveResults(String repoAnalysisId, String projectKey) {
+    private SonarResultDownloader.SonarAnalysisResults getAndSaveResults(String repoAnalysisId, String projectKey) {
         int attempts = 0;
         while (attempts < MAX_DOWNLOAD_ATTEMPTS) {
-            Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
+            SonarResultDownloader.SonarAnalysisResults result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
 
-            if (result != null && result.getFirst().getComponents() != null && !result.getFirst().getComponents().isEmpty()) {
-                SonarRepoAnalysisResult repoAnalysisResult = result.getFirst();
-                SonarFileAnalysisResult sonarFileAnalysisResult = result.getSecond();
+            if (result != null && result.repoAnalysisComponents() != null && !result.repoAnalysisComponents().isEmpty()) {
+                SonarRepoAnalysisResult repoAnalysisResult = result.repoAnalysisResult();
+                List<SonarRepoAnalysisComponent> components = result.repoAnalysisComponents();
+                SonarFileAnalysisResult sonarFileAnalysisResult = result.fileAnalysisResult();
                 sonarRepoAnalysisRepository.save(repoAnalysisResult);
+                sonarRepoAnalysisComponentRepository.saveAll(components);
                 sonarFileAnalysisRepository.save(sonarFileAnalysisResult);
                 log.info("Successfully saved analysis results for project: {}", projectKey);
 

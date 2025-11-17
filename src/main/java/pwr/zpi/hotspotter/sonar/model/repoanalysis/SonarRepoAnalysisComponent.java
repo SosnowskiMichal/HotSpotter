@@ -1,11 +1,21 @@
 package pwr.zpi.hotspotter.sonar.model.repoanalysis;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
+@Document(collection = "sonar_repo_analysis_components")
+@CompoundIndex(name = "repoAnalysisId_path_idx", def = "{'repoAnalysisId': 1, 'path': 1}")
+@NoArgsConstructor
+@AllArgsConstructor
 public class SonarRepoAnalysisComponent {
-    private String key;
-    private String name;
+    @Id
+    private String id;
+    private String repoAnalysisId;
     private String qualifier;
     private String path;
 

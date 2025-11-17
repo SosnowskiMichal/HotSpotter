@@ -50,7 +50,7 @@ public class SonarResultDownloader {
     private final SonarProperties sonarProperties;
 
 
-    public Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> fetchAnalysisResults(String repoAnalysisId, String projectKey) {
+    public SonarAnalysisResults fetchAnalysisResults(String repoAnalysisId, String projectKey) {
         try {
             log.info("Fetching analysis results for project: {}", projectKey);
 
@@ -62,9 +62,16 @@ public class SonarResultDownloader {
 
             List<Map<String, Object>> issues = fetchIssues(projectKey);
 
-            return Pair.of(
-                    mapToAnalysisResult(repoAnalysisId, projectKey, componentTree),
-                    mapIssuesToFileAnalysisResult(repoAnalysisId, projectKey, issues)
+
+            Pair<SonarRepoAnalysisResult, List<SonarRepoAnalysisComponent>> repoAnalysisResult =
+                    mapToRepoAnalysisResult(repoAnalysisId, componentTree);
+            SonarFileAnalysisResult fileAnalysisResult =
+                    mapIssuesToFileAnalysisResult(repoAnalysisId, projectKey, issues);
+
+            return new SonarAnalysisResults(
+                    repoAnalysisResult.getFirst(),
+                    repoAnalysisResult.getSecond(),
+                    fileAnalysisResult
             );
 
         } catch (Exception e) {
@@ -189,43 +196,39 @@ public class SonarResultDownloader {
         return result;
     }
 
-    private SonarRepoAnalysisResult mapToAnalysisResult(String repoAnalysisId, String projectKey, Map<String, Object> data) {
-        SonarRepoAnalysisResult result = new SonarRepoAnalysisResult();
-        result.setProjectKey(projectKey);
-        result.setRepoAnalysisId(repoAnalysisId);
-        result.setAnalysisDate(LocalDateTime.now());
+    private Pair<SonarRepoAnalysisResult, List<SonarRepoAnalysisComponent>> mapToRepoAnalysisResult(String repoAnalysisId, Map<String, Object> data) {
+        SonarRepoAnalysisResult repoAnalysisResult = new SonarRepoAnalysisResult();
+        repoAnalysisResult.setRepoAnalysisId(repoAnalysisId);
+        repoAnalysisResult.setAnalysisDate(LocalDateTime.now());
 
         Map<String, Object> baseComponent = (Map<String, Object>) data.get("baseComponent");
         if (baseComponent != null) {
-            result.setProjectName((String) baseComponent.get("name"));
             List<Map<String, Object>> measures = (List<Map<String, Object>>) baseComponent.get("measures");
             Metrics projectMetrics = extractMetrics(measures);
 
-            result.setBugs(projectMetrics.bugs);
-            result.setVulnerabilities(projectMetrics.vulnerabilities);
-            result.setCodeSmells(projectMetrics.codeSmells);
-            result.setCoverage(projectMetrics.coverage);
-            result.setDuplicatedLinesDensity(projectMetrics.duplicatedLinesDensity);
-            result.setComplexity(projectMetrics.complexity);
+            repoAnalysisResult.setBugs(projectMetrics.bugs);
+            repoAnalysisResult.setVulnerabilities(projectMetrics.vulnerabilities);
+            repoAnalysisResult.setCodeSmells(projectMetrics.codeSmells);
+            repoAnalysisResult.setCoverage(projectMetrics.coverage);
+            repoAnalysisResult.setDuplicatedLinesDensity(projectMetrics.duplicatedLinesDensity);
+            repoAnalysisResult.setComplexity(projectMetrics.complexity);
         }
 
         List<Map<String, Object>> components = (List<Map<String, Object>>) data.get("components");
+        List<SonarRepoAnalysisComponent> componentList = new ArrayList<>();
         if (components != null) {
-            List<SonarRepoAnalysisComponent> componentList = components.stream()
+            componentList = components.stream()
                     .map(this::mapComponent)
                     .collect(Collectors.toList());
 
-            result.setComponents(componentList);
         }
 
-        return result;
+        return Pair.of(repoAnalysisResult, componentList);
     }
 
     private SonarRepoAnalysisComponent mapComponent(Map<String, Object> componentData) {
         SonarRepoAnalysisComponent comp = new SonarRepoAnalysisComponent();
 
-        comp.setKey((String) componentData.get("key"));
-        comp.setName((String) componentData.get("name"));
         comp.setQualifier((String) componentData.get("qualifier"));
         comp.setPath((String) componentData.get("path"));
 
@@ -324,7 +327,7 @@ public class SonarResultDownloader {
     private TextRange extractTextRange(Map<String, Object> raw) {
         TextRange textRange = new TextRange();
         Object textRangeObj = raw.get("textRange");
-        
+
         if (textRangeObj instanceof Map) {
             Map<String, Object> textRangeMap = (Map<String, Object>) textRangeObj;
             textRange.setStartLine(parseIntOrZero(textRangeMap.get("startLine")));
@@ -432,4 +435,10 @@ public class SonarResultDownloader {
         private Double duplicatedLinesDensity;
         private Integer complexity;
     }
+
+    public record SonarAnalysisResults(
+            SonarRepoAnalysisResult repoAnalysisResult,
+            List<SonarRepoAnalysisComponent> repoAnalysisComponents,
+            SonarFileAnalysisResult fileAnalysisResult
+    ) {}
 }
