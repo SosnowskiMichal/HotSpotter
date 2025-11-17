@@ -41,8 +41,8 @@ public class SonarResultDownloader {
             "duplicated_lines_density",
             "complexity"
     );
-    private final static List<String> FILE_PROBLEM_TYPES = List.of("BUG", "CODE_SMELL");
-    private final static List<String> FILE_SEVERITIES = List.of("MAJOR", "CRITICAL");
+    public final static List<String> FILE_PROBLEM_TYPES = List.of("BUG", "CODE_SMELL");
+    public final static List<String> FILE_SEVERITIES = List.of("MAJOR", "CRITICAL");
     private final static int DEFAULT_PAGE_SIZE = 500;
     private final static int MAX_API_RESULTS = 10000;
 
@@ -80,7 +80,7 @@ public class SonarResultDownloader {
         }
     }
 
-    private Map<String, Object> fetchPaged(String apiPath, Map<String, String> queryParams, String listKey, String baseKey) {
+    public Map<String, Object> fetchPaged(String apiPath, Map<String, String> queryParams, String listKey, String baseKey) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + sonarProperties.getToken());
@@ -267,7 +267,7 @@ public class SonarResultDownloader {
         return metrics;
     }
 
-    public SonarFileAnalysisResult mapIssuesToFileAnalysisResult(
+    private SonarFileAnalysisResult mapIssuesToFileAnalysisResult(
             String repoAnalysisId,
             String projectKey,
             List<Map<String, Object>> issuesList) {
