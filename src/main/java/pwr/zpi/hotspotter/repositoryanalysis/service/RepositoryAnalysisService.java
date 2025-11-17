@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.ActivityTrendsContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.CouplingAnalyzer;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.CouplingAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzer;
@@ -19,6 +21,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
@@ -27,6 +30,7 @@ import pwr.zpi.hotspotter.sonar.service.SonarService;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -48,15 +52,16 @@ public class RepositoryAnalysisService {
     private final AuthorsAnalyzer authorsAnalyzer;
     private final FileInfoAnalyzer fileInfoAnalyzer;
     private final ActivityTrendsAnalyzer activityTrendsAnalyzer;
+    private final CouplingAnalyzer couplingAnalyzer;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
-        long analysisStartTime = System.currentTimeMillis();
+        LocalDateTime analysisStartedAt = LocalDateTime.now();
 
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
         RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
-        AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate);
+        AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
         String analysisId = analysisInfo.getId();
         analysisInfoRepository.save(analysisInfo);
 
@@ -74,6 +79,7 @@ public class RepositoryAnalysisService {
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
             ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, endDate, 6);
+            CouplingAnalyzerContext couplingContext = couplingAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
 
             try (commits) {
                 commits.forEach(commit -> {
@@ -81,6 +87,7 @@ public class RepositoryAnalysisService {
                     authorsAnalyzer.processCommit(commit, authorsContext);
                     fileInfoAnalyzer.processCommit(commit, fileInfoContext);
                     activityTrendsAnalyzer.processCommit(commit, activityTrendsContext);
+                    couplingAnalyzer.processCommit(commit, couplingContext);
                 });
             }
 
@@ -88,6 +95,7 @@ public class RepositoryAnalysisService {
             authorsAnalyzer.finishAnalysis(authorsContext);
             fileInfoAnalyzer.finishAnalysis(fileInfoContext);
             activityTrendsAnalyzer.finishAnalysis(activityTrendsContext);
+            couplingAnalyzer.finishAnalysis(couplingContext);
 
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
@@ -99,15 +107,10 @@ public class RepositoryAnalysisService {
                 log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
             }
 
-            long analysisEndTime = System.currentTimeMillis();
-            long analysisDurationSeconds = (analysisEndTime - analysisStartTime) / 1000;
-
-            analysisInfo.setAnalysisTimeInSeconds(analysisDurationSeconds);
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
 
-            log.info("Analysis completed for repository {} in {} seconds, ID: {}",
-                    repositoryUrl, analysisDurationSeconds, analysisId);
+            log.info("Analysis completed for repository {}, ID: {}", repositoryUrl, analysisId);
             ssePublisher.sendComplete(emitter, analysisId);
 
         } catch (LogProcessingException e) {
@@ -130,7 +133,12 @@ public class RepositoryAnalysisService {
         }
     }
 
-    private AnalysisInfo createAnalysisInfo(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate) {
+    private AnalysisInfo createAnalysisInfo(
+            RepositoryInfo repositoryInfo,
+            LocalDate startDate,
+            LocalDate endDate,
+            LocalDateTime analysisStartedAt
+    ) {
         String analysisId = UUID.randomUUID().toString();
         return AnalysisInfo.builder()
                 .id(analysisId)
@@ -139,14 +147,8 @@ public class RepositoryAnalysisService {
                 .repositoryOwner(repositoryInfo.getOwner())
                 .startDate(startDate)
                 .endDate(endDate)
+                .analysisStartedAt(analysisStartedAt)
                 .build();
-    }
-
-    public enum AnalysisSseStatus {
-        DOWNLOADING,
-        PROCESSING_DATA,
-        ANALYZING,
-        SONAR
     }
 
 }

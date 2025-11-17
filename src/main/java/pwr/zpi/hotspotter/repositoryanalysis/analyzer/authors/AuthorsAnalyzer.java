@@ -28,7 +28,7 @@ public class AuthorsAnalyzer {
     private final FileKnowledgeRepository fileKnowledgeRepository;
 
     public AuthorsAnalyzerContext startAnalysis(String analysisId, LocalDate referenceDate) {
-        log.debug("Starting authors analysis for ID {}", analysisId);
+        log.debug("Starting authors analysis for ID: {}", analysisId);
         return new AuthorsAnalyzerContext(analysisId, referenceDate);
     }
 
@@ -52,6 +52,8 @@ public class AuthorsAnalyzer {
     public void finishAnalysis(AuthorsAnalyzerContext context) {
         if (context == null) return;
 
+        log.debug("Finishing authors analysis for ID: {}", context.getAnalysisId());
+
         Collection<AuthorStatistics> authorStatistics = context.getAuthorStatistics().values();
         authorStatistics.forEach(stats -> {
             calculateInactivityTime(stats, context.getReferenceDate());
@@ -60,13 +62,16 @@ public class AuthorsAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(authorStatisticsRepository, authorStatistics);
+            log.debug("Saved {} authors analysis data records for ID: {}", authorStatistics.size(), context.getAnalysisId());
         } catch (Exception e) {
-            log.error("Error saving authors analysis data for ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            log.error("Error saving authors analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 
     public void enrichAnalysisData(AuthorsAnalyzerContext context) {
         if (context == null) return;
+
+        log.debug("Enriching authors analysis data for ID: {}", context.getAnalysisId());
 
         Collection<AuthorStatistics> authorStatistics = context.getAuthorStatistics().values();
         List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(context.getAnalysisId());
@@ -91,8 +96,9 @@ public class AuthorsAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(authorStatisticsRepository, authorStatistics);
+            log.debug("Saved enriched authors analysis data for ID: {}", context.getAnalysisId());
         } catch (Exception e) {
-            log.error("Error saving enriched authors analysis data for ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            log.error("Error saving enriched authors analysis data for ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 

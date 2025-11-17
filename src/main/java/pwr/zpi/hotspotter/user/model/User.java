@@ -1,5 +1,6 @@
 package pwr.zpi.hotspotter.user.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -9,6 +10,7 @@ import pwr.zpi.hotspotter.user.model.analysispreferences.UserAnalysisPreferences
 import java.time.LocalDateTime;
 
 @Data
+@AllArgsConstructor
 @Document(collection = "users")
 public class User {
 
@@ -41,6 +43,7 @@ public class User {
         USER,
         ADMIN
     }
+
 }
 
 

@@ -52,6 +52,8 @@ public class FileInfoAnalyzer {
     public void finishAnalysis(FileInfoAnalyzerContext context) {
         if (context == null) return;
 
+        log.debug("Finishing file info analysis for ID: {}", context.getAnalysisId());
+
         Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
         Map<String, FileLinesData> fileLinesData = getFileLinesData(context.getRepositoryPath());
         Collection<FileInfo> fileInfos = context.getFileInfos().values();
@@ -68,8 +70,9 @@ public class FileInfoAnalyzer {
 
         try {
             AnalysisUtils.saveDataInBatches(fileInfoRepository, fileInfosFiltered);
+            log.debug("Saved {} file info analysis data records for ID: {}", fileInfosFiltered.size(), context.getAnalysisId());
         } catch (Exception e) {
-            log.error("Error saving file info data for analysis ID {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            log.error("Error saving file info data for analysis ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
     }
 
@@ -79,7 +82,7 @@ public class FileInfoAnalyzer {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     "bash", "-c",
-                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 120 ."
+                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 60 ."
             );
             pb.directory(repositoryPath.toFile());
             pb.redirectErrorStream(true);
