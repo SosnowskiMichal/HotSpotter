@@ -16,6 +16,7 @@ import pwr.zpi.hotspotter.sonar.repository.SonarFileAnalysisRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 import pwr.zpi.hotspotter.sonar.service.JavaProjectCompiler;
 import pwr.zpi.hotspotter.sonar.service.SonarAnalysisExecutor;
+import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -58,7 +59,7 @@ class SonarAnalysisExecutorTest {
         when(sonarProperties.getToken()).thenReturn("token");
         when(javaProjectCompiler.findCommonJavaSourceRoot(projectPath)).thenReturn(Optional.empty());
 
-        CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> result =
+        CompletableFuture<SonarResultDownloader.SonarAnalysisResults> result =
                 sonarAnalysisExecutor.runAnalysisAsync(repoAnalysisId, sonarAnalysisId, projectPath, projectKey, projectName);
 
         assertNotNull(result);
