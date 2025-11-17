@@ -15,6 +15,7 @@ import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
 import pwr.zpi.hotspotter.sonar.service.SonarAnalysisExecutor;
 import pwr.zpi.hotspotter.sonar.service.SonarClient;
+import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
 
 import java.nio.file.Files;
@@ -125,14 +126,14 @@ class SonarServiceTest {
         when(sonarProperties.getToken()).thenReturn("token");
         when(sonarClient.validateToken(anyString())).thenReturn(true);
         when(sonarAnalysisStatusRepository.save(any(SonarAnalysisStatus.class))).thenReturn(status);
-        CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> future = new CompletableFuture<>();
+        CompletableFuture<SonarResultDownloader.SonarAnalysisResults> future = new CompletableFuture<>();
         when(sonarAnalysisExecutor.runAnalysisAsync(anyString(), anyString(), any(), anyString(), anyString())).thenReturn(future);
 
         try (var filesMock = mockStatic(Files.class)) {
             filesMock.when(() -> Files.exists(projectPath)).thenReturn(true);
             filesMock.when(() -> Files.isDirectory(projectPath)).thenReturn(true);
 
-            CompletableFuture<Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult>> result = sonarService.runAnalysis(repoAnalysisId, projectPath, projectKey, projectName);
+            CompletableFuture<SonarResultDownloader.SonarAnalysisResults> result = sonarService.runAnalysis(repoAnalysisId, projectPath, projectKey, projectName);
 
             assertNotNull(result);
             verify(sonarAnalysisStatusRepository).save(any(SonarAnalysisStatus.class));

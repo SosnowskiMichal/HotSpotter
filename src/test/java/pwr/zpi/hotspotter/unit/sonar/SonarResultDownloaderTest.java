@@ -5,14 +5,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.util.Pair;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
-import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 
 import java.net.URI;
@@ -48,12 +45,12 @@ class SonarResultDownloaderTest {
                 .thenReturn(ResponseEntity.ok(componentTree))
                 .thenReturn(ResponseEntity.ok(Map.of("issues", issues)));
 
-        Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
+        SonarResultDownloader.SonarAnalysisResults result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
 
         assertNotNull(result);
-        assertEquals("Project Name", result.getFirst().getProjectName());
+        assertEquals(repoAnalysisId, result.repoAnalysisResult().getRepoAnalysisId());
         int expectedIssuesCount = SonarResultDownloader.FILE_PROBLEM_TYPES.size() * SonarResultDownloader.FILE_SEVERITIES.size();
-        assertEquals(expectedIssuesCount, result.getSecond().getIssues().size());
+        assertEquals(expectedIssuesCount, result.fileAnalysisResult().getIssues().size());
     }
 
     @Test
@@ -66,7 +63,7 @@ class SonarResultDownloaderTest {
         when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)))
                 .thenThrow(new RuntimeException("API error"));
 
-        Pair<SonarRepoAnalysisResult, SonarFileAnalysisResult> result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
+        SonarResultDownloader.SonarAnalysisResults result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);
 
         assertNull(result);
     }
