@@ -14,16 +14,18 @@ public class AuthorContribution {
     private String name;
 
     @Builder.Default
-    private int linesAdded = 0;
+    private Integer linesAdded = 0;
 
     @Builder.Default
-    private int commits = 0;
+    private Integer commits = 0;
 
     @Builder.Default
-    private double contributionPercentage = 0.0;
+    private Double contributionPercentage = 0.0;
 
     public AuthorContribution(String name) {
         this.name = name;
+        this.linesAdded = 0;
+        this.commits = 0;
     }
 
     public void increaseLinesAdded(int lines) {

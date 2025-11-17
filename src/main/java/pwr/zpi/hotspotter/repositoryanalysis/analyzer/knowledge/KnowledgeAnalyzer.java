@@ -88,14 +88,6 @@ public class KnowledgeAnalyzer {
                 ));
 
         for (FileKnowledge fileKnowledge : fileKnowledgeData) {
-            int totalLinesAdded = fileKnowledge.getLinesAdded();
-
-            if (totalLinesAdded == 0) {
-                fileKnowledge.setKnowledgeLoss(0.0);
-                fileKnowledge.setKnowledgeRisk(KnowledgeRisk.UNKNOWN);
-                continue;
-            }
-
             List<AuthorContribution> contributions = fileKnowledge.getAuthorContributions();
             if (contributions == null || contributions.isEmpty()) {
                 fileKnowledge.setKnowledgeLoss(0.0);
@@ -108,13 +100,34 @@ public class KnowledgeAnalyzer {
                     .count();
             fileKnowledge.setActiveAuthors(activeContributors);
 
-            int linesAddedByInactiveAuthors = contributions.stream()
-                    .filter(contribution -> !authorActivityMap.get(contribution.getName()))
-                    .mapToInt(AuthorContribution::getLinesAdded)
-                    .sum();
+            int totalLinesAdded = fileKnowledge.getLinesAdded();
+            if (totalLinesAdded > 0) {
+                int linesAddedByInactiveAuthors = contributions.stream()
+                        .filter(contribution -> !authorActivityMap.get(contribution.getName()))
+                        .mapToInt(AuthorContribution::getLinesAdded)
+                        .sum();
 
-            double knowledgeLoss = Math.round(linesAddedByInactiveAuthors * 10000.0 / totalLinesAdded) / 100.0;
-            fileKnowledge.setKnowledgeLoss(knowledgeLoss);
+                double knowledgeLoss = Math.round(linesAddedByInactiveAuthors * 10000.0 / totalLinesAdded) / 100.0;
+                fileKnowledge.setKnowledgeLoss(knowledgeLoss);
+
+            } else {
+                int totalCommits = fileKnowledge.getCommits();
+                int commitsByInactiveAuthors = contributions.stream()
+                        .filter(contribution -> !authorActivityMap.get(contribution.getName()))
+                        .mapToInt(AuthorContribution::getCommits)
+                        .sum();
+
+                double knowledgeLoss = Math.round(commitsByInactiveAuthors * 10000.0 / totalCommits) / 100.0;
+                fileKnowledge.setKnowledgeLoss(knowledgeLoss);
+
+                fileKnowledge.setLinesAdded(null);
+                contributions.forEach(contribution -> {
+                    Integer lines = contribution.getLinesAdded();
+                    if (lines != null && lines == 0) {
+                        contribution.setLinesAdded(null);
+                    }
+                });
+            }
 
             KnowledgeRisk risk = calculateKnowledgeRisk(fileKnowledge);
             fileKnowledge.setKnowledgeRisk(risk);
@@ -145,7 +158,7 @@ public class KnowledgeAnalyzer {
                 .peek(contribution -> {
                     double contributionPercentage = linesAdded > 0
                             ? Math.round(contribution.getLinesAdded() * 10000.0 / linesAdded) / 100.0
-                            : 0.0;
+                            : Math.round(contribution.getCommits() * 10000.0 / commits) / 100.0;
                     contribution.setContributionPercentage(contributionPercentage);
                 })
                 .sorted(Comparator.comparingDouble(AuthorContribution::getContributionPercentage).reversed())
