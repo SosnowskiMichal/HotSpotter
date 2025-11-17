@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.ActivityTrends;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
@@ -15,9 +17,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileIn
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.*;
-import pwr.zpi.hotspotter.repositoryanalysis.mapper.AuthorCouplingMapper;
-import pwr.zpi.hotspotter.repositoryanalysis.mapper.AuthorStatisticsMapper;
-import pwr.zpi.hotspotter.repositoryanalysis.mapper.FileDataMapper;
+import pwr.zpi.hotspotter.repositoryanalysis.mapper.*;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 
 import java.util.Collection;
@@ -34,12 +34,16 @@ public class RepositoryAnalysisResultsService {
     private final FileKnowledgeRepository fileKnowledgeRepository;
     private final AuthorStatisticsRepository authorStatisticsRepository;
     private final AuthorCouplingRepository authorCouplingRepository;
+    private final ActivityTrendsRepository activityTrendsRepository;
 
     private final RepositoryStructureService repositoryStructureService;
 
     private final FileDataMapper fileDataMapper;
+    private final FileInfoMapper fileInfoMapper;
+    private final FileCouplingMapper fileCouplingMapper;
     private final AuthorStatisticsMapper authorStatisticsMapper;
     private final AuthorCouplingMapper authorCouplingMapper;
+    private final DailyStatsMapper dailyStatsMapper;
 
     public RepositoryStructureNode getRepositoryStructure(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
@@ -52,10 +56,7 @@ public class RepositoryAnalysisResultsService {
         List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
 
         return fileInfoData.stream()
-                .map(fileInfo -> new FilePathNameDTO(
-                        fileInfo.getFilePath(),
-                        fileInfo.getFileName()
-                ))
+                .map(fileInfoMapper::toPathNameDTO)
                 .toList();
     }
 
@@ -77,16 +78,21 @@ public class RepositoryAnalysisResultsService {
         return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge);
     }
 
+    public List<FileCouplingDTO> getAllFilesCoupling(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<FileCoupling> filesCouplings = fileCouplingRepository.findAllByAnalysisId(analysisId);
+
+        return filesCouplings.stream()
+                .map(fileCouplingMapper::toDTO)
+                .toList();
+    }
+
     public List<AuthorSummaryDTO> getAllAuthors(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
         List<AuthorStatistics> authorStatistics = authorStatisticsRepository.findAllByAnalysisId(analysisId);
 
         return authorStatistics.stream()
-                .map(stats -> new AuthorSummaryDTO(
-                        stats.getName(),
-                        stats.getEmails(),
-                        stats.getIsActive()
-                ))
+                .map(authorStatisticsMapper::toSummaryDTO)
                 .toList();
     }
 
@@ -117,6 +123,20 @@ public class RepositoryAnalysisResultsService {
 
         return authorsCouplings.stream()
                 .map(authorCouplingMapper::toDTO)
+                .toList();
+    }
+
+    public List<DailyStatsDTO> getActivityTrends(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+
+        ActivityTrends activityTrends = activityTrendsRepository.findById(analysisId)
+                .orElseThrow(() -> {
+                    log.warn("Activity trends not found for analysis with ID '{}'.", analysisId);
+                    return new ObjectNotFoundException("Activity trends not found for analysis.");
+                });
+
+        return activityTrends.getDailyStats().stream()
+                .map(dailyStatsMapper::toDTO)
                 .toList();
     }
 

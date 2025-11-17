@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.mapper;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.AuthorStatisticsDTO;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.AuthorSummaryDTO;
 
 @Component
 public class AuthorStatisticsMapper {
@@ -29,6 +30,16 @@ public class AuthorStatisticsMapper {
 
                 statistics.getExistingFilesModified(),
                 statistics.getFilesAsLeadAuthor()
+        );
+    }
+
+    public AuthorSummaryDTO toSummaryDTO(AuthorStatistics statistics) {
+        if (statistics == null) return null;
+
+        return new AuthorSummaryDTO(
+                statistics.getName(),
+                statistics.getEmails(),
+                statistics.getIsActive()
         );
     }
 

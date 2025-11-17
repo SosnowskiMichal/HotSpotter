@@ -22,15 +22,23 @@ public class RepositoryAnalysisResultsController {
     }
 
     @GetMapping("/{analysisId}/files")
-    public ResponseEntity<List<FilePathNameDTO>> getAllFilesInRepository(@PathVariable String analysisId) {
+    public ResponseEntity<?> getAllFilesInRepository(
+            @PathVariable String analysisId,
+            @RequestParam(required = false) String path
+    ) {
+        if (path != null) {
+            FileDataDTO fileData = repositoryAnalysisResultsService.getFileData(analysisId, path);
+            return ResponseEntity.ok(fileData);
+        }
+
         List<FilePathNameDTO> files = repositoryAnalysisResultsService.getAllFilesInRepository(analysisId);
         return ResponseEntity.ok(files);
     }
 
-    @GetMapping("/{analysisId}/file")
-    public ResponseEntity<FileDataDTO> getFileData(@PathVariable String analysisId, @RequestParam String path) {
-        FileDataDTO fileData = repositoryAnalysisResultsService.getFileData(analysisId, path);
-        return ResponseEntity.ok(fileData);
+    @GetMapping("/{analysisId}/files/coupling")
+    public ResponseEntity<List<FileCouplingDTO>> getAllFilesCoupling(@PathVariable String analysisId) {
+        List<FileCouplingDTO> filesCouplings = repositoryAnalysisResultsService.getAllFilesCoupling(analysisId);
+        return ResponseEntity.ok(filesCouplings);
     }
 
     @GetMapping("/{analysisId}/authors")
@@ -44,19 +52,25 @@ public class RepositoryAnalysisResultsController {
             @PathVariable String analysisId,
             @RequestParam(required = false) String name
     ) {
-        if (name == null) {
-            List<AuthorStatisticsDTO> authorsStatistics = repositoryAnalysisResultsService.getAllAuthorsStatistics(analysisId);
-            return ResponseEntity.ok(authorsStatistics);
+        if (name != null) {
+            AuthorStatisticsDTO authorStatistics = repositoryAnalysisResultsService.getAuthorStatistics(analysisId, name);
+            return ResponseEntity.ok(authorStatistics);
         }
 
-        AuthorStatisticsDTO authorStatistics = repositoryAnalysisResultsService.getAuthorStatistics(analysisId, name);
-        return ResponseEntity.ok(authorStatistics);
+        List<AuthorStatisticsDTO> authorsStatistics = repositoryAnalysisResultsService.getAllAuthorsStatistics(analysisId);
+        return ResponseEntity.ok(authorsStatistics);
     }
 
     @GetMapping("/{analysisId}/authors/coupling")
     public ResponseEntity<List<AuthorCouplingDTO>> getAllAuthorsCoupling(@PathVariable String analysisId) {
         List<AuthorCouplingDTO> authorsCouplings = repositoryAnalysisResultsService.getAllAuthorsCouplings(analysisId);
         return ResponseEntity.ok(authorsCouplings);
+    }
+
+    @GetMapping("/{analysisId}/trends")
+    public ResponseEntity<List<DailyStatsDTO>> getActivityTrends(@PathVariable String analysisId) {
+        List<DailyStatsDTO> dailyStats = repositoryAnalysisResultsService.getActivityTrends(analysisId);
+        return ResponseEntity.ok(dailyStats);
     }
 
 }

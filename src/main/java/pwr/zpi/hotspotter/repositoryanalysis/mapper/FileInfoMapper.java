@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.mapper;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileInfoDTO;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.FilePathNameDTO;
 
 @Component
 public class FileInfoMapper {
@@ -30,6 +31,15 @@ public class FileInfoMapper {
 
                 fileInfo.getCodeAgeDays(),
                 fileInfo.getCodeAgeMonths()
+        );
+    }
+
+    public FilePathNameDTO toPathNameDTO(FileInfo fileInfo) {
+        if (fileInfo == null) return null;
+
+        return new FilePathNameDTO(
+                fileInfo.getFilePath(),
+                fileInfo.getFileName()
         );
     }
 
