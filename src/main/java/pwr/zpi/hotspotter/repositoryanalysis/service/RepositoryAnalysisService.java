@@ -21,6 +21,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
@@ -56,7 +57,7 @@ public class RepositoryAnalysisService {
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         LocalDateTime analysisStartedAt = LocalDateTime.now();
 
-        ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.DOWNLOADING);
+        ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
         RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
@@ -66,14 +67,14 @@ public class RepositoryAnalysisService {
 
         Path logFilePath = null;
         try {
-            ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.PROCESSING_DATA);
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
             CompletableFuture<SonarRepoAnalysisResult> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
 
             logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
             Stream<Commit> commits = logParser.parseLogs(logFilePath);
 
-            ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.ANALYZING);
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
@@ -99,7 +100,7 @@ public class RepositoryAnalysisService {
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
 
-            ssePublisher.sendProgress(emitter, RepositoryAnalysisSsePublisher.AnalysisSseStatus.SONAR);
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {

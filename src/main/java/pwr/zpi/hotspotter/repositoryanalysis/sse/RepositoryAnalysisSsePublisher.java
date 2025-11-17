@@ -38,11 +38,4 @@ public class RepositoryAnalysisSsePublisher {
         } catch (IOException _) {}
     }
 
-    public enum AnalysisSseStatus {
-        DOWNLOADING,
-        PROCESSING_DATA,
-        ANALYZING,
-        SONAR
-    }
-
 }
