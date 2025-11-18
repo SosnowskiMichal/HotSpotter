@@ -38,7 +38,7 @@ public class FileInfoAnalyzerContext {
             }
 
             if (isWithinHotSpotAnalysisPeriod(date)) {
-                fileInfo.incrementCommitsInHotSpotAnalysisPeriod();
+                fileInfo.incrementCommitsInHotspotAnalysisPeriod();
             }
             if (isWithinLastMonth(date)) {
                 fileInfo.incrementCommitsLastMonth();

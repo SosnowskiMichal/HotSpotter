@@ -1,7 +1,6 @@
 package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -48,7 +47,7 @@ public class FileInfo {
     private Integer commitsLastMonth = 0;
 
     @Builder.Default
-    private Integer commitsInHotSpotAnalysisPeriod = 0;
+    private Integer commitsInHotspotAnalysisPeriod = 0;
 
     @Builder.Default
     private Integer commitsLastYear = 0;
@@ -64,8 +63,8 @@ public class FileInfo {
 
     private Integer codeAgeMonths;
 
-    public void incrementCommitsInHotSpotAnalysisPeriod() {
-        commitsInHotSpotAnalysisPeriod++;
+    public void incrementCommitsInHotspotAnalysisPeriod() {
+        commitsInHotspotAnalysisPeriod++;
     }
 
     public void incrementCommitsLastMonth() {

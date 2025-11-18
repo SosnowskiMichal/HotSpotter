@@ -20,6 +20,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.dto.*;
 import pwr.zpi.hotspotter.repositoryanalysis.mapper.*;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -41,6 +42,7 @@ public class RepositoryAnalysisResultsService {
     private final FileDataMapper fileDataMapper;
     private final FileInfoMapper fileInfoMapper;
     private final FileCouplingMapper fileCouplingMapper;
+    private final FileKnowledgeMapper fileKnowledgeMapper;
     private final AuthorStatisticsMapper authorStatisticsMapper;
     private final AuthorCouplingMapper authorCouplingMapper;
     private final DailyStatsMapper dailyStatsMapper;
@@ -85,6 +87,94 @@ public class RepositoryAnalysisResultsService {
         return filesCouplings.stream()
                 .map(fileCouplingMapper::toDTO)
                 .toList();
+    }
+
+    public List<FileCodeAgeDTO> getAllFilesCodeAge(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+
+        int maxCodeAge = fileInfoData.stream()
+                .map(FileInfo::getCodeAgeDays)
+                .max(Integer::compareTo)
+                .orElse(1);
+
+        return fileInfoData.stream()
+                .map(fileInfo -> {
+                    double normalizedValue = Math.round(fileInfo.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
+                    return fileInfoMapper.toCodeAgeDTO(fileInfo, normalizedValue);
+                })
+                .toList();
+    }
+
+    public List<FileKnowledgeLossRiskDTO> getAllFilesKnowledgeLossRisk(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+
+        return fileKnowledgeData.stream()
+                .map(fileKnowledge -> {
+                    double normalizedValue = Math.round(fileKnowledge.getKnowledgeLoss()) / 100.0;
+                    return fileKnowledgeMapper.toKnowledgeLossRiskDTO(fileKnowledge, normalizedValue);
+                })
+                .toList();
+    }
+
+    public List<FileLeadAuthorDTO> getAllFilesLeadAuthors(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+
+        return fileKnowledgeData.stream()
+                .map(fileKnowledgeMapper::toLeadAuthorDTO)
+                .toList();
+    }
+
+    public List<HotspotDTO> getHotspots(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+
+        int maxCommits = 1;
+        int maxCodeLines = 1;
+        List<FileInfo> codeFiles = new ArrayList<>();
+
+        for (FileInfo fileInfo : fileInfoData) {
+            if (fileInfo.getCodeLines() != null) {
+                codeFiles.add(fileInfo);
+                maxCommits = Math.max(maxCommits, fileInfo.getCommitsInHotspotAnalysisPeriod());
+                maxCodeLines = Math.max(maxCodeLines, fileInfo.getCodeLines());
+            }
+        }
+
+        if (codeFiles.isEmpty()) {
+            return List.of();
+        }
+
+        final double invMaxCommits = 1.0 / maxCommits;
+        final double invMaxCodeLines = 1.0 / maxCodeLines;
+
+        double maxHotspotScore = codeFiles.stream()
+                .mapToDouble(fileInfo -> {
+                    double normalizedCommits = fileInfo.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
+                    double normalizedCodeLines = fileInfo.getCodeLines() * invMaxCodeLines;
+                    return calculateHotSpotScore(normalizedCommits, normalizedCodeLines);
+                })
+                .max()
+                .orElse(1.0);
+
+        final double invMaxHotspotScore = 1.0 / maxHotspotScore;
+
+        return codeFiles.stream()
+                .map(fileInfo -> {
+                    double normalizedCommits = fileInfo.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
+                    double normalizedCodeLines = fileInfo.getCodeLines() * invMaxCodeLines;
+                    double hotspotScore = calculateHotSpotScore(normalizedCommits, normalizedCodeLines);
+                    double normalizedValue = Math.round(hotspotScore * invMaxHotspotScore * 100.0) / 100.0;
+
+                    return fileInfoMapper.toHotspotDTO(fileInfo, normalizedValue);
+                })
+                .toList();
+    }
+
+    private double calculateHotSpotScore(double normalizedCommits, double normalizedCodeLines) {
+        return Math.pow(normalizedCommits, 0.65) * Math.pow(normalizedCodeLines, 0.35);
     }
 
     public List<AuthorSummaryDTO> getAllAuthors(String analysisId) {

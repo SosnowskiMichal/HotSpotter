@@ -41,6 +41,30 @@ public class RepositoryAnalysisResultsController {
         return ResponseEntity.ok(filesCouplings);
     }
 
+    @GetMapping("/{analysisId}/files/code-age")
+    public ResponseEntity<List<FileCodeAgeDTO>> getAllFilesCodeAge(@PathVariable String analysisId) {
+        List<FileCodeAgeDTO> filesCodeAge = repositoryAnalysisResultsService.getAllFilesCodeAge(analysisId);
+        return ResponseEntity.ok(filesCodeAge);
+    }
+
+    @GetMapping("/{analysisId}/files/knowledge-loss-risk")
+    public ResponseEntity<List<FileKnowledgeLossRiskDTO>> getAllFilesKnowledgeLossRisk(@PathVariable String analysisId) {
+        List<FileKnowledgeLossRiskDTO> filesKnowledgeLossRisk = repositoryAnalysisResultsService.getAllFilesKnowledgeLossRisk(analysisId);
+        return ResponseEntity.ok(filesKnowledgeLossRisk);
+    }
+
+    @GetMapping("/{analysisId}/files/lead-authors")
+    public ResponseEntity<List<FileLeadAuthorDTO>> getAllFilesLeadAuthors(@PathVariable String analysisId) {
+        List<FileLeadAuthorDTO> filesLeadAuthors = repositoryAnalysisResultsService.getAllFilesLeadAuthors(analysisId);
+        return ResponseEntity.ok(filesLeadAuthors);
+    }
+
+    @GetMapping("/{analysisId}/files/hotspots")
+    public ResponseEntity<List<HotspotDTO>> getHotspots(@PathVariable String analysisId) {
+        List<HotspotDTO> hotspots = repositoryAnalysisResultsService.getHotspots(analysisId);
+        return ResponseEntity.ok(hotspots);
+    }
+
     @GetMapping("/{analysisId}/authors")
     public ResponseEntity<List<AuthorSummaryDTO>> getAllAuthors(@PathVariable String analysisId) {
         List<AuthorSummaryDTO> authors = repositoryAnalysisResultsService.getAllAuthors(analysisId);

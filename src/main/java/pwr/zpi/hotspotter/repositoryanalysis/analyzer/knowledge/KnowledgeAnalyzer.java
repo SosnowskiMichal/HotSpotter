@@ -171,6 +171,7 @@ public class KnowledgeAnalyzer {
         return FileKnowledge.builder()
                 .analysisId(analysisId)
                 .filePath(filePath)
+                .fileName(getFileName(filePath))
                 .linesAdded(linesAdded)
                 .commits(commits)
                 .authorContributions(contributions)
@@ -190,6 +191,11 @@ public class KnowledgeAnalyzer {
                 .filter(c -> c.getContributionPercentage() == maxPercentage)
                 .max(Comparator.comparingInt(AuthorContribution::getCommits))
                 .orElse(null);
+    }
+
+    private String getFileName(String filePath) {
+        String[] parts = filePath.replace("\\", "/").split("/");
+        return parts[parts.length - 1];
     }
 
     private KnowledgeRisk calculateKnowledgeRisk(FileKnowledge fileKnowledge) {
