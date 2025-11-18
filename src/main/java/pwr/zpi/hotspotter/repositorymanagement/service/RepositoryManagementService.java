@@ -72,7 +72,7 @@ public class RepositoryManagementService {
         return RepositoryState.VALID;
     }
 
-    private boolean isValidGitRepository(Path localPath) {
+    public boolean isValidGitRepository(Path localPath) {
         try {
             Path gitDir = localPath.resolve(".git");
             if (!Files.exists(gitDir) || !Files.isDirectory(gitDir)) {

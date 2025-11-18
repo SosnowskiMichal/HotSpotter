@@ -1,5 +1,6 @@
 package pwr.zpi.hotspotter.repositorymanagement.operation;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
@@ -13,6 +14,7 @@ import java.util.function.Supplier;
 @Component
 public class RepositoryOperationQueue {
 
+    @Getter
     private final ConcurrentHashMap<String, Lock> repositoryLocks = new ConcurrentHashMap<>();
 
     public RepositoryInfo executeOperation(
