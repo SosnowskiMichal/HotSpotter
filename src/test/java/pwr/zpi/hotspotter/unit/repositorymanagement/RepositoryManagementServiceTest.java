@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryOperationQueue;
@@ -17,8 +18,10 @@ import pwr.zpi.hotspotter.repositorymanagement.storage.DiskSpaceManager;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -43,120 +46,94 @@ class RepositoryManagementServiceTest {
     private RepositoryManagementService repositoryManagementService;
 
     @Test
-    void cloneOrUpdateRepository_shouldCloneRepositoryWhenNonexistent() {
+    void cloneOrUpdateRepositoryWithNonexistentRepositoryClonesSuccessfully() {
         String repositoryUrl = "https://github.com/user/repo";
         RepositoryUrlParser.RepositoryData repositoryData = new RepositoryUrlParser.RepositoryData(repositoryUrl, "github", "user", "repo");
-        RepositoryInfo repositoryInfo = new RepositoryInfo();
+        RepositoryInfo clonedRepositoryInfo = new RepositoryInfo();
 
         when(repositoryUrlParser.parse(repositoryUrl)).thenReturn(repositoryData);
         when(repositoryInfoRepository.findByNameAndOwnerAndPlatform("repo", "user", "github"))
                 .thenReturn(Optional.empty());
-        when(repositoryCloner.clone(repositoryData)).thenReturn(repositoryInfo);
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any())).thenAnswer(invocation -> {
-            Object operation = invocation.getArgument(1);
-            try {
-                java.lang.reflect.Method target = null;
-                for (java.lang.reflect.Method m : operation.getClass().getDeclaredMethods()) {
-                    if (m.getParameterCount() == 0 && RepositoryInfo.class.isAssignableFrom(m.getReturnType())) {
-                        target = m;
-                        break;
-                    }
-                }
-                if (target == null) {
-                    target = operation.getClass().getMethod("call");
-                }
-                target.setAccessible(true);
-                return target.invoke(operation);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        });
+        when(repositoryCloner.clone(repositoryData)).thenReturn(clonedRepositoryInfo);
+        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
+                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
 
         RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
 
-        assertEquals(repositoryInfo, result);
+        assertEquals(clonedRepositoryInfo, result);
         verify(repositoryCloner).clone(repositoryData);
     }
 
     @Test
-    void cloneOrUpdateRepository_shouldUpdateRepositoryWhenValid() {
+    void cloneOrUpdateRepositoryWithValidRepositoryUpdatesSuccessfully() {
         String repositoryUrl = "https://github.com/user/repo";
+        Path localPath = Path.of("/path/to/repo");
         RepositoryUrlParser.RepositoryData repositoryData = new RepositoryUrlParser.RepositoryData(repositoryUrl, "github", "user", "repo");
-        RepositoryInfo repositoryInfo = new RepositoryInfo();
-        repositoryInfo.setLocalPath("/path/to/repo");
+        RepositoryInfo existingRepositoryInfo = new RepositoryInfo();
+        existingRepositoryInfo.setLocalPath(localPath.toString());
+        RepositoryInfo updatedRepositoryInfo = new RepositoryInfo();
 
         when(repositoryUrlParser.parse(repositoryUrl)).thenReturn(repositoryData);
         when(repositoryInfoRepository.findByNameAndOwnerAndPlatform("repo", "user", "github"))
-                .thenReturn(Optional.of(repositoryInfo));
-        when(repositoryUpdater.update(repositoryInfo)).thenReturn(repositoryInfo);
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any())).thenAnswer(invocation -> {
-            Object operation = invocation.getArgument(1);
-            try {
-                java.lang.reflect.Method target = null;
-                for (java.lang.reflect.Method m : operation.getClass().getDeclaredMethods()) {
-                    if (m.getParameterCount() == 0 && RepositoryInfo.class.isAssignableFrom(m.getReturnType())) {
-                        target = m;
-                        break;
-                    }
-                }
-                if (target == null) {
-                    target = operation.getClass().getMethod("call");
-                }
-                target.setAccessible(true);
-                return target.invoke(operation);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        });
+                .thenReturn(Optional.of(existingRepositoryInfo));
+        when(repositoryUpdater.update(existingRepositoryInfo)).thenReturn(updatedRepositoryInfo);
+        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
+                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
 
-        RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
+        RepositoryManagementService spyService = spy(repositoryManagementService);
+        doReturn(true).when(spyService).isValidGitRepository(localPath);
 
-        assertEquals(repositoryInfo, result);
-        verify(repositoryUpdater).update(repositoryInfo);
+        RepositoryInfo result;
+        try (var filesMock = mockStatic(Files.class)) {
+            filesMock.when(() -> Files.exists(any())).thenReturn(true);
+            filesMock.when(() -> Files.isReadable(any())).thenReturn(true);
+            filesMock.when(() -> Files.isWritable(any())).thenReturn(true);
+
+            result = spyService.cloneOrUpdateRepository(repositoryUrl);
+        }
+
+        assertEquals(updatedRepositoryInfo, result);
+        verify(repositoryUpdater).update(existingRepositoryInfo);
     }
 
+
     @Test
-    void cloneOrUpdateRepository_shouldCleanupAndCloneWhenCorrupted() {
+    void cloneOrUpdateRepositoryWithCorruptedRepositoryCleansUpAndClones() {
         String repositoryUrl = "https://github.com/user/repo";
         RepositoryUrlParser.RepositoryData repositoryData = new RepositoryUrlParser.RepositoryData(repositoryUrl, "github", "user", "repo");
-        RepositoryInfo repositoryInfo = new RepositoryInfo();
-        repositoryInfo.setLocalPath("/path/to/repo");
+        RepositoryInfo corruptedRepositoryInfo = new RepositoryInfo();
+        corruptedRepositoryInfo.setLocalPath("/invalid/path");
+        RepositoryInfo clonedRepositoryInfo = new RepositoryInfo();
 
         when(repositoryUrlParser.parse(repositoryUrl)).thenReturn(repositoryData);
         when(repositoryInfoRepository.findByNameAndOwnerAndPlatform("repo", "user", "github"))
-                .thenReturn(Optional.of(repositoryInfo));
-        when(repositoryCloner.clone(repositoryData)).thenReturn(repositoryInfo);
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any())).thenAnswer(invocation -> {
-            Object operation = invocation.getArgument(1);
-            try {
-                java.lang.reflect.Method target = null;
-                for (java.lang.reflect.Method m : operation.getClass().getDeclaredMethods()) {
-                    if (m.getParameterCount() == 0 && RepositoryInfo.class.isAssignableFrom(m.getReturnType())) {
-                        target = m;
-                        break;
-                    }
-                }
-                if (target == null) {
-                    target = operation.getClass().getMethod("call");
-                }
-                target.setAccessible(true);
-                return target.invoke(operation);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        });
-
-        doAnswer(invocation -> {
-            Path path = Path.of(repositoryInfo.getLocalPath());
-            Files.deleteIfExists(path);
-            return null;
-        }).when(diskSpaceManager).deleteRepositoryDirectory(any());
+                .thenReturn(Optional.of(corruptedRepositoryInfo));
+        when(repositoryCloner.clone(repositoryData)).thenReturn(clonedRepositoryInfo);
+        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
+                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
+        doNothing().when(repositoryInfoRepository).delete(corruptedRepositoryInfo);
+        when(diskSpaceManager.deleteRepositoryDirectory(any())).thenReturn(true);
 
         RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
 
-        assertEquals(repositoryInfo, result);
+        assertEquals(clonedRepositoryInfo, result);
+        verify(repositoryInfoRepository).delete(corruptedRepositoryInfo);
         verify(diskSpaceManager).deleteRepositoryDirectory(any());
         verify(repositoryCloner).clone(repositoryData);
     }
-}
 
+    @Test
+    void cloneOrUpdateRepositoryWithInvalidUrlThrowsException() {
+        String repositoryUrl = "invalid-url";
+
+        when(repositoryUrlParser.parse(repositoryUrl)).thenThrow(new InvalidRepositoryUrlException("Invalid URL"));
+        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
+                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
+
+        assertThrows(InvalidRepositoryUrlException.class, () -> repositoryManagementService.cloneOrUpdateRepository(repositoryUrl));
+        verify(repositoryUrlParser).parse(repositoryUrl);
+        verifyNoInteractions(repositoryInfoRepository, repositoryCloner, repositoryUpdater);
+        verify(repositoryOperationQueue).executeOperation(eq(repositoryUrl), any());
+    }
+
+}
