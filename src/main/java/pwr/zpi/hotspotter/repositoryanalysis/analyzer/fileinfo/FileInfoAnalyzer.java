@@ -173,7 +173,7 @@ public class FileInfoAnalyzer {
         }
     }
 
-    private record FileLinesData(String language, int code, int comment, int blank) {
+    public record FileLinesData(String language, int code, int comment, int blank) {
         public int total() {
             return code + comment + blank;
         }

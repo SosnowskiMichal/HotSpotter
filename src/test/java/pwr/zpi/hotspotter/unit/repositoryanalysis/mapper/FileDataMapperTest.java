@@ -1,6 +1,10 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.mapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
@@ -14,14 +18,18 @@ import pwr.zpi.hotspotter.repositoryanalysis.mapper.FileKnowledgeMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class FileDataMapperTest {
 
-    private final FileInfoMapper fileInfoMapper = mock(FileInfoMapper.class);
-    private final FileCouplingMapper fileCouplingMapper = mock(FileCouplingMapper.class);
-    private final FileKnowledgeMapper fileKnowledgeMapper = mock(FileKnowledgeMapper.class);
+    @Mock
+    private FileInfoMapper fileInfoMapper;
+    @Mock
+    private FileCouplingMapper fileCouplingMapper;
+    @Mock
+    private FileKnowledgeMapper fileKnowledgeMapper;
 
-    private final FileDataMapper mapper =
-            new FileDataMapper(fileInfoMapper, fileCouplingMapper, fileKnowledgeMapper);
+    @InjectMocks
+    private FileDataMapper mapper;
 
     @Test
     void mapsAllComponentsToDTO() {

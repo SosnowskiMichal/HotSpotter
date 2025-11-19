@@ -1,6 +1,9 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.mapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.CoupledFile;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileCouplingDTO;
@@ -10,9 +13,11 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(MockitoExtension.class)
 class FileCouplingMapperTest {
 
-    private final FileCouplingMapper mapper = new FileCouplingMapper();
+    @InjectMocks
+    private FileCouplingMapper mapper;
 
     @Test
     void returnsNullWhenInputNull() {

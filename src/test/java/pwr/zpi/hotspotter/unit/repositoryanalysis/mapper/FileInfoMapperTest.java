@@ -1,6 +1,9 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.mapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileInfoDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.mapper.FileInfoMapper;
@@ -9,9 +12,11 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(MockitoExtension.class)
 class FileInfoMapperTest {
 
-    private final FileInfoMapper mapper = new FileInfoMapper();
+    @InjectMocks
+    private FileInfoMapper mapper;
 
     @Test
     void returnsNullWhenFileInfoIsNull() {
