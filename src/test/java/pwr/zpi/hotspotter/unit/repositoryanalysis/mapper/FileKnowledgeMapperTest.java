@@ -1,6 +1,9 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.mapper;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.AuthorContribution;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.KnowledgeRisk;
@@ -11,9 +14,11 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(MockitoExtension.class)
 class FileKnowledgeMapperTest {
 
-    private final FileKnowledgeMapper mapper = new FileKnowledgeMapper();
+    @InjectMocks
+    private FileKnowledgeMapper mapper;
 
     @Test
     void returnsNullWhenInputNull() {
