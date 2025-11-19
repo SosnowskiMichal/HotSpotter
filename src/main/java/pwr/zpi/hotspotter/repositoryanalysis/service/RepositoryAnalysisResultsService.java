@@ -16,12 +16,14 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.model.AnalysisStatistics;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.repository.AnalysisStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.*;
 import pwr.zpi.hotspotter.repositoryanalysis.mapper.*;
+import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 @Slf4j
@@ -30,6 +32,7 @@ import java.util.List;
 public class RepositoryAnalysisResultsService {
 
     private final AnalysisInfoRepository analysisInfoRepository;
+    private final AnalysisStatisticsRepository analysisStatisticsRepository;
     private final FileInfoRepository fileInfoRepository;
     private final FileCouplingRepository fileCouplingRepository;
     private final FileKnowledgeRepository fileKnowledgeRepository;
@@ -39,6 +42,7 @@ public class RepositoryAnalysisResultsService {
 
     private final RepositoryStructureService repositoryStructureService;
 
+    private final AnalysisSummaryMapper analysisSummaryMapper;
     private final FileDataMapper fileDataMapper;
     private final FileInfoMapper fileInfoMapper;
     private final FileCouplingMapper fileCouplingMapper;
@@ -47,9 +51,20 @@ public class RepositoryAnalysisResultsService {
     private final AuthorCouplingMapper authorCouplingMapper;
     private final DailyStatsMapper dailyStatsMapper;
 
+    public AnalysisSummaryDTO getAnalysisSummary(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+
+        AnalysisInfo analysisInfo = analysisInfoRepository.findById(analysisId)
+                .orElse(null);
+        AnalysisStatistics analysisStatistics = analysisStatisticsRepository.findById(analysisId)
+                .orElse(null);
+
+        return analysisSummaryMapper.toDTO(analysisInfo, analysisStatistics);
+    }
+
     public RepositoryStructureNode getRepositoryStructure(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        Collection<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
         return repositoryStructureService.buildRepositoryStructure(fileInfoData);
     }
 
@@ -73,7 +88,6 @@ public class RepositoryAnalysisResultsService {
 
         FileCoupling fileCoupling = fileCouplingRepository.findByAnalysisIdAndFilePath(analysisId, path)
                 .orElse(null);
-
         FileKnowledge fileKnowledge = fileKnowledgeRepository.findByAnalysisIdAndFilePath(analysisId, path)
                 .orElse(null);
 

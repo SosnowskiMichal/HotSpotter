@@ -15,6 +15,12 @@ public class RepositoryAnalysisResultsController {
 
     private final RepositoryAnalysisResultsService repositoryAnalysisResultsService;
 
+    @GetMapping("/{analysisId}/summary")
+    public ResponseEntity<AnalysisSummaryDTO> getAnalysisSummary(@PathVariable String analysisId) {
+        AnalysisSummaryDTO analysisSummary = repositoryAnalysisResultsService.getAnalysisSummary(analysisId);
+        return ResponseEntity.ok(analysisSummary);
+    }
+
     @GetMapping("/{analysisId}/structure")
     public ResponseEntity<RepositoryStructureNode> getRepositoryStructure(@PathVariable String analysisId) {
         RepositoryStructureNode response = repositoryAnalysisResultsService.getRepositoryStructure(analysisId);

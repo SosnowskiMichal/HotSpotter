@@ -1,7 +1,10 @@
 package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository;
 
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.FileTypeStatistics;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.LineStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 
 import java.util.List;
@@ -14,7 +17,39 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
 
     Optional<FileInfo> findByAnalysisIdAndFilePath(String analysisId, String filePath);
 
-    long countAllByAnalysisId(String analysisId);
+    int countAllByAnalysisId(String analysisId);
+
+    @Aggregation(pipeline = {
+            "{ $match: { analysisId: ?0 } }",
+            "{ $group: { " +
+            " _id: null, " +
+            "  codeLines: { $sum: '$codeLines' }, " +
+            "  commentLines: { $sum: '$commentLines' }, " +
+            "  blankLines: { $sum: '$blankLines' } " +
+            "} }"
+    })
+    LineStatistics getLineStatisticsByAnalysisId(String analysisId);
+
+    @Aggregation(pipeline = {
+            "{ $match: { analysisId: ?0, fileType: { $ne: null } } }",
+            "{ $group: { " +
+            "  _id: '$fileType', " +
+            "  files: { $sum: 1 }, " +
+            "  codeLines: { $sum: '$codeLines' }, " +
+            "  commentLines: { $sum: '$commentLines' }, " +
+            "  blankLines: { $sum: '$blankLines' } " +
+            "} }",
+            "{ $project: { " +
+            "  _id: 0, " +
+            "  fileType: '$_id', " +
+            "  files: 1, " +
+            "  codeLines: 1, " +
+            "  commentLines: 1, " +
+            "  blankLines: 1 " +
+            "} }",
+            "{ $sort: { files: -1 } }"
+    })
+    List<FileTypeStatistics> getFileTypeStatisticsByAnalysisId(String analysisId);
 
     void deleteAllByAnalysisId(String analysisId);
 
