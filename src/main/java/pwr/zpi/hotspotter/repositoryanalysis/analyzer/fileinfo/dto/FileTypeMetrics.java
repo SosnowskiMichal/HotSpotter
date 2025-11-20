@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FileTypeStatistics {
+public class FileTypeMetrics {
 
     private String fileType;
 

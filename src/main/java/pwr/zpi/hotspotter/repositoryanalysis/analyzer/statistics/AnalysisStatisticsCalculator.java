@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.FileTypeMetrics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.LineStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.model.AnalysisStatistics;
@@ -30,8 +31,8 @@ public class AnalysisStatisticsCalculator {
 
         int files = fileInfoRepository.countAllByAnalysisId(analysisId);
         LineStatistics lineStats = fileInfoRepository.getLineStatisticsByAnalysisId(analysisId);
-        List<FileTypeStatistics> fileTypeSummaries = convertToFileTypeSummaries(
-                fileInfoRepository.getFileTypeStatisticsByAnalysisId(analysisId)
+        List<FileTypeStatistics> fileTypeSummaries = convertToFileTypeStatistics(
+                fileInfoRepository.getFileTypeMetricsByAnalysisId(analysisId)
         );
 
         AnalysisStatistics summary = AnalysisStatistics.builder()
@@ -54,8 +55,8 @@ public class AnalysisStatisticsCalculator {
         }
     }
 
-    private List<FileTypeStatistics> convertToFileTypeSummaries(List<pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.FileTypeStatistics> fileTypeStatistics) {
-        return fileTypeStatistics.stream()
+    private List<FileTypeStatistics> convertToFileTypeStatistics(List<FileTypeMetrics> fileTypeMetrics) {
+        return fileTypeMetrics.stream()
                 .map(stats -> FileTypeStatistics.builder()
                         .fileType(stats.getFileType())
                         .files(stats.getFiles())

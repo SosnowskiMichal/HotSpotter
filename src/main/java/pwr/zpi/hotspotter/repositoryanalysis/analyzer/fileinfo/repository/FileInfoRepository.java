@@ -3,7 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.FileTypeStatistics;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.FileTypeMetrics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.dto.LineStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 
@@ -49,7 +49,7 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
             "} }",
             "{ $sort: { files: -1 } }"
     })
-    List<FileTypeStatistics> getFileTypeStatisticsByAnalysisId(String analysisId);
+    List<FileTypeMetrics> getFileTypeMetricsByAnalysisId(String analysisId);
 
     void deleteAllByAnalysisId(String analysisId);
 
