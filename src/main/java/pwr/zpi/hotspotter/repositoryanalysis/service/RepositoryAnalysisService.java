@@ -14,6 +14,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyze
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
@@ -47,12 +48,12 @@ public class RepositoryAnalysisService {
     private final RepositoryAnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
 
-    // Inject all analyzers here
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
     private final FileInfoAnalyzer fileInfoAnalyzer;
     private final ActivityTrendsAnalyzer activityTrendsAnalyzer;
     private final CouplingAnalyzer couplingAnalyzer;
+    private final AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         LocalDateTime analysisStartedAt = LocalDateTime.now();
@@ -100,6 +101,8 @@ public class RepositoryAnalysisService {
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
 
+            analysisStatisticsCalculator.calculateStatistics(analysisId);
+
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
@@ -145,6 +148,7 @@ public class RepositoryAnalysisService {
                 .repositoryUrl(repositoryInfo.getRemoteUrl())
                 .repositoryName(repositoryInfo.getName())
                 .repositoryOwner(repositoryInfo.getOwner())
+                .repositoryPlatform(repositoryInfo.getPlatform())
                 .startDate(startDate)
                 .endDate(endDate)
                 .analysisStartedAt(analysisStartedAt)

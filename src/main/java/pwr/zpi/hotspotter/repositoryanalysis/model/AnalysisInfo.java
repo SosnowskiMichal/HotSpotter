@@ -32,6 +32,9 @@ public class AnalysisInfo {
     @NotBlank(message = "Repository owner is required")
     private String repositoryOwner;
 
+    @NotBlank(message = "Repository platform is required")
+    private String repositoryPlatform;
+
     @Builder.Default
     @NotNull(message = "Analysis date is required")
     private LocalDateTime analysisStartedAt = LocalDateTime.now();
