@@ -22,6 +22,8 @@ import pwr.zpi.hotspotter.repositoryanalysis.dto.*;
 import pwr.zpi.hotspotter.repositoryanalysis.mapper.*;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
+import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisComponentRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +41,7 @@ public class RepositoryAnalysisResultsService {
     private final AuthorStatisticsRepository authorStatisticsRepository;
     private final AuthorCouplingRepository authorCouplingRepository;
     private final ActivityTrendsRepository activityTrendsRepository;
+    private final SonarRepoAnalysisComponentRepository sonarAnalysisComponentRepository;
 
     private final RepositoryStructureService repositoryStructureService;
 
@@ -90,8 +93,11 @@ public class RepositoryAnalysisResultsService {
                 .orElse(null);
         FileKnowledge fileKnowledge = fileKnowledgeRepository.findByAnalysisIdAndFilePath(analysisId, path)
                 .orElse(null);
+        SonarRepoAnalysisComponent sonarAnalysisComponent = sonarAnalysisComponentRepository
+                .findByRepoAnalysisIdAndPath(analysisId, path)
+                .orElse(null);
 
-        return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge);
+        return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge, sonarAnalysisComponent);
     }
 
     public List<FileCouplingDTO> getAllFilesCoupling(String analysisId) {

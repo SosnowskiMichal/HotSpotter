@@ -6,5 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public record FileDataDTO(
     FileInfoDTO info,
     FileCouplingDTO coupling,
-    FileKnowledgeDTO knowledge
+    FileKnowledgeDTO knowledge,
+    SonarAnalysisComponentDTO staticAnalysis
 ) { }
