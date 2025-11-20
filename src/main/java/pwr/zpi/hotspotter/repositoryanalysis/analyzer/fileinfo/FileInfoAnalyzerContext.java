@@ -17,12 +17,14 @@ public class FileInfoAnalyzerContext {
     private final String analysisId;
     private final Path repositoryPath;
     private final LocalDate referenceDate;
+    private final Process clocProcess;
     private final Map<String, FileInfo> fileInfos;
 
-    public FileInfoAnalyzerContext(String analysisId, Path repositoryPath, LocalDate referenceDate) {
+    public FileInfoAnalyzerContext(String analysisId, Path repositoryPath, LocalDate referenceDate, Process clocProcess) {
         this.analysisId = analysisId;
         this.repositoryPath = repositoryPath;
         this.referenceDate = referenceDate != null ? referenceDate : LocalDate.now();
+        this.clocProcess = clocProcess;
         this.fileInfos = new HashMap<>();
     }
 
