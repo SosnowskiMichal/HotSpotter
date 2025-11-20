@@ -23,7 +23,9 @@ import pwr.zpi.hotspotter.repositoryanalysis.mapper.*;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
+import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisComponentRepository;
+import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +43,7 @@ public class RepositoryAnalysisResultsService {
     private final AuthorStatisticsRepository authorStatisticsRepository;
     private final AuthorCouplingRepository authorCouplingRepository;
     private final ActivityTrendsRepository activityTrendsRepository;
+    private final SonarRepoAnalysisRepository sonarAnalysisRepository;
     private final SonarRepoAnalysisComponentRepository sonarAnalysisComponentRepository;
 
     private final RepositoryStructureService repositoryStructureService;
@@ -61,8 +64,10 @@ public class RepositoryAnalysisResultsService {
                 .orElse(null);
         AnalysisStatistics analysisStatistics = analysisStatisticsRepository.findById(analysisId)
                 .orElse(null);
+        SonarRepoAnalysisResult sonarAnalysisResult = sonarAnalysisRepository.findByRepoAnalysisId(analysisId)
+                .orElse(null);
 
-        return analysisSummaryMapper.toDTO(analysisInfo, analysisStatistics);
+        return analysisSummaryMapper.toDTO(analysisInfo, analysisStatistics, sonarAnalysisResult);
     }
 
     public RepositoryStructureNode getRepositoryStructure(String analysisId) {

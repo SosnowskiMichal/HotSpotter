@@ -7,5 +7,5 @@ public record FileDataDTO(
     FileInfoDTO info,
     FileCouplingDTO coupling,
     FileKnowledgeDTO knowledge,
-    SonarAnalysisComponentDTO staticAnalysis
+    SonarAnalysisResultDTO staticAnalysis
 ) { }
