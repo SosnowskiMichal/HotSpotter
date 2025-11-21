@@ -47,7 +47,6 @@ public class RepositoryAnalysisService {
     private final RepositoryAnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
 
-    // Inject all analyzers here
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
     private final FileInfoAnalyzer fileInfoAnalyzer;
@@ -55,10 +54,10 @@ public class RepositoryAnalysisService {
     private final CouplingAnalyzer couplingAnalyzer;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
+        log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryUrl, startDate, endDate);
         LocalDateTime analysisStartedAt = LocalDateTime.now();
 
-        ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
-        RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
+        RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl, emitter);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
         AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
@@ -91,6 +90,7 @@ public class RepositoryAnalysisService {
                 });
             }
 
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
             fileInfoAnalyzer.finishAnalysis(fileInfoContext);
@@ -100,7 +100,6 @@ public class RepositoryAnalysisService {
             knowledgeAnalyzer.enrichAnalysisData(knowledgeContext);
             authorsAnalyzer.enrichAnalysisData(authorsContext);
 
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {
@@ -111,19 +110,16 @@ public class RepositoryAnalysisService {
             analysisInfoRepository.save(analysisInfo);
 
             log.info("Analysis completed for repository {}, ID: {}", repositoryUrl, analysisId);
-            ssePublisher.sendComplete(emitter, analysisId);
+            ssePublisher.sendSuccess(emitter, analysisId);
 
         } catch (LogProcessingException e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
-            ssePublisher.sendError(emitter, e.getMessage());
             throw e;
 
         } catch (Exception e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
-            log.error("Unexpected error during analysis for repository {}: {}", repositoryUrl, e.getMessage(), e);
-            ssePublisher.sendError(emitter, e.getMessage());
             throw new AnalysisException("Analysis failed: " + e.getMessage());
 
         } finally {

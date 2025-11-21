@@ -4,37 +4,27 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.Map;
 
 @Component
 public class RepositoryAnalysisSsePublisher {
 
     public void sendProgress(SseEmitter emitter, AnalysisSseStatus status) {
-        try {
-            emitter.send(SseEmitter.event()
-                    .name("progress")
-                    .data(Map.of("status", status)));
-        } catch (IOException _) {}
+        sendEvent(emitter, "progress", status);
     }
 
-    public void sendComplete(SseEmitter emitter, String analysisId) {
-        try {
-            emitter.send(SseEmitter.event()
-                    .name("complete")
-                    .data(Map.of(
-                            "success", true,
-                            "data", analysisId,
-                            "timestamp", Instant.now().toString()
-                    )));
-        } catch (IOException _) {}
+    public void sendSuccess(SseEmitter emitter, String analysisId) {
+        sendEvent(emitter, "success", analysisId);
     }
 
     public void sendError(SseEmitter emitter, String message) {
+        sendEvent(emitter, "error", message);
+    }
+
+    private void sendEvent(SseEmitter emitter, String eventName, Object data) {
         try {
             emitter.send(SseEmitter.event()
-                    .name("error")
-                    .data(Map.of("message", message)));
+                    .name(eventName)
+                    .data(data));
         } catch (IOException _) {}
     }
 
