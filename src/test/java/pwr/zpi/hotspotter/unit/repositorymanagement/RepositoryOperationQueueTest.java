@@ -1,8 +1,8 @@
 package pwr.zpi.hotspotter.unit.repositorymanagement;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryOperationQueue;
@@ -17,12 +17,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class RepositoryOperationQueueTest {
 
+    @InjectMocks
     private RepositoryOperationQueue repositoryOperationQueue;
-
-    @BeforeEach
-    void setUp() {
-        repositoryOperationQueue = new RepositoryOperationQueue();
-    }
 
     @Test
     void executesOperationSuccessfullyWhenLockIsAcquired() {

@@ -31,6 +31,7 @@ class FileKnowledgeMapperTest {
                 "id",
                 "analysisId",
                 "file/path/Main.java",
+                "Main.java",
                 120,
                 15,
                 List.of(

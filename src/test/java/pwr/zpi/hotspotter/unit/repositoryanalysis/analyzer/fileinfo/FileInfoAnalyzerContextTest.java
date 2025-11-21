@@ -1,6 +1,9 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.analyzer.fileinfo;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 
@@ -9,12 +12,16 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(MockitoExtension.class)
 class FileInfoAnalyzerContextTest {
+
+    @Mock
+    Process clocProcess;
 
     @Test
     void recordContribution_shouldCreateNewEntry() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
 
         ctx.recordContribution("src/Main.java", ref.minusDays(3));
 
@@ -30,14 +37,14 @@ class FileInfoAnalyzerContextTest {
     @Test
     void recordContribution_shouldUpdateCountersCorrectly() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
 
-        ctx.recordContribution("file.txt", ref.minusDays(10));  // last month + last year
-        ctx.recordContribution("file.txt", ref.minusMonths(3)); // last year only
+        ctx.recordContribution("file.txt", ref.minusDays(10));
+        ctx.recordContribution("file.txt", ref.minusMonths(3));
 
         FileInfo info = ctx.getFileInfos().get("file.txt");
 
-        assertThat(info.getCommitsInHotSpotAnalysisPeriod()).isEqualTo(2);
+        assertThat(info.getCommitsInHotspotAnalysisPeriod()).isEqualTo(2);
         assertThat(info.getCommitsLastMonth()).isEqualTo(1);
         assertThat(info.getCommitsLastYear()).isEqualTo(2);
         assertThat(info.getTotalCommits()).isEqualTo(2);
@@ -47,7 +54,7 @@ class FileInfoAnalyzerContextTest {
     @Test
     void updateFilePath_shouldMoveEntryToNewKey() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
 
         ctx.recordContribution("old/File.java", ref.minusDays(1));
 
@@ -63,7 +70,7 @@ class FileInfoAnalyzerContextTest {
     @Test
     void updateFilePath_shouldRemoveWhenNewPathNull() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
 
         ctx.recordContribution("file.txt", ref.minusDays(1));
         ctx.updateFilePath("file.txt", null);

@@ -25,27 +25,7 @@ class FileInfoMapperTest {
 
     @Test
     void mapsAllFieldsCorrectly() {
-        FileInfo fileInfo = new FileInfo();
-        fileInfo.setFilePath("src/Main.java");
-        fileInfo.setFileName("Main.java");
-        fileInfo.setFileType("java");
-        fileInfo.setFileSize(String.valueOf(1234L));
-
-        fileInfo.setTotalLines(200);
-        fileInfo.setCodeLines(150);
-        fileInfo.setCommentLines(30);
-        fileInfo.setBlankLines(20);
-
-        fileInfo.setTotalCommits(10);
-        fileInfo.setCommitsLastMonth(3);
-        fileInfo.setCommitsLastYear(7);
-
-        fileInfo.setFirstCommitDate(LocalDate.of(2020, 1, 1));
-        fileInfo.setLastCommitDate(LocalDate.of(2024, 1, 1));
-
-        fileInfo.setCodeAgeDays(1000);
-        fileInfo.setCodeAgeMonths(33);
-
+        FileInfo fileInfo = getFileInfo();
         FileInfoDTO dto = mapper.toDTO(fileInfo);
 
         assertThat(dto.path()).isEqualTo("src/Main.java");
@@ -67,5 +47,30 @@ class FileInfoMapperTest {
 
         assertThat(dto.codeAgeDays()).isEqualTo(1000);
         assertThat(dto.codeAgeMonths()).isEqualTo(33);
+    }
+
+    private static FileInfo getFileInfo() {
+        FileInfo fileInfo = new FileInfo();
+        fileInfo.setFilePath("src/Main.java");
+        fileInfo.setFileName("Main.java");
+        fileInfo.setFileType("java");
+        fileInfo.setFileSize(String.valueOf(1234L));
+
+        fileInfo.setTotalLines(200);
+        fileInfo.setCodeLines(150);
+        fileInfo.setCommentLines(30);
+        fileInfo.setBlankLines(20);
+
+        fileInfo.setTotalCommits(10);
+        fileInfo.setCommitsLastMonth(3);
+        fileInfo.setCommitsLastYear(7);
+
+        fileInfo.setFirstCommitDate(LocalDate.of(2020, 1, 1));
+        fileInfo.setLastCommitDate(LocalDate.of(2024, 1, 1));
+
+        fileInfo.setCodeAgeDays(1000);
+        fileInfo.setCodeAgeMonths(33);
+
+        return fileInfo;
     }
 }

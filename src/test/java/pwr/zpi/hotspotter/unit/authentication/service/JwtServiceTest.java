@@ -1,6 +1,7 @@
 package pwr.zpi.hotspotter.unit.authentication.service;
 
 import io.jsonwebtoken.Claims;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +23,12 @@ class JwtServiceTest {
     @InjectMocks
     private JwtService jwtService;
 
+    @BeforeEach
+    void setUp() {
+        when(jwtProperties.getExpiration()).thenReturn(3600000L);
+        when(jwtProperties.getSecret()).thenReturn("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo1Njc4OTAxMjM=");
+    }
+
     private User sampleUser() {
         User u = new User();
         u.setId(String.valueOf(10));
@@ -33,9 +40,6 @@ class JwtServiceTest {
 
     @Test
     void generateToken_shouldContainAllClaims() {
-        when(jwtProperties.getExpiration()).thenReturn(3600000L);
-        when(jwtProperties.getSecret()).thenReturn("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo1Njc4OTAxMjM=");
-
         User user = sampleUser();
 
         String token = jwtService.generateToken(user);
@@ -49,9 +53,6 @@ class JwtServiceTest {
 
     @Test
     void extractClaim_shouldReturnCorrectValues() {
-        when(jwtProperties.getExpiration()).thenReturn(3600000L);
-        when(jwtProperties.getSecret()).thenReturn("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo1Njc4OTAxMjM=");
-
         User user = sampleUser();
         String token = jwtService.generateToken(user);
 
@@ -64,9 +65,6 @@ class JwtServiceTest {
 
     @Test
     void isTokenValid_shouldReturnTrueForValidToken() {
-        when(jwtProperties.getExpiration()).thenReturn(3600000L);
-        when(jwtProperties.getSecret()).thenReturn("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo1Njc4OTAxMjM=");
-
         User user = sampleUser();
         String token = jwtService.generateToken(user);
 
@@ -82,9 +80,6 @@ class JwtServiceTest {
 
     @Test
     void isTokenValid_shouldReturnFalseForDifferentUser() {
-        when(jwtProperties.getExpiration()).thenReturn(3600000L);
-        when(jwtProperties.getSecret()).thenReturn("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo1Njc4OTAxMjM=");
-
         User user = sampleUser();
         String token = jwtService.generateToken(user);
 
@@ -100,9 +95,6 @@ class JwtServiceTest {
 
     @Test
     void extractAllClaims_shouldWorkWithValidToken() {
-        when(jwtProperties.getExpiration()).thenReturn(3600000L);
-        when(jwtProperties.getSecret()).thenReturn("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo1Njc4OTAxMjM=");
-
         User user = sampleUser();
         String token = jwtService.generateToken(user);
 

@@ -80,7 +80,7 @@ class ActivityTrendsAnalyzerTest {
         ActivityTrends saved = captor.getValue();
 
         assertThat(saved.getAnalysisId()).isEqualTo("A1");
-        assertThat(saved.getDailyStats()).hasSize(4);
+        assertThat(saved.getDailyStats()).hasSize(5);
     }
 
     @Test

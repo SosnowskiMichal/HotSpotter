@@ -89,7 +89,7 @@ class CookieUtilTest {
 
         Cookie cookie = cookieUtil.createJwtCookie("X", req);
         assertThat(cookie.getDomain()).isNull();
-        assertThat(cookie.getSecure()).isFalse(); // localhost forces false
+        assertThat(cookie.getSecure()).isFalse();
     }
 
     @Test
