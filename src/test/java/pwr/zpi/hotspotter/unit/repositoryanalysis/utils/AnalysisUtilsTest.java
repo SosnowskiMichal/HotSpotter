@@ -78,7 +78,6 @@ class AnalysisUtilsTest {
     void returnsFileNamesFromGitRepository() throws Exception {
         Path mockPath = Path.of("/fake/repo");
 
-        // mock Git.open(repositoryPath)
         Git git = mock(Git.class);
         Repository repo = mock(Repository.class);
         DirCache dirCache = mock(DirCache.class);

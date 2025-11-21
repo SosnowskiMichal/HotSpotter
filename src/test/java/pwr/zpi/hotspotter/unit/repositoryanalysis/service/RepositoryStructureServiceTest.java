@@ -105,7 +105,6 @@ class RepositoryStructureServiceTest {
 
     @Test
     void roundsDimensionsToNearestStep() {
-        // To round values we artificially set equal max
         FileInfo f = file("file.txt", "file.txt", 1, 1);
 
         RepositoryStructureNode root = service.buildRepositoryStructure(List.of(f));
@@ -114,7 +113,6 @@ class RepositoryStructureServiceTest {
         double height = fileNode.getHeight();
         double width = fileNode.getWidth();
 
-        // 0.05 steps
         assertThat((height * 100) % 5).isZero();
         assertThat((width * 100) % 5).isZero();
     }

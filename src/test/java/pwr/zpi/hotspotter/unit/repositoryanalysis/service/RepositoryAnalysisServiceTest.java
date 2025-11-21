@@ -17,6 +17,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
@@ -59,6 +60,7 @@ public class RepositoryAnalysisServiceTest {
     @Mock private FileInfoAnalyzer fileInfoAnalyzer;
     @Mock private ActivityTrendsAnalyzer activityTrendsAnalyzer;
     @Mock private CouplingAnalyzer couplingAnalyzer;
+    @Mock private AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
     @InjectMocks
     private RepositoryAnalysisService repositoryAnalysisService;

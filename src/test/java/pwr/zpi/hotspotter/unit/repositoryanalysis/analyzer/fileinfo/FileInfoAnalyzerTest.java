@@ -1,9 +1,10 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.analyzer.fileinfo;
 
 import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
@@ -19,18 +20,16 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class FileInfoAnalyzerTest {
 
     @Mock
     private FileInfoRepository repo;
+    @Mock
+    private Process clocProcess;
 
     @InjectMocks
     private FileInfoAnalyzer analyzer;
-
-    @BeforeEach
-    void setup() {
-        MockitoAnnotations.openMocks(this);
-    }
 
     @Test
     void processCommit_shouldHandleRenameAndRecordContribution() {
@@ -43,7 +42,7 @@ class FileInfoAnalyzerTest {
         when(commit.changedFiles()).thenReturn(List.of(f1, f2));
 
         FileInfoAnalyzerContext ctx =
-                new FileInfoAnalyzerContext("A1", Path.of("/repo"), LocalDate.of(2024, 1, 20));
+                new FileInfoAnalyzerContext("A1", Path.of("/repo"), LocalDate.of(2024, 1, 20), clocProcess);
 
         analyzer.processCommit(commit, ctx);
 
@@ -56,7 +55,7 @@ class FileInfoAnalyzerTest {
         LocalDate ref = LocalDate.of(2024, 1, 20);
         Path repoPath = Path.of("/repo");
 
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", repoPath, ref);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", repoPath, ref, clocProcess);
         ctx.recordContribution("src/X.java", ref.minusDays(3));
 
         try (MockedStatic<AnalysisUtils> utils = mockStatic(AnalysisUtils.class);
@@ -71,8 +70,7 @@ class FileInfoAnalyzerTest {
             fileUtils.when(() -> FileUtils.sizeOf(any())).thenReturn(100L);
             fileUtils.when(() -> FileUtils.byteCountToDisplaySize(100L)).thenReturn("100 B");
 
-            Process mockProcess = mock(Process.class);
-            when(mockProcess.getInputStream())
+            when(clocProcess.getInputStream())
                     .thenReturn(new java.io.ByteArrayInputStream(
                             ("""
                                     language,file,blank,comment,code
@@ -80,11 +78,11 @@ class FileInfoAnalyzerTest {
                                     SUM,0,0,0,0
                                     """).getBytes()
                     ));
-            when(mockProcess.waitFor()).thenReturn(0);
+            when(clocProcess.waitFor()).thenReturn(0);
 
             MockedConstruction<ProcessBuilder> processBuilderMock =
                     mockConstruction(ProcessBuilder.class, (pb, _) -> {
-                        when(pb.start()).thenReturn(mockProcess);
+                        when(pb.start()).thenReturn(clocProcess);
                         when(pb.directory(any())).thenReturn(pb);
                         when(pb.redirectErrorStream(true)).thenReturn(pb);
                     });

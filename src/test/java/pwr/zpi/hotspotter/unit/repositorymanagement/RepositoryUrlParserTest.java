@@ -2,6 +2,7 @@ package pwr.zpi.hotspotter.unit.repositorymanagement;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
@@ -12,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @ExtendWith(MockitoExtension.class)
 class RepositoryUrlParserTest {
 
-    private final RepositoryUrlParser repositoryUrlParser = new RepositoryUrlParser();
+    @InjectMocks
+    private RepositoryUrlParser repositoryUrlParser;
 
     @Test
     void parseShouldExtractRepositoryDataForValidGitHubUrl() {
