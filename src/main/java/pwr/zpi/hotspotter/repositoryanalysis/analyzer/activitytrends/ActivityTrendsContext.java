@@ -58,6 +58,8 @@ public class ActivityTrendsContext {
     }
 
     private void aggregateStatsForDaysBetween(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null) return;
+
         LocalDate date = startDate;
 
         while (date.isBefore(endDate)) {

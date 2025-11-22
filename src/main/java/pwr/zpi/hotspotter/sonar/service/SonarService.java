@@ -66,7 +66,7 @@ public class SonarService {
 
         if (prepareConnection()) {
             SonarAnalysisStatus status = new SonarAnalysisStatus(repoAnalysisId, projectKey, SonarAnalysisState.PENDING, "SonarQube analysis is pending.");
-            sonarAnalysisStatusRepository.save(status);
+            status = sonarAnalysisStatusRepository.save(status);
 
             return sonarAnalysisExecutor.runAnalysisAsync(repoAnalysisId, status.getId(), projectPath, status.getProjectKey(), projectName);
         } else {

@@ -33,6 +33,8 @@
 
 	<properties>
 		<java.version>25</java.version>
+        <bytebuddy.version>1.18.1</bytebuddy.version>
+        <argLine/>
 	</properties>
 
 	<dependencies>
@@ -185,6 +187,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+
+        <!-- Byte Buddy Agent for Testing -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>${bytebuddy.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 	<build>
@@ -214,6 +224,53 @@
 					</excludes>
 				</configuration>
 			</plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.9.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-bytebuddy-agent</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>net.bytebuddy</groupId>
+                                    <artifactId>byte-buddy-agent</artifactId>
+                                    <version>${bytebuddy.version}</version>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/test-dependency</outputDirectory>
+                                    <destFileName>byte-buddy-agent-${bytebuddy.version}.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <overWriteReleases>true</overWriteReleases>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <argLine>-javaagent:"${project.build.directory}/test-dependency/byte-buddy-agent-${bytebuddy.version}.jar" ${argLine}</argLine>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <argLine>-javaagent:"${project.build.directory}/test-dependency/byte-buddy-agent-${bytebuddy.version}.jar" ${argLine}</argLine>
+                </configuration>
+            </plugin>
 		</plugins>
 	</build>
 

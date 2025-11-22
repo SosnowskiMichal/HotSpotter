@@ -28,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class SonarAnalysisExecutor {
-    private final static int MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS = 10000;
     private final static int MAX_DOWNLOAD_ATTEMPTS = 15;
     private final static int DELAY_BETWEEN_DOWNLOAD_ATTEMPTS_MS = 10000;
 
@@ -57,7 +56,6 @@ public class SonarAnalysisExecutor {
             boolean success = executeSonarScanner(projectPath, projectKey, projectName);
 
             if (success) {
-                Thread.sleep(MILLISECONDS_TO_WAIT_BEFORE_FETCHING_RESULTS);
                 sonarAnalysisResult = getAndSaveResults(repoAnalysisId, status.getProjectKey());
                 if (sonarAnalysisResult == null) {
                     throw new RuntimeException("Failed to fetch/save analysis results for project: " + status.getProjectKey());
@@ -84,7 +82,7 @@ public class SonarAnalysisExecutor {
         return CompletableFuture.completedFuture(sonarAnalysisResult);
     }
 
-    private boolean executeSonarScanner(Path projectPath, String projectKey, String projectName) {
+    public boolean executeSonarScanner(Path projectPath, String projectKey, String projectName) {
         try {
             List<String> command = new ArrayList<>();
             command.add(sonarProperties.getScannerPath());
@@ -143,7 +141,7 @@ public class SonarAnalysisExecutor {
         }).start();
     }
 
-    private SonarResultDownloader.SonarAnalysisResults getAndSaveResults(String repoAnalysisId, String projectKey) {
+    public SonarResultDownloader.SonarAnalysisResults getAndSaveResults(String repoAnalysisId, String projectKey) {
         int attempts = 0;
         while (attempts < MAX_DOWNLOAD_ATTEMPTS) {
             SonarResultDownloader.SonarAnalysisResults result = sonarResultDownloader.fetchAnalysisResults(repoAnalysisId, projectKey);

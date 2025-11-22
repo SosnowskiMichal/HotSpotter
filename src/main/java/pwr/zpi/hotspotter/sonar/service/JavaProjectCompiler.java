@@ -86,7 +86,7 @@ public class JavaProjectCompiler {
 
     private List<String> compileMavenProject(Path projectPath) throws Exception {
         System.setProperty("maven.multiModuleProjectDirectory", projectPath.toString());
-        MavenCli cli = new MavenCli();
+        MavenCli cli = getMavenCli();
         PrintStream nullOut = new PrintStream(OutputStream.nullOutputStream());
         int result = cli.doMain(
                 new String[]{"clean", "compile"},
@@ -103,6 +103,10 @@ public class JavaProjectCompiler {
                     .map(Path::toString)
                     .collect(Collectors.toList());
         }
+    }
+
+    public static MavenCli getMavenCli() {
+        return new MavenCli();
     }
 
     private List<String> compileGradleProject(Path projectPath) throws Exception {
