@@ -26,11 +26,13 @@ public class RepositoryAnalysisController {
     public SseEmitter analyzeRepository(@Valid @ModelAttribute AnalysisRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
 
-        Runnable analysisTask = () -> asyncRepositoryAnalysisService.runRepositoryAnalysis(
-                request.repositoryUrl(), request.startDate(), request.endDate(), emitter
+        repositoryAnalysisQueue.submitAnalysis(
+                request.repositoryUrl(),
+                request.startDate(),
+                request.endDate(),
+                emitter,
+                asyncRepositoryAnalysisService
         );
-
-        repositoryAnalysisQueue.submitAnalysis(request.repositoryUrl(), analysisTask, emitter);
 
         return emitter;
     }

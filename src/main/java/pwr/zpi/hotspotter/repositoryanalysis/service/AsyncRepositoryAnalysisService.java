@@ -10,6 +10,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
+import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 
 import java.time.LocalDate;
 
@@ -21,28 +22,28 @@ public class AsyncRepositoryAnalysisService {
     private final RepositoryAnalysisService repositoryAnalysisService;
     private final RepositoryAnalysisSsePublisher ssePublisher;
 
-    public void runRepositoryAnalysis(String repositoryUrl, LocalDate start, LocalDate end, SseEmitter emitter) {
+    public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate start, LocalDate end, SseEmitter emitter) {
         try {
-            repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, start, end, emitter);
+            repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, start, end, emitter);
 
         } catch (InvalidRepositoryUrlException e) {
-            log.warn("Invalid repository URL {}: {}", repositoryUrl, e.getMessage());
+            log.warn("Invalid repository URL {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (RepositoryCloneException | RepositoryUpdateException e) {
-            log.error("Repository operation failed for {}: {}", repositoryUrl, e.getMessage());
+            log.error("Repository operation failed for {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (LogProcessingException e) {
-            log.warn("Log processing failed for repository {}: {}", repositoryUrl, e.getMessage());
+            log.warn("Log processing failed for repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (AnalysisException e) {
-            log.error("Analysis failed for repository {}: {}", repositoryUrl, e.getMessage());
+            log.error("Analysis failed for repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (Exception e) {
-            log.error("Unexpected error during analysis of repository {}: {}", repositoryUrl, e.getMessage());
+            log.error("Unexpected error during analysis of repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } finally {
