@@ -1,8 +1,10 @@
 package pwr.zpi.hotspotter.repositoryanalysis.sse;
 
 public enum AnalysisSseStatus {
-    DOWNLOADING,
+    QUEUED,
+    CLONING,
+    UPDATING,
     PROCESSING_DATA,
     ANALYZING,
-    SONAR
+    FINALIZING,
 }

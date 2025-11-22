@@ -25,7 +25,7 @@ public class FileDataMapper {
     ) {
         FileInfoDTO fileInfoDTO = fileInfoMapper.toDTO(fileInfo);
         FileCouplingDTO fileCouplingDTO = fileCouplingMapper.toDTO(fileCoupling);
-        FileKnowledgeDTO fileKnowledgeDTO = fileKnowledgeMapper.toDTO(fileKnowledge);
+        FileKnowledgeDTO fileKnowledgeDTO = fileKnowledgeMapper.toReducedDTO(fileKnowledge);
         SonarAnalysisResultDTO sonarAnalysisResultDTO = sonarAnalysisResultMapper.toDTO(sonarAnalysisComponent);
 
         return new FileDataDTO(fileInfoDTO, fileCouplingDTO, fileKnowledgeDTO, sonarAnalysisResultDTO);

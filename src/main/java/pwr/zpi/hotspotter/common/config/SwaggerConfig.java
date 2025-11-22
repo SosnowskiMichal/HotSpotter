@@ -19,4 +19,5 @@ public class SwaggerConfig {
                         new Server().url("http://localhost:8080/api").description("Localhost")
                 ));
     }
+
 }

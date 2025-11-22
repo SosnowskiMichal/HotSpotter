@@ -30,9 +30,7 @@ public class FileInfoMapper {
 
                 fileInfo.getFirstCommitDate(),
                 fileInfo.getLastCommitDate(),
-
-                fileInfo.getCodeAgeDays(),
-                fileInfo.getCodeAgeMonths()
+                fileInfo.getCodeAgeDays()
         );
     }
 

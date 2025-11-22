@@ -29,6 +29,9 @@ import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementServi
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,10 +59,10 @@ public class RepositoryAnalysisService {
     private final AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
     public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
+        log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryUrl, startDate, endDate);
         LocalDateTime analysisStartedAt = LocalDateTime.now();
 
-        ssePublisher.sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
-        RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
+        RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl, emitter);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
         AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
@@ -69,6 +72,11 @@ public class RepositoryAnalysisService {
         Path logFilePath = null;
         try {
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
+
+            if (endDate != null) {
+                restoreRepositoryToDate(repositoryPath, endDate);
+            }
+
             CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
 
@@ -76,6 +84,7 @@ public class RepositoryAnalysisService {
             Stream<Commit> commits = logParser.parseLogs(logFilePath);
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
+
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
@@ -92,6 +101,8 @@ public class RepositoryAnalysisService {
                 });
             }
 
+            ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
+
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
             fileInfoAnalyzer.finishAnalysis(fileInfoContext);
@@ -103,7 +114,6 @@ public class RepositoryAnalysisService {
 
             analysisStatisticsCalculator.calculateStatistics(analysisId);
 
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {
@@ -114,24 +124,24 @@ public class RepositoryAnalysisService {
             analysisInfoRepository.save(analysisInfo);
 
             log.info("Analysis completed for repository {}, ID: {}", repositoryUrl, analysisId);
-            ssePublisher.sendComplete(emitter, analysisId);
+            ssePublisher.sendSuccess(emitter, analysisId);
 
         } catch (LogProcessingException e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
-            ssePublisher.sendError(emitter, e.getMessage());
             throw e;
 
         } catch (Exception e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
-            log.error("Unexpected error during analysis for repository {}: {}", repositoryUrl, e.getMessage(), e);
-            ssePublisher.sendError(emitter, e.getMessage());
             throw new AnalysisException("Analysis failed: " + e.getMessage());
 
         } finally {
             if (logFilePath != null) {
                 logExtractor.deleteLogFile(logFilePath);
+            }
+            if (endDate != null) {
+                restoreRepositoryToLatest(repositoryPath);
             }
         }
     }
@@ -153,6 +163,72 @@ public class RepositoryAnalysisService {
                 .endDate(endDate)
                 .analysisStartedAt(analysisStartedAt)
                 .build();
+    }
+
+    private void restoreRepositoryToDate(Path repositoryPath, LocalDate endDate) {
+        log.debug("Restoring repository {} to {}", repositoryPath, endDate);
+        LocalDate beforeDate = endDate.plusDays(1);
+
+        try {
+            int exitCode = executeGitCheckout(repositoryPath, beforeDate);
+            if (exitCode != 0) {
+                throw new AnalysisException("Failed to restore repository to date " + endDate);
+            }
+            log.debug("Repository {} restored to {}", repositoryPath, endDate);
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            throw new AnalysisException("Failed to restore repository to date " + endDate);
+        }
+    }
+
+    private int executeGitCheckout(Path repositoryPath, LocalDate beforeDate) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(
+                "bash", "-c",
+                "git checkout $(git rev-list -1 --before=\"" + beforeDate + "\" HEAD)"
+        );
+        pb.directory(repositoryPath.toFile());
+        pb.redirectErrorStream(true);
+
+        return executeProcess(pb);
+    }
+
+    private void restoreRepositoryToLatest(Path repositoryPath) {
+        log.debug("Restoring repository {} to latest", repositoryPath);
+
+        try {
+            int exitCode = executeGitCheckoutLatest(repositoryPath);
+            if (exitCode != 0) {
+                log.error("Failed to restore repository {} to the latest state", repositoryPath);
+            } else {
+                log.debug("Repository {} restored to the latest state", repositoryPath);
+            }
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            log.error("Failed to restore repository {} to the latest state", repositoryPath, e);
+        }
+    }
+
+    private int executeGitCheckoutLatest(Path repositoryPath) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(
+                "bash", "-c",
+                "git checkout $(git branch | grep -v '^\\*' | tr -d ' ')"
+        );
+        pb.directory(repositoryPath.toFile());
+        pb.redirectErrorStream(true);
+
+        return executeProcess(pb);
+    }
+
+    private int executeProcess(ProcessBuilder pb) throws IOException, InterruptedException {
+        Process process = pb.start();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            while (reader.readLine() != null) {}
+        }
+
+        return process.waitFor();
     }
 
 }
