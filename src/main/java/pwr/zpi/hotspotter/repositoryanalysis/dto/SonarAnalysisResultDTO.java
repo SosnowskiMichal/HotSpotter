@@ -5,6 +5,5 @@ public record SonarAnalysisResultDTO(
         Integer vulnerabilities,
         Integer codeSmells,
         Integer complexity,
-        Double testCoverage,
         Double duplicatedLinesDensity
 ) { }

@@ -16,7 +16,6 @@ public class SonarAnalysisResultMapper {
                 component.getVulnerabilities(),
                 component.getCodeSmells(),
                 component.getComplexity(),
-                component.getCoverage(),
                 component.getDuplicatedLinesDensity()
         );
     }
@@ -29,7 +28,6 @@ public class SonarAnalysisResultMapper {
                 result.getVulnerabilities(),
                 result.getCodeSmells(),
                 result.getComplexity(),
-                result.getCoverage(),
                 result.getDuplicatedLinesDensity()
         );
     }

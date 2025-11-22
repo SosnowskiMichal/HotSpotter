@@ -114,7 +114,6 @@ public class RepositoryAnalysisService {
 
             analysisStatisticsCalculator.calculateStatistics(analysisId);
 
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.SONAR);
             try {
                 sonarAnalysisFuture.get();
             } catch (Exception e) {
@@ -141,7 +140,9 @@ public class RepositoryAnalysisService {
             if (logFilePath != null) {
                 logExtractor.deleteLogFile(logFilePath);
             }
-            restoreRepositoryToLatest(repositoryPath);
+            if (endDate != null) {
+                restoreRepositoryToLatest(repositoryPath);
+            }
         }
     }
 

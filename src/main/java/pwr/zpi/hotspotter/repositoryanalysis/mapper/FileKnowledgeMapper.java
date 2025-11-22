@@ -12,10 +12,32 @@ import java.util.List;
 @Component
 public class FileKnowledgeMapper {
 
+    private static final int CONTRIBUTIONS_MAX_SIZE = 20;
+
     public FileKnowledgeDTO toDTO(FileKnowledge fileKnowledge) {
         if (fileKnowledge == null) return null;
 
         List<FileKnowledgeDTO.AuthorContributionDTO> contributionsDTOs = fileKnowledge.getAuthorContributions().stream()
+                .map(this::toAuthorContributionDTO)
+                .toList();
+
+        return new FileKnowledgeDTO(
+                fileKnowledge.getLinesAdded(),
+                fileKnowledge.getLeadAuthor(),
+                fileKnowledge.getLeadAuthorKnowledgePercentage(),
+                fileKnowledge.getAuthors(),
+                fileKnowledge.getActiveAuthors(),
+                fileKnowledge.getKnowledgeLoss(),
+                fileKnowledge.getKnowledgeRisk(),
+                contributionsDTOs
+        );
+    }
+
+    public FileKnowledgeDTO toReducedDTO(FileKnowledge fileKnowledge) {
+        if (fileKnowledge == null) return null;
+
+        List<FileKnowledgeDTO.AuthorContributionDTO> contributionsDTOs = fileKnowledge.getAuthorContributions().stream()
+                .limit(CONTRIBUTIONS_MAX_SIZE)
                 .map(this::toAuthorContributionDTO)
                 .toList();
 

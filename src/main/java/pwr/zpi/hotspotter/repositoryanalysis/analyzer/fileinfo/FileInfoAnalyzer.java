@@ -148,7 +148,7 @@ public class FileInfoAnalyzer {
     private void calculateFileSize(FileInfo fileInfo, Path repositoryPath) {
         Path filePath = repositoryPath.resolve(fileInfo.getFilePath());
         long fileSizeInBytes = FileUtils.sizeOf(filePath.toFile());
-        String fileSizeStr = FileUtils.byteCountToDisplaySize(fileSizeInBytes);
+        String fileSizeStr = FileUtils.byteCountToDisplaySize(fileSizeInBytes).replace("bytes", "B");
         fileInfo.setFileSize(fileSizeStr);
     }
 

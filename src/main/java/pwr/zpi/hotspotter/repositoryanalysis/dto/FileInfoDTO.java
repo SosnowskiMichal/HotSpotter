@@ -19,7 +19,5 @@ public record FileInfoDTO(
 
         LocalDate firstCommitDate,
         LocalDate lastCommitDate,
-
-        Integer codeAgeDays,
-        Integer codeAgeMonths
+        Integer codeAgeDays
 ) { }
