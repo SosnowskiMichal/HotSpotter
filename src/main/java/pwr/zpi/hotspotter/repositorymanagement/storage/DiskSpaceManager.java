@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
@@ -23,6 +24,7 @@ public class DiskSpaceManager {
 
     private final RepositoryInfoRepository repositoryInfoRepository;
     private final RepositoryManagementConfig repositoryManagementConfig;
+    private final RepositoryAnalysisQueue repositoryAnalysisQueue;
 
     @PostConstruct
     public void init() {
@@ -30,11 +32,11 @@ public class DiskSpaceManager {
             Path baseDirectory = Path.of(repositoryManagementConfig.getBaseDirectory());
             if (!Files.exists(baseDirectory)) {
                 Files.createDirectories(baseDirectory);
-                log.info("Created base directory: {}", baseDirectory);
+                log.info("Created base directory for repositories: {}", baseDirectory);
             }
 
         } catch (IOException e) {
-            log.error("Failed to create base directory: {}", e.getMessage(), e);
+            log.error("Failed to create base directory for repositories: {}", e.getMessage(), e);
         }
     }
 
@@ -77,7 +79,7 @@ public class DiskSpaceManager {
     }
 
     private boolean cleanupRepositories() {
-        log.info("Starting repositories cleanup using strategy: {}", repositoryManagementConfig.getCleanupStrategy());
+        log.debug("Starting repositories cleanup using strategy: {}", repositoryManagementConfig.getCleanupStrategy());
 
         try {
             List<RepositoryInfo> repositories = getRepositoriesOrderedByStrategy();
@@ -95,7 +97,9 @@ public class DiskSpaceManager {
 
                 long repositorySize = repositoryInfo.getSizeInBytes() != null ? repositoryInfo.getSizeInBytes() : 0L;
                 File localPath = new File(repositoryInfo.getLocalPath());
-                if (deleteRepositoryDirectory(localPath)) {
+                String repositoryUrl = repositoryInfo.getRemoteUrl();
+
+                if (deleteRepositoryDirectory(localPath, repositoryUrl)) {
                     repositoryInfoRepository.delete(repositoryInfo);
                     logRemovedRepository(repositoryInfo);
                     spaceFreed += repositorySize;
@@ -125,11 +129,16 @@ public class DiskSpaceManager {
                 FileUtils.byteCountToDisplaySize(toRemove.getSizeInBytes() != null ? toRemove.getSizeInBytes() : 0L));
     }
 
-    public boolean deleteRepositoryDirectory(File directory) {
+    public boolean deleteRepositoryDirectory(File directory, String repositoryUrl) {
+        if (repositoryAnalysisQueue.isRepositoryInUse(repositoryUrl)) {
+            log.warn("Cannot delete repository at {} - repository {} is currently in use", directory, repositoryUrl);
+            return false;
+        }
+
         try {
             if (directory.exists()) {
                 FileUtils.deleteDirectory(directory);
-                log.info("Successfully removed repository at {}", directory);
+                log.debug("Successfully removed repository at {}", directory);
                 return true;
             }
             return false;

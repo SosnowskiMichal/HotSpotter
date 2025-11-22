@@ -94,7 +94,10 @@ public class RepositoryManagementService {
 
     private void cleanupRepository(RepositoryInfo repositoryInfo) {
         repositoryInfoRepository.delete(repositoryInfo);
-        diskSpaceManager.deleteRepositoryDirectory(Path.of(repositoryInfo.getLocalPath()).toFile());
+        diskSpaceManager.deleteRepositoryDirectory(
+                Path.of(repositoryInfo.getLocalPath()).toFile(),
+                repositoryInfo.getRemoteUrl()
+        );
     }
 
     private enum RepositoryState {

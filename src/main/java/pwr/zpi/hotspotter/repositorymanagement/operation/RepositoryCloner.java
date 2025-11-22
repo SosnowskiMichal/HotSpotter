@@ -33,7 +33,7 @@ public class RepositoryCloner {
         log.info("Cloning repository from URL {} to {}", repositoryUrl, localPath);
 
         if (!diskSpaceManager.ensureEnoughFreeSpace()) {
-            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile(), repositoryUrl);
             throw new RepositoryCloneException("Insufficient disk space or failed cleanup.");
         }
 
@@ -42,7 +42,7 @@ public class RepositoryCloner {
         }
 
         if (!cleanLocalDirectory(localPath)) {
-            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile(), repositoryUrl);
             throw new RepositoryCloneException("Failed to cleanup local directory for repository.");
         }
 
@@ -50,17 +50,17 @@ public class RepositoryCloner {
             cloneRepository(repositoryUrl, localPath);
         } catch (GitAPIException e) {
             log.error("Git clone failed for URL {}: {}", repositoryUrl, e.getMessage(), e);
-            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile(), repositoryUrl);
             throw new RepositoryCloneException("Git clone failed: " + e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected error during clone for URL {}: {}", repositoryUrl, e.getMessage(), e);
-            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile(), repositoryUrl);
             throw new RepositoryCloneException("Unexpected error during clone: " + e.getMessage());
         }
 
         if (!isValidGitRepository(localPath)) {
             log.error("Invalid git repository after clone: {}", localPath);
-            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile());
+            diskSpaceManager.deleteRepositoryDirectory(localPath.toFile(), repositoryUrl);
             throw new RepositoryCloneException("Invalid git repository after clone.");
         }
 
