@@ -74,7 +74,7 @@ class RepositoryClonerTest {
                 cloner.clone(repoData)
         );
 
-        verify(diskSpaceManager).deleteRepositoryDirectory(any(File.class));
+        verify(diskSpaceManager).deleteRepositoryDirectory(any(File.class), anyString());
     }
 
     @Test
@@ -98,7 +98,7 @@ class RepositoryClonerTest {
         goodDir.mkdirs();
 
         doThrow(new RuntimeException("clean fail"))
-                .when(diskSpaceManager).deleteRepositoryDirectory(any(File.class));
+                .when(diskSpaceManager).deleteRepositoryDirectory(any(File.class), anyString());
 
         assertThrows(RuntimeException.class, () ->
                 cloner.clone(repoData)
@@ -124,7 +124,7 @@ class RepositoryClonerTest {
                     cloner.clone(repoData)
             );
 
-            verify(diskSpaceManager).deleteRepositoryDirectory(any());
+            verify(diskSpaceManager).deleteRepositoryDirectory(any(), anyString());
         }
     }
 
@@ -145,7 +145,7 @@ class RepositoryClonerTest {
             assertThrows(RepositoryCloneException.class, () ->
                     cloner.clone(repoData)
             );
-            verify(diskSpaceManager).deleteRepositoryDirectory(any());
+            verify(diskSpaceManager).deleteRepositoryDirectory(any(), anyString());
         }
     }
 
@@ -165,7 +165,7 @@ class RepositoryClonerTest {
 
             assertThrows(RepositoryCloneException.class, () -> cloner.clone(repoData));
 
-            verify(diskSpaceManager).deleteRepositoryDirectory(any());
+            verify(diskSpaceManager).deleteRepositoryDirectory(any(), anyString());
         }
     }
 }

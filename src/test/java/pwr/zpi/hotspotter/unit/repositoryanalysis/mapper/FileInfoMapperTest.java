@@ -46,7 +46,6 @@ class FileInfoMapperTest {
         assertThat(dto.lastCommitDate()).isEqualTo(LocalDate.of(2024, 1, 1));
 
         assertThat(dto.codeAgeDays()).isEqualTo(1000);
-        assertThat(dto.codeAgeMonths()).isEqualTo(33);
     }
 
     private static FileInfo getFileInfo() {

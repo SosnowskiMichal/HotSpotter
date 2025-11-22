@@ -40,13 +40,15 @@ class FileDataMapperTest {
         FileKnowledge fileKnowledge = new FileKnowledge();
         SonarRepoAnalysisComponent sonarRepoAnalysisComponent = new SonarRepoAnalysisComponent();
 
-        FileInfoDTO infoDTO = new FileInfoDTO("path", "name", "type", String.valueOf(1L), 1,1,1,1,1,1,1,null,null,1,1);
+        FileInfoDTO infoDTO = new FileInfoDTO("path", "name", "type", String.valueOf(1L), 1,1,1,1,1,1,1,null,null,1);
         FileCouplingDTO couplingDTO = new FileCouplingDTO(null, List.of());
         FileKnowledgeDTO knowledgeDTO = new FileKnowledgeDTO(1, "", 1.0, 1,1,1.0, KnowledgeRisk.SINGLE_OWNER, null);
+        SonarAnalysisResultDTO sonarDTO = new SonarAnalysisResultDTO(0,0,0,0,0.0);
 
         when(fileInfoMapper.toDTO(fileInfo)).thenReturn(infoDTO);
         when(fileCouplingMapper.toDTO(fileCoupling)).thenReturn(couplingDTO);
-        when(fileKnowledgeMapper.toDTO(fileKnowledge)).thenReturn(knowledgeDTO);
+        when(fileKnowledgeMapper.toReducedDTO(fileKnowledge)).thenReturn(knowledgeDTO);
+        when(sonarAnalysisResultMapper.toDTO(sonarRepoAnalysisComponent)).thenReturn(sonarDTO);
 
         FileDataDTO result = mapper.toDTO(fileInfo, fileCoupling, fileKnowledge, sonarRepoAnalysisComponent);
 

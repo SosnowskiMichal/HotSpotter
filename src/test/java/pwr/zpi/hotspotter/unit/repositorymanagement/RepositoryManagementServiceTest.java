@@ -5,10 +5,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;
-import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryOperationQueue;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryUpdater;
 import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
@@ -18,12 +19,10 @@ import pwr.zpi.hotspotter.repositorymanagement.storage.DiskSpaceManager;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,9 +37,11 @@ class RepositoryManagementServiceTest {
     @Mock
     private RepositoryUpdater repositoryUpdater;
     @Mock
-    private RepositoryOperationQueue repositoryOperationQueue;
-    @Mock
     private DiskSpaceManager diskSpaceManager;
+    @Mock
+    private SseEmitter sseEmitter;
+    @Mock
+    private RepositoryAnalysisSsePublisher repositoryAnalysisSsePublisher;
 
     @InjectMocks
     private RepositoryManagementService repositoryManagementService;
@@ -55,10 +56,8 @@ class RepositoryManagementServiceTest {
         when(repositoryInfoRepository.findByNameAndOwnerAndPlatform("repo", "user", "github"))
                 .thenReturn(Optional.empty());
         when(repositoryCloner.clone(repositoryData)).thenReturn(clonedRepositoryInfo);
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
-                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
 
-        RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
+        RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl, sseEmitter);
 
         assertEquals(clonedRepositoryInfo, result);
         verify(repositoryCloner).clone(repositoryData);
@@ -77,8 +76,6 @@ class RepositoryManagementServiceTest {
         when(repositoryInfoRepository.findByNameAndOwnerAndPlatform("repo", "user", "github"))
                 .thenReturn(Optional.of(existingRepositoryInfo));
         when(repositoryUpdater.update(existingRepositoryInfo)).thenReturn(updatedRepositoryInfo);
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
-                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
 
         RepositoryManagementService spyService = spy(repositoryManagementService);
         doReturn(true).when(spyService).isValidGitRepository(localPath);
@@ -89,7 +86,7 @@ class RepositoryManagementServiceTest {
             filesMock.when(() -> Files.isReadable(any())).thenReturn(true);
             filesMock.when(() -> Files.isWritable(any())).thenReturn(true);
 
-            result = spyService.cloneOrUpdateRepository(repositoryUrl);
+            result = spyService.cloneOrUpdateRepository(repositoryUrl, sseEmitter);
         }
 
         assertEquals(updatedRepositoryInfo, result);
@@ -109,31 +106,27 @@ class RepositoryManagementServiceTest {
         when(repositoryInfoRepository.findByNameAndOwnerAndPlatform("repo", "user", "github"))
                 .thenReturn(Optional.of(corruptedRepositoryInfo));
         when(repositoryCloner.clone(repositoryData)).thenReturn(clonedRepositoryInfo);
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
-                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
         doNothing().when(repositoryInfoRepository).delete(corruptedRepositoryInfo);
-        when(diskSpaceManager.deleteRepositoryDirectory(any())).thenReturn(true);
+        when(diskSpaceManager.deleteRepositoryDirectory(any(), any())).thenReturn(true);
 
-        RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl);
+        RepositoryInfo result = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl, sseEmitter);
 
         assertEquals(clonedRepositoryInfo, result);
         verify(repositoryInfoRepository).delete(corruptedRepositoryInfo);
-        verify(diskSpaceManager).deleteRepositoryDirectory(any());
+        verify(diskSpaceManager).deleteRepositoryDirectory(any(), any());
         verify(repositoryCloner).clone(repositoryData);
     }
+
 
     @Test
     void cloneOrUpdateRepositoryWithInvalidUrlThrowsException() {
         String repositoryUrl = "invalid-url";
 
         when(repositoryUrlParser.parse(repositoryUrl)).thenThrow(new InvalidRepositoryUrlException("Invalid URL"));
-        when(repositoryOperationQueue.executeOperation(eq(repositoryUrl), any()))
-                .thenAnswer(invocation -> ((Supplier<RepositoryInfo>) invocation.getArgument(1)).get());
 
-        assertThrows(InvalidRepositoryUrlException.class, () -> repositoryManagementService.cloneOrUpdateRepository(repositoryUrl));
+        assertThrows(InvalidRepositoryUrlException.class, () -> repositoryManagementService.cloneOrUpdateRepository(repositoryUrl, sseEmitter));
         verify(repositoryUrlParser).parse(repositoryUrl);
         verifyNoInteractions(repositoryInfoRepository, repositoryCloner, repositoryUpdater);
-        verify(repositoryOperationQueue).executeOperation(eq(repositoryUrl), any());
     }
 
 }

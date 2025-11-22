@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
-import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisOrchestrationService;
+import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisService;
 import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RepositoryAnalysisOrchestrationServiceTest {
+class AsyncRepositoryAnalysisTest {
 
     @Mock
     private RepositoryAnalysisService repositoryAnalysisService;
@@ -28,7 +28,7 @@ class RepositoryAnalysisOrchestrationServiceTest {
     private SseEmitter emitter;
 
     @InjectMocks
-    private RepositoryAnalysisOrchestrationService orchestrationService;
+    private AsyncRepositoryAnalysisService orchestrationService;
 
     @Test
     void completesAnalysisSuccessfully() {
@@ -36,7 +36,7 @@ class RepositoryAnalysisOrchestrationServiceTest {
         LocalDate start = LocalDate.of(2023, 1, 1);
         LocalDate end = LocalDate.of(2023, 12, 31);
 
-        orchestrationService.startAsyncAnalysis(repoUrl, start, end, emitter);
+        orchestrationService.runRepositoryAnalysis(repoUrl, start, end, emitter);
 
         verify(repositoryAnalysisService).runRepositoryAnalysis(repoUrl, start, end, emitter);
         verify(emitter).complete();
@@ -50,7 +50,7 @@ class RepositoryAnalysisOrchestrationServiceTest {
         doThrow(new InvalidRepositoryUrlException("Invalid URL")).when(repositoryAnalysisService)
                 .runRepositoryAnalysis(repoUrl, start, end, emitter);
 
-        orchestrationService.startAsyncAnalysis(repoUrl, start, end, emitter);
+        orchestrationService.runRepositoryAnalysis(repoUrl, start, end, emitter);
 
         verify(sse).sendError(emitter, "Invalid URL");
         verify(emitter).complete();
@@ -64,7 +64,7 @@ class RepositoryAnalysisOrchestrationServiceTest {
         doThrow(new RepositoryCloneException("Clone failed")).when(repositoryAnalysisService)
                 .runRepositoryAnalysis(repoUrl, start, end, emitter);
 
-        orchestrationService.startAsyncAnalysis(repoUrl, start, end, emitter);
+        orchestrationService.runRepositoryAnalysis(repoUrl, start, end, emitter);
 
         verify(sse).sendError(emitter, "Clone failed");
         verify(emitter).complete();
@@ -78,7 +78,7 @@ class RepositoryAnalysisOrchestrationServiceTest {
         doThrow(new LogProcessingException("Log processing failed")).when(repositoryAnalysisService)
                 .runRepositoryAnalysis(repoUrl, start, end, emitter);
 
-        orchestrationService.startAsyncAnalysis(repoUrl, start, end, emitter);
+        orchestrationService.runRepositoryAnalysis(repoUrl, start, end, emitter);
 
         verify(sse).sendError(emitter, "Log processing failed");
         verify(emitter).complete();
@@ -92,7 +92,7 @@ class RepositoryAnalysisOrchestrationServiceTest {
         doThrow(new RuntimeException("Unexpected error")).when(repositoryAnalysisService)
                 .runRepositoryAnalysis(repoUrl, start, end, emitter);
 
-        orchestrationService.startAsyncAnalysis(repoUrl, start, end, emitter);
+        orchestrationService.runRepositoryAnalysis(repoUrl, start, end, emitter);
 
         verify(sse).sendError(emitter, "Unexpected error");
         verify(emitter).complete();

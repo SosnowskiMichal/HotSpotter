@@ -7,6 +7,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
@@ -32,6 +33,8 @@ class DiskSpaceManagerTest {
     private RepositoryInfoRepository repositoryInfoRepository;
     @Mock
     private RepositoryManagementConfig repositoryManagementConfig;
+    @Mock
+    private RepositoryAnalysisQueue repositoryAnalysisQueue;
 
     @InjectMocks
     private DiskSpaceManager diskSpaceManager;
@@ -68,7 +71,7 @@ class DiskSpaceManagerTest {
             when(fileStoreMock.getUsableSpace()).thenReturn(50L);
 
             DiskSpaceManager spyManager = spy(diskSpaceManager);
-            doReturn(true).when(spyManager).deleteRepositoryDirectory(any(File.class));
+            doReturn(true).when(spyManager).deleteRepositoryDirectory(any(File.class), anyString());
 
             boolean result = spyManager.ensureEnoughFreeSpace();
 
@@ -91,7 +94,7 @@ class DiskSpaceManagerTest {
             when(fileStoreMock.getUsableSpace()).thenReturn(50L);
 
             DiskSpaceManager spyManager = spy(diskSpaceManager);
-            doReturn(true).when(spyManager).deleteRepositoryDirectory(any(File.class));
+            doReturn(true).when(spyManager).deleteRepositoryDirectory(any(File.class), anyString());
 
             boolean result = spyManager.ensureEnoughFreeSpace();
 
@@ -109,7 +112,7 @@ class DiskSpaceManagerTest {
                      mockStatic(FileUtils.class)) {
             fileUtilsMock.when(() -> FileUtils.deleteDirectory(directory)).thenAnswer(_ -> null);
 
-            boolean result = diskSpaceManager.deleteRepositoryDirectory(directory);
+            boolean result = diskSpaceManager.deleteRepositoryDirectory(directory, anyString());
 
             assertTrue(result);
         }
@@ -120,7 +123,7 @@ class DiskSpaceManagerTest {
         File directory = mock(File.class);
         when(directory.exists()).thenReturn(false);
 
-        boolean result = diskSpaceManager.deleteRepositoryDirectory(directory);
+        boolean result = diskSpaceManager.deleteRepositoryDirectory(directory, anyString());
 
         assertFalse(result);
     }
@@ -133,7 +136,7 @@ class DiskSpaceManagerTest {
         try (MockedStatic<FileUtils> fileUtilsMock = mockStatic(FileUtils.class)) {
             fileUtilsMock.when(() -> FileUtils.deleteDirectory(directory)).thenThrow(new IOException("Deletion failed"));
 
-            boolean result = diskSpaceManager.deleteRepositoryDirectory(directory);
+            boolean result = diskSpaceManager.deleteRepositoryDirectory(directory, anyString());
 
             assertFalse(result);
         }

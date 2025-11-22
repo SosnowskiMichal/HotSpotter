@@ -54,6 +54,7 @@ public class RepositoryAnalysisServiceTest {
     @Mock private LogExtractor logExtractor;
     @Mock private LogParser logParser;
     @Mock private RepositoryAnalysisSsePublisher ssePublisher;
+    @Mock private SseEmitter sseEmitter;
     @Mock private SonarService sonarService;
     @Mock private KnowledgeAnalyzer knowledgeAnalyzer;
     @Mock private AuthorsAnalyzer authorsAnalyzer;
@@ -69,7 +70,6 @@ public class RepositoryAnalysisServiceTest {
     void completesAnalysisSuccessfullyWhenAllStepsSucceed() {
         String repositoryUrl = "https://example.com/repo.git";
         LocalDate startDate = LocalDate.of(2023, 1, 1);
-        LocalDate endDate = LocalDate.of(2023, 12, 31);
         SseEmitter emitter = mock(SseEmitter.class);
 
         RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
@@ -88,11 +88,11 @@ public class RepositoryAnalysisServiceTest {
                         )
                 );
 
-        when(repositoryManagementService.cloneOrUpdateRepository(repositoryUrl)).thenReturn(repositoryInfo);
+        when(repositoryManagementService.cloneOrUpdateRepository(eq(repositoryUrl), any(SseEmitter.class))).thenReturn(repositoryInfo);
         when(repositoryInfo.getLocalPath()).thenReturn(repositoryPath.toString());
         when(repositoryInfo.getName()).thenReturn("repo-name");
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(endDate)))
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
                 .thenReturn(logFilePath);
         when(logParser.parseLogs(logFilePath)).thenReturn(commits);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
@@ -100,22 +100,21 @@ public class RepositoryAnalysisServiceTest {
 
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
                 .thenReturn(mock(KnowledgeAnalyzerContext.class));
-        when(authorsAnalyzer.startAnalysis(anyString(), eq(endDate)))
+        when(authorsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
-        when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(endDate)))
+        when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(endDate), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
                 .thenReturn(mock(ActivityTrendsContext.class));
-        when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(endDate)))
+        when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, startDate, endDate, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, startDate, null, emitter);
 
-        verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.DOWNLOADING);
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.ANALYZING);
-        verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.SONAR);
-        verify(ssePublisher).sendComplete(eq(emitter), anyString());
+        verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.FINALIZING);
+        verify(ssePublisher).sendSuccess(eq(emitter), anyString());
         verify(logExtractor).deleteLogFile(logFilePath);
     }
 
@@ -123,35 +122,32 @@ public class RepositoryAnalysisServiceTest {
     void handlesLogProcessingExceptionAndMarksAnalysisAsFailed() {
         String repositoryUrl = "https://example.com/repo.git";
         LocalDate startDate = LocalDate.of(2023, 1, 1);
-        LocalDate endDate = LocalDate.of(2023, 12, 31);
         SseEmitter emitter = mock(SseEmitter.class);
 
         RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
         Path repositoryPath = Path.of("/local/repo");
         AnalysisInfo analysisInfo = mock(AnalysisInfo.class);
 
-        when(repositoryManagementService.cloneOrUpdateRepository(repositoryUrl)).thenReturn(repositoryInfo);
+        when(repositoryManagementService.cloneOrUpdateRepository(eq(repositoryUrl), any(SseEmitter.class))).thenReturn(repositoryInfo);
         when(repositoryInfo.getLocalPath()).thenReturn(repositoryPath.toString());
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(endDate)))
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
                 .thenThrow(new LogProcessingException("Log extraction failed"));
 
         assertThrows(LogProcessingException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, startDate, endDate, emitter)
+                repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, startDate, null, emitter)
         );
 
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
         verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
         AnalysisInfo failed = captor.getValue();
         assertEquals(AnalysisInfo.AnalysisStatus.FAILED, failed.getStatus());
-        verify(ssePublisher).sendError(emitter, "Log extraction failed");
     }
 
     @Test
     void handlesUnexpectedExceptionAndMarksAnalysisAsFailed() {
         String repositoryUrl = "https://example.com/repo.git";
         LocalDate startDate = LocalDate.of(2023, 1, 1);
-        LocalDate endDate = LocalDate.of(2023, 12, 31);
         SseEmitter emitter = mock(SseEmitter.class);
 
         RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
@@ -159,21 +155,20 @@ public class RepositoryAnalysisServiceTest {
         AnalysisInfo analysisInfo = new AnalysisInfo();
         analysisInfo.setId("123");
 
-        when(repositoryManagementService.cloneOrUpdateRepository(repositoryUrl))
+        when(repositoryManagementService.cloneOrUpdateRepository(eq(repositoryUrl), any(SseEmitter.class)))
                 .thenReturn(repositoryInfo);
         when(repositoryInfo.getLocalPath()).thenReturn(repositoryPath.toString());
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(endDate)))
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
         assertThrows(AnalysisException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, startDate, endDate, emitter)
+                repositoryAnalysisService.runRepositoryAnalysis(repositoryUrl, startDate, null, emitter)
         );
 
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
         verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
         AnalysisInfo failed = captor.getValue();
         assertEquals(AnalysisInfo.AnalysisStatus.FAILED, failed.getStatus());
-        verify(ssePublisher).sendError(emitter, "Unexpected error");
     }
 }
