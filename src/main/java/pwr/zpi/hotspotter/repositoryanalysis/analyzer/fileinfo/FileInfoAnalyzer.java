@@ -28,8 +28,8 @@ public class FileInfoAnalyzer {
 
     public FileInfoAnalyzerContext startAnalysis(String analysisId, Path repositoryPath, LocalDate referenceDate) {
         log.debug("Starting file info analysis for ID: {}", analysisId);
-        return new FileInfoAnalyzerContext(analysisId, repositoryPath, referenceDate);
-
+        Process clocProcess = startClocProcess(repositoryPath);
+        return new FileInfoAnalyzerContext(analysisId, repositoryPath, referenceDate, clocProcess);
     }
 
     public void processCommit(Commit commit, FileInfoAnalyzerContext context) {
@@ -55,7 +55,7 @@ public class FileInfoAnalyzer {
         log.debug("Finishing file info analysis for ID: {}", context.getAnalysisId());
 
         Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
-        Map<String, FileLinesData> fileLinesData = getFileLinesData(context.getRepositoryPath());
+        Map<String, FileLinesData> fileLinesData = getFileLinesDataFromProcess(context.getClocProcess());
         Collection<FileInfo> fileInfos = context.getFileInfos().values();
 
         List<FileInfo> fileInfosFiltered = fileInfos.stream()
@@ -76,9 +76,7 @@ public class FileInfoAnalyzer {
         }
     }
 
-    private Map<String, FileLinesData> getFileLinesData(Path repositoryPath) {
-        Map<String, FileLinesData> fileLinesData = new HashMap<>();
-
+    private Process startClocProcess(Path repositoryPath) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     "bash", "-c",
@@ -88,7 +86,19 @@ public class FileInfoAnalyzer {
             pb.redirectErrorStream(true);
 
             Process process = pb.start();
+            log.debug("Started cloc process for {}", repositoryPath);
+            return process;
+        } catch (IOException e) {
+            log.error("Error starting cloc process for {}: {}", repositoryPath, e.getMessage(), e);
+            return null;
+        }
+    }
 
+    private Map<String, FileLinesData> getFileLinesDataFromProcess(Process process) {
+        Map<String, FileLinesData> fileLinesData = new HashMap<>();
+        if (process == null) return fileLinesData;
+
+        try {
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
             );
@@ -124,11 +134,11 @@ public class FileInfoAnalyzer {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                log.warn("cloc process exited with code {} for {}", exitCode, repositoryPath);
+                log.warn("cloc process exited with code {}", exitCode);
             }
 
         } catch (IOException | InterruptedException e) {
-            log.error("Error calculating file lines data for {} using cloc: {}", repositoryPath, e.getMessage(), e);
+            log.error("Error reading cloc process output: {}", e.getMessage(), e);
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
         }
 

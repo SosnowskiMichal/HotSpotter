@@ -9,9 +9,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
 @Data
-@Document(collection = "sonar_repo_analysis_results")
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "sonar_repo_analysis_results")
 public class SonarRepoAnalysisResult {
     @Id
     private String repoAnalysisId;

@@ -29,6 +29,9 @@ public class FileKnowledge {
     @NotBlank(message = "File path is required")
     private String filePath;
 
+    @NotBlank(message = "File name is required")
+    private String fileName;
+
     private Integer linesAdded;
 
     @NotNull(message = "Total commits is required")

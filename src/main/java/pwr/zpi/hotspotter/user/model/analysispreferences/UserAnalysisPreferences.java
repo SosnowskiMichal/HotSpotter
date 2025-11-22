@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 public class UserAnalysisPreferences {
 
-    private static final int DEFAULT_HOT_SPOT_ANALYSIS_PERIOD_MONTHS = 12;
+    private static final int DEFAULT_HOTSPOT_ANALYSIS_PERIOD_MONTHS = 12;
     private static final int DEFAULT_AUTHOR_INACTIVITY_THRESHOLD_MONTHS = 6;
 
     private static final int DEFAULT_MIN_FILE_COMMITS = 5;
@@ -25,7 +25,7 @@ public class UserAnalysisPreferences {
 
     // ==================================================
 
-    private int hotSpotAnalysisPeriodMonths = DEFAULT_HOT_SPOT_ANALYSIS_PERIOD_MONTHS;
+    private int hotspotAnalysisPeriodMonths = DEFAULT_HOTSPOT_ANALYSIS_PERIOD_MONTHS;
     private int authorInactivityThresholdMonths = DEFAULT_AUTHOR_INACTIVITY_THRESHOLD_MONTHS;
 
     private int minFileCommits = DEFAULT_MIN_FILE_COMMITS;

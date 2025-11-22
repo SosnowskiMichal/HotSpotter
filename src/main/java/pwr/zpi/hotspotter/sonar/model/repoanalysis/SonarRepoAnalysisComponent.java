@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
-@Document(collection = "sonar_repo_analysis_components")
-@CompoundIndex(name = "repoAnalysisId_path_idx", def = "{'repoAnalysisId': 1, 'path': 1}")
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "sonar_repo_analysis_components")
+@CompoundIndex(name = "repoAnalysisId_path_idx", def = "{'repoAnalysisId': 1, 'path': 1}", unique = true)
 public class SonarRepoAnalysisComponent {
     @Id
     private String id;

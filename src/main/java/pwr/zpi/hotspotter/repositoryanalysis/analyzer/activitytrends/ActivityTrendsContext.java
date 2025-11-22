@@ -54,7 +54,7 @@ public class ActivityTrendsContext {
     }
 
     public void finishAnalysis() {
-        aggregateStatsForDaysBetween(lastDate, referenceDate);
+        aggregateStatsForDaysBetween(lastDate, referenceDate.plusDays(1));
     }
 
     private void aggregateStatsForDaysBetween(LocalDate startDate, LocalDate endDate) {

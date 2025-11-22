@@ -17,7 +17,10 @@ public class FileCouplingMapper {
                 .map(this::toCoupledFileDTO)
                 .toList();
 
-        return new FileCouplingDTO(coupledFilesDTOs);
+        return new FileCouplingDTO(
+                fileCoupling.getFilePath(),
+                coupledFilesDTOs
+        );
     }
 
     private FileCouplingDTO.CoupledFileDTO toCoupledFileDTO(CoupledFile coupledFile) {
