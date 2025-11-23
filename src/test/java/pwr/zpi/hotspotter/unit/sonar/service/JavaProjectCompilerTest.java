@@ -114,7 +114,7 @@ class JavaProjectCompilerTest {
             List<String> result = compiler.compileJavaProject(project);
 
             assertEquals(1, result.size());
-            assertTrue(result.getFirst().endsWith("target/classes"));
+            assertTrue(result.getFirst().endsWith(Path.of("target", "classes").toString()));
         }
     }
 
@@ -164,7 +164,7 @@ class JavaProjectCompilerTest {
                 List<String> binaries = compiler.compileJavaProject(project);
 
                 assertEquals(1, binaries.size());
-                assertTrue(binaries.getFirst().contains("build/classes/java/main"));
+                assertTrue(binaries.getFirst().contains(Path.of("build", "classes", "java", "main").toString()));
             }
         }
     }

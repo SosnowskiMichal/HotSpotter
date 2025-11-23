@@ -21,7 +21,7 @@ public class JavaProjectCompiler {
         return Files.exists(projectPath.resolve("pom.xml"))
                 || Files.exists(projectPath.resolve("build.gradle"))
                 || Files.exists(projectPath.resolve("build.gradle.kts"))
-                || Files.exists(projectPath.resolve("src/main/java"));
+                || Files.exists(projectPath.resolve(Path.of("src", "main", "java")));
     }
 
     public Optional<Path> findCommonJavaSourceRoot(Path projectPath) throws IOException {
@@ -99,7 +99,7 @@ public class JavaProjectCompiler {
         }
 
         try (Stream<Path> walk = Files.walk(projectPath)) {
-            return walk.filter(p -> p.endsWith("target/classes"))
+            return walk.filter(p -> p.endsWith(Path.of("target", "classes")))
                     .map(Path::toString)
                     .collect(Collectors.toList());
         }
@@ -121,9 +121,9 @@ public class JavaProjectCompiler {
         }
 
         try (Stream<Path> walk = Files.walk(projectPath)) {
-            return walk.filter(p -> p.endsWith("build/classes/java/main")
-                            || p.endsWith("build/classes/kotlin/main")
-                            || p.endsWith("build/classes/groovy/main"))
+            return walk.filter(p -> p.endsWith(Path.of("build", "classes", "java", "main"))
+                            || p.endsWith(Path.of("build", "classes", "kotlin", "main"))
+                            || p.endsWith(Path.of("build", "classes", "groovy", "main")))
                     .map(Path::toString)
                     .collect(Collectors.toList());
         }
@@ -133,8 +133,7 @@ public class JavaProjectCompiler {
         List<Path> srcDirs;
         try (Stream<Path> walk = Files.walk(projectPath)) {
             srcDirs = walk
-                    .filter(p -> Files.isDirectory(p)
-                            && p.endsWith("src/main/java"))
+                    .filter(p -> Files.isDirectory(p) && p.endsWith(Path.of("src", "main", "java")))
                     .toList();
         }
 
@@ -177,4 +176,5 @@ public class JavaProjectCompiler {
 
         return binaries;
     }
+
 }
