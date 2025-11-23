@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
 import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisService;
+import pwr.zpi.hotspotter.repositoryanalysis.validation.ValidDateRange;
 
 import java.time.LocalDate;
 
@@ -37,6 +38,7 @@ public class RepositoryAnalysisController {
         return emitter;
     }
 
+    @ValidDateRange
     public record AnalysisRequest(
             @NotBlank(message = "Repository URL is required")
             String repositoryUrl,
