@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.sonar;
+package pwr.zpi.hotspotter.unit.sonar.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

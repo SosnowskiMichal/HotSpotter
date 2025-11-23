@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.sonar;
+package pwr.zpi.hotspotter.unit.sonar.service;
 
 import org.apache.maven.cli.MavenCli;
 import org.gradle.tooling.ProjectConnection;

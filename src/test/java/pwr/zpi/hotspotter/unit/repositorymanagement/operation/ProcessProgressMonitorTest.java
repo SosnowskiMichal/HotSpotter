@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.repositorymanagement;
+package pwr.zpi.hotspotter.unit.repositorymanagement.operation;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
