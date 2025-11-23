@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.RedirectStrategy;
 import pwr.zpi.hotspotter.authentication.component.CookieUtil;
 import pwr.zpi.hotspotter.authentication.component.OAuth2LoginSuccessHandler;
-import pwr.zpi.hotspotter.authentication.config.GoogleProperties;
+import pwr.zpi.hotspotter.google.config.GoogleProperties;
 import pwr.zpi.hotspotter.authentication.service.JwtService;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
