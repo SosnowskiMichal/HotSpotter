@@ -7,7 +7,6 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -120,7 +119,7 @@ public class SonarResultDownloader {
                         .encode()
                         .toUri();
 
-                ResponseEntity<Map> response = restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
+                var response = restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
                 Map<String, Object> body = response.getBody();
                 if (body == null) break;
 
@@ -221,6 +220,7 @@ public class SonarResultDownloader {
                     .map(this::mapComponent)
                     .collect(Collectors.toList());
 
+            componentList.forEach(component -> component.setRepoAnalysisId(repoAnalysisId));
         }
 
         return Pair.of(repoAnalysisResult, componentList);
