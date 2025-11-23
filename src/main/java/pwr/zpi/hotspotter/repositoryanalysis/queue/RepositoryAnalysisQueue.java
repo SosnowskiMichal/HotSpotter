@@ -9,11 +9,9 @@ import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisServ
 import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
+import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryStateManager;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -31,6 +29,7 @@ public class RepositoryAnalysisQueue {
     private final ExecutorService executorService;
     private final RepositoryAnalysisSsePublisher ssePublisher;
     private final RepositoryManagementService repositoryManagementService;
+    private final RepositoryStateManager repositoryStateManager;
 
     private final ConcurrentHashMap<String, BlockingQueue<QueuedAnalysisTask>> repositoryQueues;
     private final ConcurrentHashMap<String, AtomicBoolean> repositoryProcessingFlags;
@@ -42,11 +41,13 @@ public class RepositoryAnalysisQueue {
     public RepositoryAnalysisQueue(
             @Qualifier("analysisQueueExecutor") Executor analysisQueueExecutor,
             RepositoryAnalysisSsePublisher ssePublisher,
-            RepositoryManagementService repositoryManagementService
+            RepositoryManagementService repositoryManagementService,
+            RepositoryStateManager repositoryStateManager
     ) {
         this.executorService = ((ThreadPoolTaskExecutor) analysisQueueExecutor).getThreadPoolExecutor();
         this.ssePublisher = ssePublisher;
         this.repositoryManagementService = repositoryManagementService;
+        this.repositoryStateManager = repositoryStateManager;
 
         this.repositoryQueues = new ConcurrentHashMap<>();
         this.repositoryProcessingFlags = new ConcurrentHashMap<>();
@@ -181,7 +182,7 @@ public class RepositoryAnalysisQueue {
                     boolean needsRestoration = !batchDate.equals(LocalDate.now());
                     if (needsRestoration) {
                         try {
-                            restoreRepositoryToDate(repositoryPath, batchDate);
+                            repositoryStateManager.restoreRepositoryToDate(repositoryPath, batchDate);
                         } catch (Exception e) {
                             log.error("Failed to restore repository {} to date {}: {}", repositoryUrl, batchDate, e.getMessage());
                             failEntireBatch(batch, "Failed to restore repository to date " + batchDate + ": " + e.getMessage());
@@ -224,7 +225,7 @@ public class RepositoryAnalysisQueue {
                     if (repositoryInfo != null) {
                         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
                         try {
-                            restoreRepositoryToLatest(repositoryPath);
+                            repositoryStateManager.restoreRepositoryToLatest(repositoryPath);
                         } catch (Exception e) {
                             log.error("Failed to restore repository {} to latest state: {}", repositoryUrl, e.getMessage());
                         }
@@ -291,72 +292,6 @@ public class RepositoryAnalysisQueue {
                 log.warn("Failed to send error to emitter for task {}: {}", task.getTaskId(), e.getMessage());
             }
         }
-    }
-
-    private void restoreRepositoryToDate(Path repositoryPath, LocalDate endDate) {
-        log.debug("Restoring repository {} to {}", repositoryPath, endDate);
-        LocalDate beforeDate = endDate.plusDays(1);
-
-        try {
-            int exitCode = executeGitCheckout(repositoryPath, beforeDate);
-            if (exitCode != 0) {
-                throw new AnalysisException("Failed to restore repository to date " + endDate);
-            }
-            log.debug("Repository {} restored to {}", repositoryPath, endDate);
-
-        } catch (IOException | InterruptedException e) {
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-            throw new AnalysisException("Failed to restore repository to date " + endDate);
-        }
-    }
-
-    private int executeGitCheckout(Path repositoryPath, LocalDate beforeDate) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-                "bash", "-c",
-                "git checkout $(git rev-list -1 --before=\"" + beforeDate + "\" HEAD)"
-        );
-        pb.directory(repositoryPath.toFile());
-        pb.redirectErrorStream(true);
-
-        return executeProcess(pb);
-    }
-
-    private void restoreRepositoryToLatest(Path repositoryPath) {
-        log.debug("Restoring repository {} to latest", repositoryPath);
-
-        try {
-            int exitCode = executeGitCheckoutLatest(repositoryPath);
-            if (exitCode != 0) {
-                log.error("Failed to restore repository {} to the latest state", repositoryPath);
-            } else {
-                log.debug("Repository {} restored to the latest state", repositoryPath);
-            }
-
-        } catch (IOException | InterruptedException e) {
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-            log.error("Failed to restore repository {} to the latest state", repositoryPath, e);
-        }
-    }
-
-    private int executeGitCheckoutLatest(Path repositoryPath) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-                "bash", "-c",
-                "git branch | grep -q '^* (HEAD detached' && git checkout $(git branch | grep -v '^*' | tr -d ' ')"
-        );
-        pb.directory(repositoryPath.toFile());
-        pb.redirectErrorStream(true);
-
-        return executeProcess(pb);
-    }
-
-    private int executeProcess(ProcessBuilder pb) throws IOException, InterruptedException {
-        Process process = pb.start();
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            while (reader.readLine() != null) {}
-        }
-
-        return process.waitFor();
     }
 
     public boolean isRepositoryInUse(String repositoryUrl) {
