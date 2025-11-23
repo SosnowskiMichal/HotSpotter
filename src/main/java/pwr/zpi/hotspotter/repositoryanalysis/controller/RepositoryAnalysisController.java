@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
 import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisService;
+import pwr.zpi.hotspotter.repositoryanalysis.validation.ValidDateRange;
 
 import java.time.LocalDate;
 
@@ -26,15 +27,18 @@ public class RepositoryAnalysisController {
     public SseEmitter analyzeRepository(@Valid @ModelAttribute AnalysisRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
 
-        Runnable analysisTask = () -> asyncRepositoryAnalysisService.runRepositoryAnalysis(
-                request.repositoryUrl(), request.startDate(), request.endDate(), emitter
+        repositoryAnalysisQueue.submitAnalysis(
+                request.repositoryUrl(),
+                request.startDate(),
+                request.endDate(),
+                emitter,
+                asyncRepositoryAnalysisService
         );
-
-        repositoryAnalysisQueue.submitAnalysis(request.repositoryUrl(), analysisTask, emitter);
 
         return emitter;
     }
 
+    @ValidDateRange
     public record AnalysisRequest(
             @NotBlank(message = "Repository URL is required")
             String repositoryUrl,

@@ -25,13 +25,9 @@ import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
-import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,7 +40,6 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class RepositoryAnalysisService {
 
-    private final RepositoryManagementService repositoryManagementService;
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
     private final LogParser logParser;
@@ -58,11 +53,10 @@ public class RepositoryAnalysisService {
     private final CouplingAnalyzer couplingAnalyzer;
     private final AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
-    public void runRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
-        log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryUrl, startDate, endDate);
+    public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
+        log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
         LocalDateTime analysisStartedAt = LocalDateTime.now();
 
-        RepositoryInfo repositoryInfo = repositoryManagementService.cloneOrUpdateRepository(repositoryUrl, emitter);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
         AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
@@ -72,10 +66,6 @@ public class RepositoryAnalysisService {
         Path logFilePath = null;
         try {
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
-
-            if (endDate != null) {
-                restoreRepositoryToDate(repositoryPath, endDate);
-            }
 
             CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
@@ -123,7 +113,7 @@ public class RepositoryAnalysisService {
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
 
-            log.info("Analysis completed for repository {}, ID: {}", repositoryUrl, analysisId);
+            log.info("Analysis completed for repository {}, ID: {}", repositoryInfo.getRemoteUrl(), analysisId);
             ssePublisher.sendSuccess(emitter, analysisId);
 
         } catch (LogProcessingException e) {
@@ -139,9 +129,6 @@ public class RepositoryAnalysisService {
         } finally {
             if (logFilePath != null) {
                 logExtractor.deleteLogFile(logFilePath);
-            }
-            if (endDate != null) {
-                restoreRepositoryToLatest(repositoryPath);
             }
         }
     }
@@ -163,72 +150,6 @@ public class RepositoryAnalysisService {
                 .endDate(endDate)
                 .analysisStartedAt(analysisStartedAt)
                 .build();
-    }
-
-    private void restoreRepositoryToDate(Path repositoryPath, LocalDate endDate) {
-        log.debug("Restoring repository {} to {}", repositoryPath, endDate);
-        LocalDate beforeDate = endDate.plusDays(1);
-
-        try {
-            int exitCode = executeGitCheckout(repositoryPath, beforeDate);
-            if (exitCode != 0) {
-                throw new AnalysisException("Failed to restore repository to date " + endDate);
-            }
-            log.debug("Repository {} restored to {}", repositoryPath, endDate);
-
-        } catch (IOException | InterruptedException e) {
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-            throw new AnalysisException("Failed to restore repository to date " + endDate);
-        }
-    }
-
-    private int executeGitCheckout(Path repositoryPath, LocalDate beforeDate) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-                "bash", "-c",
-                "git checkout $(git rev-list -1 --before=\"" + beforeDate + "\" HEAD)"
-        );
-        pb.directory(repositoryPath.toFile());
-        pb.redirectErrorStream(true);
-
-        return executeProcess(pb);
-    }
-
-    private void restoreRepositoryToLatest(Path repositoryPath) {
-        log.debug("Restoring repository {} to latest", repositoryPath);
-
-        try {
-            int exitCode = executeGitCheckoutLatest(repositoryPath);
-            if (exitCode != 0) {
-                log.error("Failed to restore repository {} to the latest state", repositoryPath);
-            } else {
-                log.debug("Repository {} restored to the latest state", repositoryPath);
-            }
-
-        } catch (IOException | InterruptedException e) {
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-            log.error("Failed to restore repository {} to the latest state", repositoryPath, e);
-        }
-    }
-
-    private int executeGitCheckoutLatest(Path repositoryPath) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(
-                "bash", "-c",
-                "git checkout $(git branch | grep -v '^\\*' | tr -d ' ')"
-        );
-        pb.directory(repositoryPath.toFile());
-        pb.redirectErrorStream(true);
-
-        return executeProcess(pb);
-    }
-
-    private int executeProcess(ProcessBuilder pb) throws IOException, InterruptedException {
-        Process process = pb.start();
-
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            while (reader.readLine() != null) {}
-        }
-
-        return process.waitFor();
     }
 
 }

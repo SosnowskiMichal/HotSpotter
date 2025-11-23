@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.repositorymanagement;
+package pwr.zpi.hotspotter.unit.repositorymanagement.operation;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.Git;

@@ -164,6 +164,12 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileInfoRepository.findAllByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(f1, f2));
 
+            HotspotDTO dto1 = new HotspotDTO("path1", "name1", 10, 100, 1.0);
+            HotspotDTO dto2 = new HotspotDTO("path2", "name2", 5, 200, 0.79);
+
+            when(fileInfoMapper.toHotspotDTO(eq(f1), anyDouble())).thenReturn(dto1);
+            when(fileInfoMapper.toHotspotDTO(eq(f2), anyDouble())).thenReturn(dto2);
+
             List<HotspotDTO> result = service.getHotspots(ANALYSIS_ID);
 
             assertEquals(2, result.size());

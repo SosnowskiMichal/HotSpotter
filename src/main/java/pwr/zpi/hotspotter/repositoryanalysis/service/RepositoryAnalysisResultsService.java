@@ -125,9 +125,10 @@ public class RepositoryAnalysisResultsService {
 
         return fileInfoData.stream()
                 .map(fileInfo -> {
-                    double normalizedValue = Math.round(fileInfo.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
+                    double normalizedValue = Math.round(100.0 - fileInfo.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
                     return fileInfoMapper.toCodeAgeDTO(fileInfo, normalizedValue);
                 })
+                .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();
     }
 
@@ -195,6 +196,7 @@ public class RepositoryAnalysisResultsService {
 
                     return fileInfoMapper.toHotspotDTO(fileInfo, normalizedValue);
                 })
+                .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();
     }
 

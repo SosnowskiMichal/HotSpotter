@@ -1,9 +1,9 @@
 package pwr.zpi.hotspotter.repositorymanagement.storage;
 
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
@@ -19,12 +19,21 @@ import java.util.List;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DiskSpaceManager {
 
     private final RepositoryInfoRepository repositoryInfoRepository;
     private final RepositoryManagementConfig repositoryManagementConfig;
     private final RepositoryAnalysisQueue repositoryAnalysisQueue;
+
+    public DiskSpaceManager(
+            RepositoryInfoRepository repositoryInfoRepository,
+            RepositoryManagementConfig repositoryManagementConfig,
+            @Lazy RepositoryAnalysisQueue repositoryAnalysisQueue
+    ) {
+        this.repositoryInfoRepository = repositoryInfoRepository;
+        this.repositoryManagementConfig = repositoryManagementConfig;
+        this.repositoryAnalysisQueue = repositoryAnalysisQueue;
+    }
 
     @PostConstruct
     public void init() {

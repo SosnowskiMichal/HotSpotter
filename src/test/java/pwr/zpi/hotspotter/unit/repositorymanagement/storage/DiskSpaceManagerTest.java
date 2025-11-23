@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.repositorymanagement;
+package pwr.zpi.hotspotter.unit.repositorymanagement.storage;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;

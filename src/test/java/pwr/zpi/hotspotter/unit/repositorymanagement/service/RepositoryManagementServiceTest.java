@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.repositorymanagement;
+package pwr.zpi.hotspotter.unit.repositorymanagement.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
