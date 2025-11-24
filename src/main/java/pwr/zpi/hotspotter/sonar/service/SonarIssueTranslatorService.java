@@ -8,6 +8,7 @@ import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -23,6 +24,8 @@ public class SonarIssueTranslatorService {
                 sonarIssue.getMessageTranslations().get(targetLanguage) != null) {
             return;
         }
+
+        AtomicBoolean changed = new AtomicBoolean(false);
         try {
             String message = sonarIssue.getMessage();
             if (hasLetters(message)) {
@@ -31,31 +34,36 @@ public class SonarIssueTranslatorService {
                         DEFAULT_LANGUAGE,
                         targetLanguage
                 );
-                if (translatedMessage != null)
+                if (translatedMessage != null) {
                     sonarIssue.getMessageTranslations().put(targetLanguage, translatedMessage);
-            }
-
-            sonarIssue.getLocations().forEach(location -> {
-                try {
-                    String locationMessage = location.getMessage();
-                    if (hasLetters(locationMessage)) {
-                        String translatedLocationMessage = translatorService.translate(
-                                locationMessage,
-                                DEFAULT_LANGUAGE,
-                                targetLanguage
-                        );
-                        if (translatedLocationMessage != null)
-                            location.getMessageTranslations().put(targetLanguage, translatedLocationMessage);
-                    }
-                } catch (IOException e) {
-                    log.error("Failed to translate sonar issue location message.", e);
+                    changed.set(true);
                 }
-            });
-
-            sonarIssueRepository.save(sonarIssue);
+            }
         } catch (IOException e) {
             log.error("Failed to translate sonar issue message.", e);
         }
+
+        sonarIssue.getLocations().forEach(location -> {
+            try {
+                String locationMessage = location.getMessage();
+                if (hasLetters(locationMessage)) {
+                    String translatedLocationMessage = translatorService.translate(
+                            locationMessage,
+                            DEFAULT_LANGUAGE,
+                            targetLanguage
+                    );
+                    if (translatedLocationMessage != null) {
+                        location.getMessageTranslations().put(targetLanguage, translatedLocationMessage);
+                        changed.set(true);
+                    }
+                }
+            } catch (IOException e) {
+                log.error("Failed to translate sonar issue location message.", e);
+            }
+        });
+
+        if (changed.get())
+            sonarIssueRepository.save(sonarIssue);
     }
 
     private boolean hasLetters(String s) {
