@@ -50,7 +50,7 @@ class SonarResultDownloaderTest {
         assertNotNull(result);
         assertEquals(repoAnalysisId, result.repoAnalysisResult().getRepoAnalysisId());
         int expectedIssuesCount = SonarResultDownloader.FILE_PROBLEM_TYPES.size() * SonarResultDownloader.FILE_SEVERITIES.size();
-        assertEquals(expectedIssuesCount, result.fileAnalysisResult().getIssues().size());
+        assertEquals(expectedIssuesCount, result.sonarIssues().size());
     }
 
     @Test

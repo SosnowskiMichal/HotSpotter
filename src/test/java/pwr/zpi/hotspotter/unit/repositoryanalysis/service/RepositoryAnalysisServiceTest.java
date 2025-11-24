@@ -29,7 +29,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
@@ -86,7 +86,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -197,7 +197,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -250,7 +250,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -301,7 +301,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -355,7 +355,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -406,7 +406,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -544,7 +544,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
+                                List.of(new SonarIssue())
                         )
                 );
 
@@ -590,8 +590,7 @@ public class RepositoryAnalysisServiceTest {
                         new SonarResultDownloader.SonarAnalysisResults(
                                 new SonarRepoAnalysisResult(),
                                 List.of(new SonarRepoAnalysisComponent()),
-                                new SonarFileAnalysisResult()
-                        )
+                                List.of(new SonarIssue())                        )
                 );
 
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
