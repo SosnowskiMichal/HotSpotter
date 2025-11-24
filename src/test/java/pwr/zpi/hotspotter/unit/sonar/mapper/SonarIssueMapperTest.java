@@ -36,10 +36,12 @@ class SonarIssueMapperTest {
         location = new SonarIssueLocation();
         location.setMessage("loc original");
         location.setMessageTranslations(new HashMap<>());
+        location.setTextRange(new TextRange(1, 1, 1, 1));
 
         issue = new SonarIssue();
         issue.setMessage("original");
         issue.setMessageTranslations(new HashMap<>());
+        issue.setTextRange(new TextRange(1, 1, 1, 1));
         issue.setLocations(List.of(location));
     }
 
@@ -56,13 +58,6 @@ class SonarIssueMapperTest {
         verifyNoInteractions(translatorService);
         assertEquals("original", dto.message());
         assertEquals("loc original", dto.locations().getFirst().message());
-    }
-
-    @Test
-    void toDTO_CallsTranslatorService_WhenTargetLanguageIsProvided() {
-        mapper.toDTO(issue, "pl");
-
-        verify(translatorService).translateIssueMessage(issue, "pl");
     }
 
     @Test
@@ -121,7 +116,9 @@ class SonarIssueMapperTest {
         assertEquals("MAJOR", dto.severity());
         assertEquals(List.of("tag1"), dto.tags());
         assertEquals("BUG", dto.type());
-        assertEquals(new TextRange(10, 20, 2, 30), dto.textRange());
-        assertEquals(new TextRange(1, 5, 1, 10), dto.locations().getFirst().textRange());
+        assertEquals(10, dto.startLine());
+        assertEquals(20, dto.endLine());
+        assertEquals(1, dto.locations().getFirst().startLine());
+        assertEquals(5, dto.locations().getFirst().endLine());
     }
 }

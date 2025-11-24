@@ -1,13 +1,12 @@
 package pwr.zpi.hotspotter.sonar.dto;
 
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.TextRange;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
 public record SonarIssueDTO(
         String path,
-        TextRange textRange,
+        Integer startLine,
+        Integer endLine,
         String severity,
         String message,
         String type,
@@ -22,6 +21,7 @@ public record SonarIssueDTO(
 ) {
     public record SonarIssueLocationDTO(
             String message,
-            TextRange textRange
+            Integer startLine,
+            Integer endLine
     ) { }
 }

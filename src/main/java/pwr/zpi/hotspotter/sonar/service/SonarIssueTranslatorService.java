@@ -5,10 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.google.translation.TranslatorService;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssueLocation;
 import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -25,7 +25,7 @@ public class SonarIssueTranslatorService {
             return;
         }
 
-        AtomicBoolean changed = new AtomicBoolean(false);
+        boolean changed = false;
         try {
             String message = sonarIssue.getMessage();
             if (hasLetters(message)) {
@@ -36,14 +36,14 @@ public class SonarIssueTranslatorService {
                 );
                 if (translatedMessage != null) {
                     sonarIssue.getMessageTranslations().put(targetLanguage, translatedMessage);
-                    changed.set(true);
+                    changed = true;
                 }
             }
         } catch (IOException e) {
             log.error("Failed to translate sonar issue message.", e);
         }
 
-        sonarIssue.getLocations().forEach(location -> {
+        for (SonarIssueLocation location : sonarIssue.getLocations()) {
             try {
                 String locationMessage = location.getMessage();
                 if (hasLetters(locationMessage)) {
@@ -54,16 +54,24 @@ public class SonarIssueTranslatorService {
                     );
                     if (translatedLocationMessage != null) {
                         location.getMessageTranslations().put(targetLanguage, translatedLocationMessage);
-                        changed.set(true);
+                        changed = true;
                     }
                 }
             } catch (IOException e) {
                 log.error("Failed to translate sonar issue location message.", e);
             }
-        });
+        }
 
-        if (changed.get())
+        if (changed)
             sonarIssueRepository.save(sonarIssue);
+    }
+
+    public void translateIssueMessagesBulk(Iterable<SonarIssue> sonarIssues, String targetLanguage) {
+        if (targetLanguage == null || targetLanguage.equals(DEFAULT_LANGUAGE)) {
+            return;
+        }
+
+        sonarIssues.forEach(issue -> translateIssueMessage(issue, targetLanguage));
     }
 
     private boolean hasLetters(String s) {

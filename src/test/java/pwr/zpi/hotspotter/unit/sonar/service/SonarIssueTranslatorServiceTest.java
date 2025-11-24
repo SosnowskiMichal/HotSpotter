@@ -159,4 +159,40 @@ class SonarIssueTranslatorServiceTest {
 
         verifyNoInteractions(sonarIssueRepository);
     }
+
+    @Test
+    void doesNothing_WhenIterableIsEmpty() {
+        service.translateIssueMessagesBulk(Collections.emptyList(), "pl");
+
+        verifyNoInteractions(translatorService);
+        verifyNoInteractions(sonarIssueRepository);
+    }
+
+    @Test
+    void doesNothing_WhenTargetLanguageIsNull_InBulk() {
+        service.translateIssueMessagesBulk(List.of(issue), null);
+
+        verifyNoInteractions(translatorService);
+        verifyNoInteractions(sonarIssueRepository);
+    }
+
+    @Test
+    void translatesMultipleIssues_InBulk() throws Exception {
+        SonarIssue issue2 = new SonarIssue();
+        issue2.setMessage("Second message");
+        issue2.setMessageTranslations(new HashMap<>());
+        issue2.setLocations(Collections.emptyList());
+
+        when(translatorService.translate("Test message", "en", "pl")).thenReturn("Test msg PL");
+        when(translatorService.translate("Second message", "en", "pl")).thenReturn("Second msg PL");
+        when(translatorService.translate("Location message", "en", "pl")).thenReturn("Loc msg PL");
+
+        service.translateIssueMessagesBulk(List.of(issue, issue2), "pl");
+
+        assertEquals("Test msg PL", issue.getMessageTranslations().get("pl"));
+        assertEquals("Second msg PL", issue2.getMessageTranslations().get("pl"));
+
+        verify(sonarIssueRepository).save(issue);
+        verify(sonarIssueRepository).save(issue2);
+    }
 }

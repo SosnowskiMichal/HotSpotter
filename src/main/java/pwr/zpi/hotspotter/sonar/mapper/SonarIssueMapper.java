@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.sonar.dto.SonarIssueDTO;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssueLocation;
-import pwr.zpi.hotspotter.sonar.service.SonarIssueTranslatorService;
 
 import java.util.List;
 
@@ -13,14 +12,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SonarIssueMapper {
 
-    private final SonarIssueTranslatorService sonarIssueTranslatorService;
-
     public SonarIssueDTO toDTO(SonarIssue sonarIssue, String targetLanguage) {
         if (sonarIssue == null) return null;
 
-        if (targetLanguage != null) {
-            sonarIssueTranslatorService.translateIssueMessage(sonarIssue, targetLanguage);
-        }
         String message = targetLanguage == null ? sonarIssue.getMessage() :
                 sonarIssue.getMessageTranslations().getOrDefault(targetLanguage, sonarIssue.getMessage());
 
@@ -30,7 +24,8 @@ public class SonarIssueMapper {
 
         return new SonarIssueDTO(
                 sonarIssue.getPath(),
-                sonarIssue.getTextRange(),
+                sonarIssue.getTextRange().getStartLine(),
+                sonarIssue.getTextRange().getEndLine(),
                 sonarIssue.getSeverity(),
                 message,
                 sonarIssue.getType(),
@@ -53,7 +48,8 @@ public class SonarIssueMapper {
 
         return new SonarIssueDTO.SonarIssueLocationDTO(
                 message,
-                sonarIssueLocation.getTextRange()
+                sonarIssueLocation.getTextRange().getStartLine(),
+                sonarIssueLocation.getTextRange().getEndLine()
         );
     }
 }

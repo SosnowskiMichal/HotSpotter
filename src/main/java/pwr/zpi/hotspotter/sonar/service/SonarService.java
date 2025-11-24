@@ -37,6 +37,7 @@ public class SonarService {
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
     private final SonarIssueRepository sonarIssueRepository;
     private final SonarIssueMapper sonarIssueMapper;
+    private final SonarIssueTranslatorService sonarIssueTranslatorService;
 
 
     public SonarAnalysisStatus getSonarAnalysisStatus(String repoAnalysisId) {
@@ -51,6 +52,7 @@ public class SonarService {
 
     public List<SonarIssueDTO> getSonarIssuesDTOForFile(String repoAnalysisId, String filePath, String targetLanguage) {
         List<SonarIssue> issues = sonarIssueRepository.findAllByRepoAnalysisIdAndPath(repoAnalysisId, filePath);
+        sonarIssueTranslatorService.translateIssueMessagesBulk(issues, targetLanguage);
         return issues.stream()
                 .map(issue -> sonarIssueMapper.toDTO(issue, targetLanguage))
                 .toList();
