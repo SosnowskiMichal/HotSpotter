@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record SonarIssueDTO(
-        String gitUrl,
         String path,
         TextRange textRange,
         String severity,

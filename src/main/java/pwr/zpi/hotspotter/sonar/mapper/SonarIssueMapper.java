@@ -29,7 +29,6 @@ public class SonarIssueMapper {
                 .toList();
 
         return new SonarIssueDTO(
-                "gitUrl-placeholder",
                 sonarIssue.getPath(),
                 sonarIssue.getTextRange(),
                 sonarIssue.getSeverity(),
