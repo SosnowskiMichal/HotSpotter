@@ -7,12 +7,10 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssueLocation;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.TextRange;
@@ -23,10 +21,7 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -65,13 +60,13 @@ public class SonarResultDownloader {
 
             Pair<SonarRepoAnalysisResult, List<SonarRepoAnalysisComponent>> repoAnalysisResult =
                     mapToRepoAnalysisResult(repoAnalysisId, componentTree);
-            SonarFileAnalysisResult fileAnalysisResult =
-                    mapIssuesToFileAnalysisResult(repoAnalysisId, projectKey, issues);
+            List<SonarIssue> sonarIssues =
+                    mapIssues(repoAnalysisId, projectKey, issues);
 
             return new SonarAnalysisResults(
                     repoAnalysisResult.getFirst(),
                     repoAnalysisResult.getSecond(),
-                    fileAnalysisResult
+                    sonarIssues
             );
 
         } catch (Exception e) {
@@ -120,7 +115,7 @@ public class SonarResultDownloader {
                         .encode()
                         .toUri();
 
-                ResponseEntity<Map> response = restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
+                var response = restTemplate.exchange(uri, HttpMethod.GET, entity, Map.class);
                 Map<String, Object> body = response.getBody();
                 if (body == null) break;
 
@@ -267,28 +262,23 @@ public class SonarResultDownloader {
         return metrics;
     }
 
-    private SonarFileAnalysisResult mapIssuesToFileAnalysisResult(
+    private List<SonarIssue> mapIssues(
             String repoAnalysisId,
             String projectKey,
             List<Map<String, Object>> issuesList) {
 
-        SonarFileAnalysisResult result = new SonarFileAnalysisResult();
-        result.setProjectKey(projectKey);
-        result.setRepoAnalysisId(repoAnalysisId);
-        result.setAnalysisDate(LocalDateTime.now());
-
         if (issuesList == null || issuesList.isEmpty()) {
-            result.setIssues(new ArrayList<>());
-            return result;
+            return Collections.emptyList();
         }
 
         List<SonarIssue> sonarIssues = new ArrayList<>();
         for (Map<String, Object> rawIssue : issuesList) {
             SonarIssue issue = new SonarIssue();
+            issue.setRepoAnalysisId(repoAnalysisId);
 
             Object component = rawIssue.get("component");
             String filePath = extractFilePath(projectKey, component);
-            issue.setFilePath(filePath);
+            issue.setPath(filePath);
 
             issue.setTextRange(extractTextRange(rawIssue));
             issue.setLocations(extractProblemLocations(rawIssue, projectKey));
@@ -312,8 +302,7 @@ public class SonarResultDownloader {
             sonarIssues.add(issue);
         }
 
-        result.setIssues(sonarIssues);
-        return result;
+        return sonarIssues;
     }
 
     private static String extractFilePath(String projectKey, Object component) {
@@ -439,6 +428,6 @@ public class SonarResultDownloader {
     public record SonarAnalysisResults(
             SonarRepoAnalysisResult repoAnalysisResult,
             List<SonarRepoAnalysisComponent> repoAnalysisComponents,
-            SonarFileAnalysisResult fileAnalysisResult
+            List<SonarIssue> sonarIssues
     ) {}
 }

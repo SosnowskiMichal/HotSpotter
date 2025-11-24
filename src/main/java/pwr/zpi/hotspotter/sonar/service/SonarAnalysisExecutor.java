@@ -8,11 +8,11 @@ import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
-import pwr.zpi.hotspotter.sonar.repository.SonarFileAnalysisRepository;
+import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisComponentRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
@@ -36,7 +36,7 @@ public class SonarAnalysisExecutor {
     private final JavaProjectCompiler javaProjectCompiler;
     private final SonarProperties sonarProperties;
     private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
-    private final SonarFileAnalysisRepository sonarFileAnalysisRepository;
+    private final SonarIssueRepository sonarIssueRepository;
     private final SonarRepoAnalysisComponentRepository sonarRepoAnalysisComponentRepository;
 
 
@@ -149,10 +149,10 @@ public class SonarAnalysisExecutor {
             if (result != null && result.repoAnalysisComponents() != null && !result.repoAnalysisComponents().isEmpty()) {
                 SonarRepoAnalysisResult repoAnalysisResult = result.repoAnalysisResult();
                 List<SonarRepoAnalysisComponent> components = result.repoAnalysisComponents();
-                SonarFileAnalysisResult sonarFileAnalysisResult = result.fileAnalysisResult();
+                List<SonarIssue> sonarIssues = result.sonarIssues();
                 sonarRepoAnalysisRepository.save(repoAnalysisResult);
                 sonarRepoAnalysisComponentRepository.saveAll(components);
-                sonarFileAnalysisRepository.save(sonarFileAnalysisResult);
+                sonarIssueRepository.saveAll(sonarIssues);
                 log.info("Successfully saved analysis results for project: {}", projectKey);
 
                 return result;

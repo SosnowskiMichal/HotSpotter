@@ -8,7 +8,7 @@ import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarFileAnalysisResult;
+import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.*;
@@ -33,7 +33,7 @@ class SonarAnalysisExecutorTest {
     @Mock private JavaProjectCompiler compiler;
     @Mock private SonarProperties sonarProperties;
     @Mock private SonarRepoAnalysisRepository repoAnalysisRepo;
-    @Mock private SonarFileAnalysisRepository fileAnalysisRepo;
+    @Mock private SonarIssueRepository sonarIssueRepository;
     @Mock private SonarRepoAnalysisComponentRepository componentRepo;
 
     @InjectMocks
@@ -53,7 +53,7 @@ class SonarAnalysisExecutorTest {
         return new SonarResultDownloader.SonarAnalysisResults(
                 new SonarRepoAnalysisResult(),
                 List.of(new SonarRepoAnalysisComponent()),
-                new SonarFileAnalysisResult()
+                List.of(new SonarIssue())
         );
     }
 
@@ -125,6 +125,6 @@ class SonarAnalysisExecutorTest {
 
         verify(repoAnalysisRepo).save(any());
         verify(componentRepo).saveAll(any());
-        verify(fileAnalysisRepo).save(any());
+        verify(sonarIssueRepository).saveAll(any());
     }
 }
