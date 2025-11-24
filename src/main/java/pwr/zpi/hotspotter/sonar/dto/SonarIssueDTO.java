@@ -20,6 +20,7 @@ public record SonarIssueDTO(
         List<SonarIssueLocationDTO> locations
 ) {
     public record SonarIssueLocationDTO(
+            String path,
             String message,
             Integer startLine,
             Integer endLine

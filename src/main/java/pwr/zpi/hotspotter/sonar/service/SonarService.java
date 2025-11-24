@@ -6,21 +6,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.config.SonarProperties;
-import pwr.zpi.hotspotter.sonar.dto.SonarIssueDTO;
-import pwr.zpi.hotspotter.sonar.mapper.SonarIssueMapper;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisState;
 import pwr.zpi.hotspotter.sonar.model.analysisstatus.SonarAnalysisStatus;
-import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
-import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarAnalysisStatusRepository;
-import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
-import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -34,28 +27,10 @@ public class SonarService {
     private final SonarProperties sonarProperties;
     private final SonarAnalysisExecutor sonarAnalysisExecutor;
     private final SonarAnalysisStatusRepository sonarAnalysisStatusRepository;
-    private final SonarRepoAnalysisRepository sonarRepoAnalysisRepository;
-    private final SonarIssueRepository sonarIssueRepository;
-    private final SonarIssueMapper sonarIssueMapper;
-    private final SonarIssueTranslatorService sonarIssueTranslatorService;
-
 
     public SonarAnalysisStatus getSonarAnalysisStatus(String repoAnalysisId) {
         return sonarAnalysisStatusRepository.findByRepoAnalysisId(repoAnalysisId).orElseThrow(() ->
                 new ObjectNotFoundException("SonarQube analysis status not found for ID: " + repoAnalysisId));
-    }
-
-    public SonarRepoAnalysisResult getSonarRepoAnalysisResult(String repoAnalysisId) {
-        return sonarRepoAnalysisRepository.findByRepoAnalysisId(repoAnalysisId).orElseThrow(() ->
-                new ObjectNotFoundException("SonarQube analysis result not found for ID: " + repoAnalysisId));
-    }
-
-    public List<SonarIssueDTO> getSonarIssuesDTOForFile(String repoAnalysisId, String filePath, String targetLanguage) {
-        List<SonarIssue> issues = sonarIssueRepository.findAllByRepoAnalysisIdAndPath(repoAnalysisId, filePath);
-        sonarIssueTranslatorService.translateIssueMessagesBulk(issues, targetLanguage);
-        return issues.stream()
-                .map(issue -> sonarIssueMapper.toDTO(issue, targetLanguage))
-                .toList();
     }
 
     @Synchronized

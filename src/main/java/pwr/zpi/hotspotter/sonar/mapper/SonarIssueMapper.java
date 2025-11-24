@@ -47,6 +47,7 @@ public class SonarIssueMapper {
                 sonarIssueLocation.getMessageTranslations().getOrDefault(targetLanguage, sonarIssueLocation.getMessage());
 
         return new SonarIssueDTO.SonarIssueLocationDTO(
+                sonarIssueLocation.getFilePath(),
                 message,
                 sonarIssueLocation.getTextRange().getStartLine(),
                 sonarIssueLocation.getTextRange().getEndLine()
