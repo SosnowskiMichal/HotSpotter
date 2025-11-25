@@ -2,10 +2,8 @@ package pwr.zpi.hotspotter.repositoryanalysis.mapper;
 
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.FileCodeAgeDTO;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.FileInfoDTO;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.FilePathNameDTO;
-import pwr.zpi.hotspotter.repositoryanalysis.dto.HotspotDTO;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository.*;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.*;
 
 @Component
 public class FileInfoMapper {
@@ -34,34 +32,44 @@ public class FileInfoMapper {
         );
     }
 
-    public FilePathNameDTO toPathNameDTO(FileInfo fileInfo) {
-        if (fileInfo == null) return null;
+    public FilePathNameDTO toPathNameDTO(FilePathNameProjection projection) {
+        if (projection == null) return null;
 
         return new FilePathNameDTO(
-                fileInfo.getFilePath(),
-                fileInfo.getFileName()
+                projection.getFilePath(),
+                projection.getFileName()
         );
     }
 
-    public FileCodeAgeDTO toCodeAgeDTO(FileInfo fileInfo, Double normalizedValue) {
-        if (fileInfo == null) return null;
+    public FileTypeDTO toTypeDTO(FileTypeProjection projection) {
+        if (projection == null) return null;
+
+        return new FileTypeDTO(
+                projection.getFilePath(),
+                projection.getFileName(),
+                projection.getFileType()
+        );
+    }
+
+    public FileCodeAgeDTO toCodeAgeDTO(FileCodeAgeProjection projection, Double normalizedValue) {
+        if (projection == null) return null;
 
         return new FileCodeAgeDTO(
-                fileInfo.getFilePath(),
-                fileInfo.getFileName(),
-                fileInfo.getCodeAgeDays(),
+                projection.getFilePath(),
+                projection.getFileName(),
+                projection.getCodeAgeDays(),
                 normalizedValue
         );
     }
 
-    public HotspotDTO toHotspotDTO(FileInfo fileInfo, Double normalizedValue) {
-        if (fileInfo == null) return null;
+    public HotspotDTO toHotspotDTO(HotspotProjection projection, Double normalizedValue) {
+        if (projection == null) return null;
 
         return new HotspotDTO(
-                fileInfo.getFilePath(),
-                fileInfo.getFileName(),
-                fileInfo.getCommitsInHotspotAnalysisPeriod(),
-                fileInfo.getCodeLines(),
+                projection.getFilePath(),
+                projection.getFileName(),
+                projection.getCommitsInHotspotAnalysisPeriod(),
+                projection.getCodeLines(),
                 normalizedValue
         );
     }

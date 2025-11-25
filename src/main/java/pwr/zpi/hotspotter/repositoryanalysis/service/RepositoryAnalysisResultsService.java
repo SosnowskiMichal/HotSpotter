@@ -78,9 +78,9 @@ public class RepositoryAnalysisResultsService {
 
     public List<FilePathNameDTO> getAllFilesInRepository(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+        var projections = fileInfoRepository.findAllPathNamesByAnalysisId(analysisId);
 
-        return fileInfoData.stream()
+        return projections.stream()
                 .map(fileInfoMapper::toPathNameDTO)
                 .toList();
     }
@@ -105,6 +105,15 @@ public class RepositoryAnalysisResultsService {
         return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge, sonarAnalysisComponent);
     }
 
+    public List<FileTypeDTO> getAllFilesTypes(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        var projections = fileInfoRepository.findAllTypesByAnalysisId(analysisId);
+
+        return projections.stream()
+                .map(fileInfoMapper::toTypeDTO)
+                .toList();
+    }
+
     public List<FileCouplingDTO> getAllFilesCoupling(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
         List<FileCoupling> filesCouplings = fileCouplingRepository.findAllByAnalysisId(analysisId);
@@ -116,17 +125,17 @@ public class RepositoryAnalysisResultsService {
 
     public List<FileCodeAgeDTO> getAllFilesCodeAge(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+        var projections = fileInfoRepository.findAllCodeAgesByAnalysisId(analysisId);
 
-        int maxCodeAge = fileInfoData.stream()
-                .map(FileInfo::getCodeAgeDays)
+        int maxCodeAge = projections.stream()
+                .map(FileInfoRepository.FileCodeAgeProjection::getCodeAgeDays)
                 .max(Integer::compareTo)
                 .orElse(1);
 
-        return fileInfoData.stream()
-                .map(fileInfo -> {
-                    double normalizedValue = Math.round(100.0 - fileInfo.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
-                    return fileInfoMapper.toCodeAgeDTO(fileInfo, normalizedValue);
+        return projections.stream()
+                .map(projection -> {
+                    double normalizedValue = Math.round(100.0 - projection.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
+                    return fileInfoMapper.toCodeAgeDTO(projection, normalizedValue);
                 })
                 .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();
@@ -155,17 +164,17 @@ public class RepositoryAnalysisResultsService {
 
     public List<HotspotDTO> getHotspots(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+        var projections = fileInfoRepository.findAllHotspotsByAnalysisId(analysisId);
 
         int maxCommits = 1;
         int maxCodeLines = 1;
-        List<FileInfo> codeFiles = new ArrayList<>();
+        List<FileInfoRepository.HotspotProjection> codeFiles = new ArrayList<>();
 
-        for (FileInfo fileInfo : fileInfoData) {
-            if (fileInfo.getCodeLines() != null) {
-                codeFiles.add(fileInfo);
-                maxCommits = Math.max(maxCommits, fileInfo.getCommitsInHotspotAnalysisPeriod());
-                maxCodeLines = Math.max(maxCodeLines, fileInfo.getCodeLines());
+        for (var projection : projections) {
+            if (projection.getCodeLines() != null) {
+                codeFiles.add(projection);
+                maxCommits = Math.max(maxCommits, projection.getCommitsInHotspotAnalysisPeriod());
+                maxCodeLines = Math.max(maxCodeLines, projection.getCodeLines());
             }
         }
 
@@ -177,9 +186,9 @@ public class RepositoryAnalysisResultsService {
         final double invMaxCodeLines = 1.0 / maxCodeLines;
 
         double maxHotspotScore = codeFiles.stream()
-                .mapToDouble(fileInfo -> {
-                    double normalizedCommits = fileInfo.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
-                    double normalizedCodeLines = fileInfo.getCodeLines() * invMaxCodeLines;
+                .mapToDouble(projection -> {
+                    double normalizedCommits = projection.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
+                    double normalizedCodeLines = projection.getCodeLines() * invMaxCodeLines;
                     return calculateHotSpotScore(normalizedCommits, normalizedCodeLines);
                 })
                 .max()
@@ -188,13 +197,13 @@ public class RepositoryAnalysisResultsService {
         final double invMaxHotspotScore = 1.0 / maxHotspotScore;
 
         return codeFiles.stream()
-                .map(fileInfo -> {
-                    double normalizedCommits = fileInfo.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
-                    double normalizedCodeLines = fileInfo.getCodeLines() * invMaxCodeLines;
+                .map(projection -> {
+                    double normalizedCommits = projection.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
+                    double normalizedCodeLines = projection.getCodeLines() * invMaxCodeLines;
                     double hotspotScore = calculateHotSpotScore(normalizedCommits, normalizedCodeLines);
                     double normalizedValue = Math.round(hotspotScore * invMaxHotspotScore * 100.0) / 100.0;
 
-                    return fileInfoMapper.toHotspotDTO(fileInfo, normalizedValue);
+                    return fileInfoMapper.toHotspotDTO(projection, normalizedValue);
                 })
                 .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();

@@ -153,22 +153,22 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getHotspots_ReturnsNormalizedDTOs() {
-            FileInfo f1 = new FileInfo();
-            f1.setCodeLines(100);
-            f1.setCommitsInHotspotAnalysisPeriod(10);
+            FileInfoRepository.HotspotProjection p1 = mock(FileInfoRepository.HotspotProjection.class);
+            when(p1.getCodeLines()).thenReturn(100);
+            when(p1.getCommitsInHotspotAnalysisPeriod()).thenReturn(10);
 
-            FileInfo f2 = new FileInfo();
-            f2.setCodeLines(200);
-            f2.setCommitsInHotspotAnalysisPeriod(5);
+            FileInfoRepository.HotspotProjection p2 = mock(FileInfoRepository.HotspotProjection.class);
+            when(p2.getCodeLines()).thenReturn(200);
+            when(p2.getCommitsInHotspotAnalysisPeriod()).thenReturn(5);
 
-            when(fileInfoRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(f1, f2));
+            when(fileInfoRepository.findAllHotspotsByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(p1, p2));
 
             HotspotDTO dto1 = new HotspotDTO("path1", "name1", 10, 100, 1.0);
             HotspotDTO dto2 = new HotspotDTO("path2", "name2", 5, 200, 0.79);
 
-            when(fileInfoMapper.toHotspotDTO(eq(f1), anyDouble())).thenReturn(dto1);
-            when(fileInfoMapper.toHotspotDTO(eq(f2), anyDouble())).thenReturn(dto2);
+            when(fileInfoMapper.toHotspotDTO(eq(p1), anyDouble())).thenReturn(dto1);
+            when(fileInfoMapper.toHotspotDTO(eq(p2), anyDouble())).thenReturn(dto2);
 
             List<HotspotDTO> result = service.getHotspots(ANALYSIS_ID);
 
@@ -177,10 +177,11 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getHotspots_NoCodeFiles_ReturnsEmptyList() {
-            FileInfo f1 = new FileInfo();
+            FileInfoRepository.HotspotProjection p1 = mock(FileInfoRepository.HotspotProjection.class);
+            when(p1.getCodeLines()).thenReturn(null);
 
-            when(fileInfoRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(f1));
+            when(fileInfoRepository.findAllHotspotsByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(p1));
 
             assertTrue(service.getHotspots(ANALYSIS_ID).isEmpty());
         }
@@ -252,13 +253,13 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getAllFilesInRepository_ReturnsMappedList() {
-            FileInfo f = new FileInfo();
+            FileInfoRepository.FilePathNameProjection projection = mock(FileInfoRepository.FilePathNameProjection.class);
 
-            when(fileInfoRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(f));
+            when(fileInfoRepository.findAllPathNamesByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
 
             FilePathNameDTO dto = new FilePathNameDTO("path", "name");
-            when(fileInfoMapper.toPathNameDTO(f)).thenReturn(dto);
+            when(fileInfoMapper.toPathNameDTO(projection)).thenReturn(dto);
 
             List<FilePathNameDTO> result = service.getAllFilesInRepository(ANALYSIS_ID);
 
@@ -267,21 +268,37 @@ class RepositoryAnalysisResultsServiceTest {
         }
 
         @Test
+        void getAllFilesTypes_ReturnsMappedList() {
+            FileInfoRepository.FileTypeProjection projection = mock(FileInfoRepository.FileTypeProjection.class);
+
+            when(fileInfoRepository.findAllTypesByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
+
+            FileTypeDTO dto = new FileTypeDTO("path", "name", "java");
+            when(fileInfoMapper.toTypeDTO(projection)).thenReturn(dto);
+
+            List<FileTypeDTO> result = service.getAllFilesTypes(ANALYSIS_ID);
+
+            assertEquals(1, result.size());
+            assertEquals(dto, result.getFirst());
+        }
+
+        @Test
         void getAllFilesCodeAge_ReturnsMappedList() {
-            FileInfo f1 = new FileInfo();
-            f1.setCodeAgeDays(10);
+            FileInfoRepository.FileCodeAgeProjection p1 = mock(FileInfoRepository.FileCodeAgeProjection.class);
+            when(p1.getCodeAgeDays()).thenReturn(10);
 
-            FileInfo f2 = new FileInfo();
-            f2.setCodeAgeDays(20);
+            FileInfoRepository.FileCodeAgeProjection p2 = mock(FileInfoRepository.FileCodeAgeProjection.class);
+            when(p2.getCodeAgeDays()).thenReturn(20);
 
-            when(fileInfoRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(f1, f2));
+            when(fileInfoRepository.findAllCodeAgesByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(p1, p2));
 
             FileCodeAgeDTO dto1 = new FileCodeAgeDTO("path1", "name1", 10, 0.5);
             FileCodeAgeDTO dto2 = new FileCodeAgeDTO("path2", "name2", 20, 0.5);
 
-            when(fileInfoMapper.toCodeAgeDTO(eq(f1), anyDouble())).thenReturn(dto1);
-            when(fileInfoMapper.toCodeAgeDTO(eq(f2), anyDouble())).thenReturn(dto2);
+            when(fileInfoMapper.toCodeAgeDTO(eq(p1), anyDouble())).thenReturn(dto1);
+            when(fileInfoMapper.toCodeAgeDTO(eq(p2), anyDouble())).thenReturn(dto2);
 
             List<FileCodeAgeDTO> result = service.getAllFilesCodeAge(ANALYSIS_ID);
 

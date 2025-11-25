@@ -41,6 +41,12 @@ public class RepositoryAnalysisResultsController {
         return ResponseEntity.ok(files);
     }
 
+    @GetMapping("/{analysisId}/files/types")
+    public ResponseEntity<List<FileTypeDTO>> getAllFilesTypes(@PathVariable String analysisId) {
+        List<FileTypeDTO> filesTypes = repositoryAnalysisResultsService.getAllFilesTypes(analysisId);
+        return ResponseEntity.ok(filesTypes);
+    }
+
     @GetMapping("/{analysisId}/files/coupling")
     public ResponseEntity<List<FileCouplingDTO>> getAllFilesCoupling(@PathVariable String analysisId) {
         List<FileCouplingDTO> filesCouplings = repositoryAnalysisResultsService.getAllFilesCoupling(analysisId);
