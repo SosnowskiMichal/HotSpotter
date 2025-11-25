@@ -111,6 +111,7 @@ public class RepositoryAnalysisService {
                 log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
             }
 
+            setStartDateFromFirstCommitIfEmpty(analysisInfo, activityTrendsContext.getFirstCommitDate());
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
 
@@ -141,6 +142,8 @@ public class RepositoryAnalysisService {
             LocalDateTime analysisStartedAt
     ) {
         String analysisId = UUID.randomUUID().toString();
+        LocalDate nonNullEndDate = endDate != null ? endDate : LocalDate.now();
+
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
         String lastCommitHash = AnalysisUtils.getLastCommitHash(repositoryPath);
 
@@ -151,10 +154,16 @@ public class RepositoryAnalysisService {
                 .repositoryOwner(repositoryInfo.getOwner())
                 .repositoryPlatform(repositoryInfo.getPlatform())
                 .startDate(startDate)
-                .endDate(endDate)
+                .endDate(nonNullEndDate)
                 .lastCommitHash(lastCommitHash)
                 .analysisStartedAt(analysisStartedAt)
                 .build();
+    }
+
+    private void setStartDateFromFirstCommitIfEmpty(AnalysisInfo analysisInfo, LocalDate firstCommitDate) {
+        if (analysisInfo.getStartDate() == null && firstCommitDate != null) {
+            analysisInfo.setStartDate(firstCommitDate);
+        }
     }
 
 }
