@@ -8,7 +8,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.Activ
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
@@ -116,9 +115,9 @@ public class RepositoryAnalysisResultsService {
 
     public List<FileCouplingDTO> getAllFilesCoupling(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileCoupling> filesCouplings = fileCouplingRepository.findAllByAnalysisId(analysisId);
+        var projections = fileCouplingRepository.findAllCouplingDataByAnalysisId(analysisId);
 
-        return filesCouplings.stream()
+        return projections.stream()
                 .map(fileCouplingMapper::toDTO)
                 .toList();
     }
@@ -143,21 +142,21 @@ public class RepositoryAnalysisResultsService {
 
     public List<FileKnowledgeLossRiskDTO> getAllFilesKnowledgeLossRisk(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+        var projections = fileKnowledgeRepository.findAllKnowledgeLossRiskByAnalysisId(analysisId);
 
-        return fileKnowledgeData.stream()
-                .map(fileKnowledge -> {
-                    double normalizedValue = Math.round(fileKnowledge.getKnowledgeLoss()) / 100.0;
-                    return fileKnowledgeMapper.toKnowledgeLossRiskDTO(fileKnowledge, normalizedValue);
+        return projections.stream()
+                .map(projection -> {
+                    double normalizedValue = Math.round(projection.getKnowledgeLoss()) / 100.0;
+                    return fileKnowledgeMapper.toKnowledgeLossRiskDTO(projection, normalizedValue);
                 })
                 .toList();
     }
 
     public List<FileLeadAuthorDTO> getAllFilesLeadAuthors(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+        var projections = fileKnowledgeRepository.findAllLeadAuthorsByAnalysisId(analysisId);
 
-        return fileKnowledgeData.stream()
+        return projections.stream()
                 .map(fileKnowledgeMapper::toLeadAuthorDTO)
                 .toList();
     }
@@ -215,9 +214,9 @@ public class RepositoryAnalysisResultsService {
 
     public List<AuthorSummaryDTO> getAllAuthors(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<AuthorStatistics> authorStatistics = authorStatisticsRepository.findAllByAnalysisId(analysisId);
+        var projections = authorStatisticsRepository.findAllSummariesByAnalysisId(analysisId);
 
-        return authorStatistics.stream()
+        return projections.stream()
                 .map(authorStatisticsMapper::toSummaryDTO)
                 .toList();
     }
@@ -245,9 +244,9 @@ public class RepositoryAnalysisResultsService {
 
     public List<AuthorCouplingDTO> getAllAuthorsCouplings(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<AuthorCoupling> authorsCouplings = authorCouplingRepository.findAllByAnalysisId(analysisId);
+        var projections = authorCouplingRepository.findAllCouplingDataByAnalysisId(analysisId);
 
-        return authorsCouplings.stream()
+        return projections.stream()
                 .map(authorCouplingMapper::toDTO)
                 .toList();
     }

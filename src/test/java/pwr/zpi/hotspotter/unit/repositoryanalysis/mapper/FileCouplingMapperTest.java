@@ -21,7 +21,7 @@ class FileCouplingMapperTest {
 
     @Test
     void returnsNullWhenInputNull() {
-        assertThat(mapper.toDTO(null)).isNull();
+        assertThat(mapper.toDTO((FileCoupling) null)).isNull();
     }
 
     @Test

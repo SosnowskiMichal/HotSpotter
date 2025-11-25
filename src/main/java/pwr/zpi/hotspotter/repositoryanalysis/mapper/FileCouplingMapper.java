@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.mapper;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.CoupledFile;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository.*;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileCouplingDTO;
 
 import java.util.List;
@@ -19,6 +20,19 @@ public class FileCouplingMapper {
 
         return new FileCouplingDTO(
                 fileCoupling.getFilePath(),
+                coupledFilesDTOs
+        );
+    }
+
+    public FileCouplingDTO toDTO(FileCouplingDataProjection projection) {
+        if (projection == null) return null;
+
+        List<FileCouplingDTO.CoupledFileDTO> coupledFilesDTOs = projection.getCoupledFiles().stream()
+                .map(this::toCoupledFileDTO)
+                .toList();
+
+        return new FileCouplingDTO(
+                projection.getFilePath(),
                 coupledFilesDTOs
         );
     }

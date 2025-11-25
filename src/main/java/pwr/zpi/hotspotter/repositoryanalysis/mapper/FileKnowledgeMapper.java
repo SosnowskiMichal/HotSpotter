@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.mapper;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.AuthorContribution;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.FileKnowledge;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository.*;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileKnowledgeDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileKnowledgeLossRiskDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileLeadAuthorDTO;
@@ -53,26 +54,26 @@ public class FileKnowledgeMapper {
         );
     }
 
-    public FileKnowledgeLossRiskDTO toKnowledgeLossRiskDTO(FileKnowledge fileKnowledge, double normalizedValue) {
-        if (fileKnowledge == null) return null;
+    public FileKnowledgeLossRiskDTO toKnowledgeLossRiskDTO(FileKnowledgeLossRiskProjection projection, double normalizedValue) {
+        if (projection == null) return null;
 
         return new FileKnowledgeLossRiskDTO(
-                fileKnowledge.getFilePath(),
-                fileKnowledge.getFileName(),
-                fileKnowledge.getKnowledgeRisk(),
-                fileKnowledge.getKnowledgeLoss(),
+                projection.getFilePath(),
+                projection.getFileName(),
+                projection.getKnowledgeRisk(),
+                projection.getKnowledgeLoss(),
                 normalizedValue
         );
     }
 
-    public FileLeadAuthorDTO toLeadAuthorDTO(FileKnowledge fileKnowledge) {
-        if (fileKnowledge == null) return null;
+    public FileLeadAuthorDTO toLeadAuthorDTO(FileLeadAuthorProjection projection) {
+        if (projection == null) return null;
 
         return new FileLeadAuthorDTO(
-                fileKnowledge.getFilePath(),
-                fileKnowledge.getFileName(),
-                fileKnowledge.getLeadAuthor(),
-                fileKnowledge.getLeadAuthorKnowledgePercentage()
+                projection.getFilePath(),
+                projection.getFileName(),
+                projection.getLeadAuthor(),
+                projection.getLeadAuthorKnowledgePercentage()
         );
     }
 

@@ -12,7 +12,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.Activ
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
@@ -307,17 +306,18 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getAllFilesKnowledgeLossRisk_ReturnsMappedList() {
-            FileKnowledge k1 = new FileKnowledge();
-            k1.setKnowledgeLoss(50.0);
+            FileKnowledgeRepository.FileKnowledgeLossRiskProjection projection =
+                    mock(FileKnowledgeRepository.FileKnowledgeLossRiskProjection.class);
+            when(projection.getKnowledgeLoss()).thenReturn(50.0);
 
-            when(fileKnowledgeRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(k1));
+            when(fileKnowledgeRepository.findAllKnowledgeLossRiskByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
 
             FileKnowledgeLossRiskDTO dto = new FileKnowledgeLossRiskDTO(
                     "path", "name", KnowledgeRisk.SINGLE_OWNER, 0.5, 0.5
             );
 
-            when(fileKnowledgeMapper.toKnowledgeLossRiskDTO(eq(k1), anyDouble()))
+            when(fileKnowledgeMapper.toKnowledgeLossRiskDTO(eq(projection), anyDouble()))
                     .thenReturn(dto);
 
             List<FileKnowledgeLossRiskDTO> result =
@@ -329,13 +329,14 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getAllFilesLeadAuthors_ReturnsMappedList() {
-            FileKnowledge k = new FileKnowledge();
+            FileKnowledgeRepository.FileLeadAuthorProjection projection =
+                    mock(FileKnowledgeRepository.FileLeadAuthorProjection.class);
 
-            when(fileKnowledgeRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(k));
+            when(fileKnowledgeRepository.findAllLeadAuthorsByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
 
             FileLeadAuthorDTO dto = new FileLeadAuthorDTO("path", "name", "leadAuthor", 50.0);
-            when(fileKnowledgeMapper.toLeadAuthorDTO(k)).thenReturn(dto);
+            when(fileKnowledgeMapper.toLeadAuthorDTO(projection)).thenReturn(dto);
 
             List<FileLeadAuthorDTO> result =
                     service.getAllFilesLeadAuthors(ANALYSIS_ID);
@@ -346,16 +347,17 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getAllAuthors_ReturnsMappedList() {
-            AuthorStatistics s = new AuthorStatistics();
+            AuthorStatisticsRepository.AuthorSummaryProjection projection =
+                    mock(AuthorStatisticsRepository.AuthorSummaryProjection.class);
 
-            when(authorStatisticsRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(s));
+            when(authorStatisticsRepository.findAllSummariesByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
 
             AuthorSummaryDTO dto = new AuthorSummaryDTO(
                     "name",
                     Set.of(),
                     true);
-            when(authorStatisticsMapper.toSummaryDTO(s)).thenReturn(dto);
+            when(authorStatisticsMapper.toSummaryDTO(projection)).thenReturn(dto);
 
             List<AuthorSummaryDTO> result = service.getAllAuthors(ANALYSIS_ID);
 
@@ -387,13 +389,14 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getAllAuthorsCouplings_ReturnsMappedList() {
-            var coupling = new AuthorCoupling();
+            AuthorCouplingRepository.AuthorCouplingDataProjection projection =
+                    mock(AuthorCouplingRepository.AuthorCouplingDataProjection.class);
 
-            when(authorCouplingRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(coupling));
+            when(authorCouplingRepository.findAllCouplingDataByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
 
             AuthorCouplingDTO dto = new AuthorCouplingDTO("name", 0, 0, List.of());
-            when(authorCouplingMapper.toDTO(coupling)).thenReturn(dto);
+            when(authorCouplingMapper.toDTO(projection)).thenReturn(dto);
 
             List<AuthorCouplingDTO> result = service.getAllAuthorsCouplings(ANALYSIS_ID);
 
@@ -403,13 +406,14 @@ class RepositoryAnalysisResultsServiceTest {
 
         @Test
         void getAllFilesCoupling_ReturnsMappedList() {
-            FileCoupling fc = new FileCoupling();
+            FileCouplingRepository.FileCouplingDataProjection projection =
+                    mock(FileCouplingRepository.FileCouplingDataProjection.class);
 
-            when(fileCouplingRepository.findAllByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(fc));
+            when(fileCouplingRepository.findAllCouplingDataByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(projection));
 
             FileCouplingDTO dto = new FileCouplingDTO("path", List.of());
-            when(fileCouplingMapper.toDTO(fc)).thenReturn(dto);
+            when(fileCouplingMapper.toDTO(projection)).thenReturn(dto);
 
             List<FileCouplingDTO> result = service.getAllFilesCoupling(ANALYSIS_ID);
 

@@ -7,6 +7,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatis
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface AuthorStatisticsRepository extends MongoRepository<AuthorStatistics, String> {
@@ -23,12 +24,23 @@ public interface AuthorStatisticsRepository extends MongoRepository<AuthorStatis
         return countAllByAnalysisIdAndIsActive(analysisId, true);
     }
 
+    void deleteAllByAnalysisId(String analysisId);
+
+
     @Aggregation(pipeline = {
             "{ $match: { analysisId: ?0 } }",
             "{ $group: { _id: null, totalCommits: { $sum: '$commits' } } }"
     })
     int sumCommitsByAnalysisId(String analysisId);
 
-    void deleteAllByAnalysisId(String analysisId);
+
+    interface AuthorSummaryProjection {
+        String getName();
+        Set<String> getEmails();
+        Boolean getIsActive();
+    }
+
+
+    List<AuthorSummaryProjection> findAllSummariesByAnalysisId(String analysisId);
 
 }
