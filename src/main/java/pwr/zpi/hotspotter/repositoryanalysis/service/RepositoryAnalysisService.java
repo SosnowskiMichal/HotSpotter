@@ -24,6 +24,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
@@ -140,6 +141,9 @@ public class RepositoryAnalysisService {
             LocalDateTime analysisStartedAt
     ) {
         String analysisId = UUID.randomUUID().toString();
+        Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
+        String lastCommitHash = AnalysisUtils.getLastCommitHash(repositoryPath);
+
         return AnalysisInfo.builder()
                 .id(analysisId)
                 .repositoryUrl(repositoryInfo.getRemoteUrl())
@@ -148,6 +152,7 @@ public class RepositoryAnalysisService {
                 .repositoryPlatform(repositoryInfo.getPlatform())
                 .startDate(startDate)
                 .endDate(endDate)
+                .lastCommitHash(lastCommitHash)
                 .analysisStartedAt(analysisStartedAt)
                 .build();
     }

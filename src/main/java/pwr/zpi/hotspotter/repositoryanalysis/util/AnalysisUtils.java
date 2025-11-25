@@ -73,4 +73,27 @@ public class AnalysisUtils {
         return existingFiles;
     }
 
+    // ==================================================
+    // Getting last commit hash from git repository
+    // ==================================================
+
+    public static String getLastCommitHash(Path repositoryPath) {
+        ProcessBuilder pb = new ProcessBuilder("git", "rev-parse", "--short", "HEAD");
+        pb.directory(repositoryPath.toFile());
+
+        try {
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes()).trim();
+
+            if (process.waitFor() == 0 && !output.isEmpty()) {
+                return output;
+            }
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+        }
+
+        return null;
+    }
+
 }

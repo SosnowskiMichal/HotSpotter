@@ -51,6 +51,8 @@ public class AnalysisInfo {
 
     private LocalDate endDate;
 
+    private String lastCommitHash;
+
     public enum AnalysisStatus {
         IN_PROGRESS,
         COMPLETED,
