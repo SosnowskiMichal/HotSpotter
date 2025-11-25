@@ -6,11 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pwr.zpi.hotspotter.google.translation.TranslatorService;
+import pwr.zpi.hotspotter.sonar.translation.TranslatorService;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssueLocation;
 import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
-import pwr.zpi.hotspotter.sonar.service.SonarIssueTranslatorService;
+import pwr.zpi.hotspotter.sonar.translation.SonarIssueTranslatorService;
 
 import java.io.IOException;
 import java.util.Collections;

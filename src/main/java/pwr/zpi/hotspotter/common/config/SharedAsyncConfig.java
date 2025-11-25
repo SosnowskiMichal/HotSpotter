@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @EnableAsync
-public class SharedAsyncConfiguration {
+public class SharedAsyncConfig {
 
     private static final int IO_QUEUE_CAPACITY = 500;
     private static final int CPU_QUEUE_CAPACITY = 200;

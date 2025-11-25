@@ -9,6 +9,7 @@ import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
+import pwr.zpi.hotspotter.sonar.translation.SonarIssueTranslatorService;
 
 import java.util.List;
 

@@ -7,7 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.google.config.GoogleProperties;
+import pwr.zpi.hotspotter.common.config.GoogleConfig;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
 import pwr.zpi.hotspotter.authentication.service.JwtService;
@@ -21,7 +21,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
-    private final GoogleProperties googleProperties;
+    private final GoogleConfig googleConfig;
     private final CookieUtil cookieUtil;
 
 
@@ -57,7 +57,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String token = jwtService.generateToken(user);
         cookieUtil.addCookie(response, cookieUtil.createJwtCookie(token, request));
 
-        String redirectUrl = googleProperties.getRedirectUri();
+        String redirectUrl = googleConfig.getRedirectUri();
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

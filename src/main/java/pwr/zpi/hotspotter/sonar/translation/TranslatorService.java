@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.google.translation;
+package pwr.zpi.hotspotter.sonar.translation;
 
 import com.google.cloud.translate.v3.LocationName;
 import com.google.cloud.translate.v3.Translation;
@@ -6,7 +6,7 @@ import com.google.cloud.translate.v3.TranslationServiceClient;
 import com.google.cloud.translate.v3.TranslateTextRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pwr.zpi.hotspotter.google.config.GoogleProperties;
+import pwr.zpi.hotspotter.common.config.GoogleConfig;
 
 import java.io.IOException;
 
@@ -14,13 +14,13 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class TranslatorService {
 
-    private final GoogleProperties googleProperties;
+    private final GoogleConfig googleConfig;
 
     public String translate(String text, String sourceLang, String targetLang) throws IOException {
 
         try (TranslationServiceClient client = TranslationServiceClient.create()) {
 
-            LocationName parent = LocationName.of(googleProperties.getProjectId(), "global");
+            LocationName parent = LocationName.of(googleConfig.getProjectId(), "global");
 
             TranslateTextRequest request = TranslateTextRequest.newBuilder()
                     .setParent(parent.toString())
