@@ -20,6 +20,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyze
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
@@ -59,6 +60,7 @@ public class RepositoryAnalysisServiceTest {
     @Mock private ActivityTrendsAnalyzer activityTrendsAnalyzer;
     @Mock private CouplingAnalyzer couplingAnalyzer;
     @Mock private AnalysisStatisticsCalculator analysisStatisticsCalculator;
+    @Mock private AnalysisFileFilter analysisFileFilter;
 
     @InjectMocks
     private RepositoryAnalysisService repositoryAnalysisService;
@@ -370,11 +372,16 @@ public class RepositoryAnalysisServiceTest {
         when(logParser.parseLogs(logFilePath)).thenReturn(commits);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
+
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath))).thenReturn(knowledgeContext);
         when(authorsAnalyzer.startAnalysis(anyString(), eq(null))).thenReturn(authorsContext);
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null))).thenReturn(fileInfoContext);
         when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6))).thenReturn(activityTrendsContext);
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null))).thenReturn(couplingContext);
+
+        when(analysisFileFilter.filterCommit(commit1)).thenReturn(commit1);
+        when(analysisFileFilter.filterCommit(commit2)).thenReturn(commit2);
+        when(analysisFileFilter.filterCommit(commit3)).thenReturn(commit3);
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
 

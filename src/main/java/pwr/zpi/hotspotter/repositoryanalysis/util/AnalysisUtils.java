@@ -6,6 +6,7 @@ import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEntry;
 import org.eclipse.jgit.lib.Repository;
 import org.springframework.data.repository.CrudRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -71,6 +72,14 @@ public class AnalysisUtils {
         } catch (IOException _) { }
 
         return existingFiles;
+    }
+
+    public static Set<String> getFilteredExistingFileNames(Path repositoryPath, AnalysisFileFilter analysisFileFilter) {
+        Set<String> existingFiles = getExistingFileNames(repositoryPath);
+        if (analysisFileFilter == null) {
+            return existingFiles;
+        }
+        return analysisFileFilter.filterFileNames(existingFiles);
     }
 
     // ==================================================

@@ -11,6 +11,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.nio.file.Path;
@@ -25,6 +26,8 @@ class FileInfoAnalyzerTest {
 
     @Mock
     private FileInfoRepository repo;
+    @Mock
+    private AnalysisFileFilter analysisFileFilter;
     @Mock
     private Process clocProcess;
 
@@ -61,7 +64,7 @@ class FileInfoAnalyzerTest {
         try (MockedStatic<AnalysisUtils> utils = mockStatic(AnalysisUtils.class);
              MockedStatic<FileUtils> fileUtils = mockStatic(FileUtils.class)) {
 
-            utils.when(() -> AnalysisUtils.getExistingFileNames(repoPath))
+            utils.when(() -> AnalysisUtils.getFilteredExistingFileNames(repoPath, analysisFileFilter))
                     .thenReturn(Set.of("src/X.java"));
 
             utils.when(() -> AnalysisUtils.saveDataInBatches(eq(repo), anyCollection()))
@@ -76,7 +79,7 @@ class FileInfoAnalyzerTest {
                                     language,file,blank,comment,code
                                     Java,./src/X.java,1,2,3
                                     SUM,0,0,0,0
-                                    """).getBytes()
+                            """).getBytes()
                     ));
             when(clocProcess.waitFor()).thenReturn(0);
 

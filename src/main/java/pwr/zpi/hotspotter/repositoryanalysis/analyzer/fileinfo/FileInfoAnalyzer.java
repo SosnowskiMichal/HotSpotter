@@ -8,6 +8,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.io.BufferedReader;
@@ -25,6 +26,7 @@ import java.util.*;
 public class FileInfoAnalyzer {
 
     private final FileInfoRepository fileInfoRepository;
+    private final AnalysisFileFilter analysisFileFilter;
 
     public FileInfoAnalyzerContext startAnalysis(String analysisId, Path repositoryPath, LocalDate referenceDate) {
         log.debug("Starting file info analysis for ID: {}", analysisId);
@@ -54,7 +56,8 @@ public class FileInfoAnalyzer {
 
         log.debug("Finishing file info analysis for ID: {}", context.getAnalysisId());
 
-        Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
+        Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(),
+                analysisFileFilter);
         Map<String, FileLinesData> fileLinesData = getFileLinesDataFromProcess(context.getClocProcess());
         Collection<FileInfo> fileInfos = context.getFileInfos().values();
 

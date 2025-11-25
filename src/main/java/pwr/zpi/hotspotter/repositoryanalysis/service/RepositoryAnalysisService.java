@@ -17,6 +17,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerCon
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
@@ -46,6 +47,7 @@ public class RepositoryAnalysisService {
     private final LogParser logParser;
     private final RepositoryAnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
+    private final AnalysisFileFilter analysisFileFilter;
 
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
@@ -84,12 +86,19 @@ public class RepositoryAnalysisService {
 
             try (commits) {
                 commits.forEach(commit -> {
-                    knowledgeAnalyzer.processCommit(commit, knowledgeContext);
-                    authorsAnalyzer.processCommit(commit, authorsContext);
-                    fileInfoAnalyzer.processCommit(commit, fileInfoContext);
-                    activityTrendsAnalyzer.processCommit(commit, activityTrendsContext);
-                    couplingAnalyzer.processCommit(commit, couplingContext);
+                    Commit filteredCommit = analysisFileFilter.filterCommit(commit);
+                    knowledgeAnalyzer.processCommit(filteredCommit, knowledgeContext);
+                    authorsAnalyzer.processCommit(filteredCommit, authorsContext);
+                    fileInfoAnalyzer.processCommit(filteredCommit, fileInfoContext);
+                    activityTrendsAnalyzer.processCommit(filteredCommit, activityTrendsContext);
+                    couplingAnalyzer.processCommit(filteredCommit, couplingContext);
                 });
+            }
+
+            try {
+                sonarAnalysisFuture.get();
+            } catch (Exception e) {
+                log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
             }
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
@@ -105,13 +114,8 @@ public class RepositoryAnalysisService {
 
             analysisStatisticsCalculator.calculateStatistics(analysisId);
 
-            try {
-                sonarAnalysisFuture.get();
-            } catch (Exception e) {
-                log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
-            }
-
             setStartDateFromFirstCommitIfEmpty(analysisInfo, activityTrendsContext.getFirstCommitDate());
+
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
 
