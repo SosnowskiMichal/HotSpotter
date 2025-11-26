@@ -6,7 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;
@@ -41,7 +41,7 @@ class RepositoryManagementServiceTest {
     @Mock
     private SseEmitter sseEmitter;
     @Mock
-    private RepositoryAnalysisSsePublisher repositoryAnalysisSsePublisher;
+    private AnalysisSsePublisher analysisSsePublisher;
 
     @InjectMocks
     private RepositoryManagementService repositoryManagementService;

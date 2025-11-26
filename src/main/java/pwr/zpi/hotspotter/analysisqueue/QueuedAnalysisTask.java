@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.queue;
+package pwr.zpi.hotspotter.analysisqueue;
 
 import lombok.Getter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;

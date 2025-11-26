@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.sse;
+package pwr.zpi.hotspotter.common.sse;
 
 public enum AnalysisSseStatus {
     QUEUED,

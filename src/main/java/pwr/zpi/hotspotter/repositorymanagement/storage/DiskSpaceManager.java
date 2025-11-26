@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
+import pwr.zpi.hotspotter.analysisqueue.RepositoryAnalysisQueue;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;

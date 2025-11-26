@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.Git;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
@@ -29,7 +29,7 @@ public class RepositoryManagementService {
     private final RepositoryCloner repositoryCloner;
     private final RepositoryUpdater repositoryUpdater;
     private final DiskSpaceManager diskSpaceManager;
-    private final RepositoryAnalysisSsePublisher ssePublisher;
+    private final AnalysisSsePublisher ssePublisher;
 
     public RepositoryInfo cloneOrUpdateRepository(String repositoryUrl, SseEmitter emitter) {
         try {

@@ -23,8 +23,8 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
@@ -45,7 +45,7 @@ public class RepositoryAnalysisService {
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
     private final LogParser logParser;
-    private final RepositoryAnalysisSsePublisher ssePublisher;
+    private final AnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
     private final AnalysisFileFilter analysisFileFilter;
 

@@ -10,7 +10,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisService;
 import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
@@ -26,7 +26,7 @@ class AsyncRepositoryAnalysisServiceTest {
     @Mock
     private RepositoryAnalysisService repositoryAnalysisService;
     @Mock
-    private RepositoryAnalysisSsePublisher ssePublisher;
+    private AnalysisSsePublisher ssePublisher;
     @Mock
     private SseEmitter emitter;
 

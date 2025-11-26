@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.queue;
+package pwr.zpi.hotspotter.analysisqueue;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -6,8 +6,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisService;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryStateManager;
 import pwr.zpi.hotspotter.repositorymanagement.service.RepositoryManagementService;
@@ -27,7 +27,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class RepositoryAnalysisQueue {
 
     private final ExecutorService executorService;
-    private final RepositoryAnalysisSsePublisher ssePublisher;
+    private final AnalysisSsePublisher ssePublisher;
     private final RepositoryManagementService repositoryManagementService;
     private final RepositoryStateManager repositoryStateManager;
 
@@ -40,7 +40,7 @@ public class RepositoryAnalysisQueue {
 
     public RepositoryAnalysisQueue(
             @Qualifier("analysisQueueExecutor") Executor analysisQueueExecutor,
-            RepositoryAnalysisSsePublisher ssePublisher,
+            AnalysisSsePublisher ssePublisher,
             RepositoryManagementService repositoryManagementService,
             RepositoryStateManager repositoryStateManager
     ) {
