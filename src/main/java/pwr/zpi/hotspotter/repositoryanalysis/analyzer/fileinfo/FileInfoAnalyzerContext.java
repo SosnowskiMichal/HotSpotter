@@ -11,8 +11,8 @@ import java.util.Map;
 @Getter
 public class FileInfoAnalyzerContext {
 
-    // TODO: Get from user settings
-    private static final int HOT_SPOT_ANALYSIS_PERIOD_MONTHS = 6;
+    // TODO: Temporary constants, replace with user preferences
+    private static final int HOTSPOT_ANALYSIS_PERIOD_MONTHS = 6;
 
     private final String analysisId;
     private final Path repositoryPath;
@@ -39,15 +39,17 @@ public class FileInfoAnalyzerContext {
                         .build();
             }
 
-            if (isWithinHotSpotAnalysisPeriod(date)) {
+            if (isWithinHotspotAnalysisPeriod(date)) {
                 fileInfo.incrementCommitsInHotspotAnalysisPeriod();
             }
+
             if (isWithinLastMonth(date)) {
                 fileInfo.incrementCommitsLastMonth();
                 fileInfo.incrementCommitsLastYear();
             } else if (isWithinLastYear(date)) {
                 fileInfo.incrementCommitsLastYear();
             }
+
             fileInfo.incrementTotalCommits();
             fileInfo.setLastCommitDate(date);
             return fileInfo;
@@ -73,8 +75,8 @@ public class FileInfoAnalyzerContext {
         }
     }
 
-    private boolean isWithinHotSpotAnalysisPeriod(LocalDate date) {
-        return !date.isBefore(referenceDate.minusMonths(HOT_SPOT_ANALYSIS_PERIOD_MONTHS));
+    private boolean isWithinHotspotAnalysisPeriod(LocalDate date) {
+        return !date.isBefore(referenceDate.minusMonths(HOTSPOT_ANALYSIS_PERIOD_MONTHS));
     }
 
     private boolean isWithinLastMonth(LocalDate date) {

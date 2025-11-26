@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.CoupledAuthor;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,5 +18,16 @@ public interface AuthorCouplingRepository extends MongoRepository<AuthorCoupling
     long countAllByAnalysisId(String analysisId);
 
     void deleteAllByAnalysisId(String analysisId);
+
+
+    interface AuthorCouplingDataProjection {
+        String getAuthor();
+        Integer getFilesChanged();
+        Integer getTotalChanges();
+        List<CoupledAuthor> getCoupledAuthors();
+    }
+
+
+    List<AuthorCouplingDataProjection> findAllCouplingDataByAnalysisId(String analysisId);
 
 }

@@ -7,7 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.google.config.GoogleProperties;
+import pwr.zpi.hotspotter.common.config.GoogleProperties;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
 import pwr.zpi.hotspotter.authentication.service.JwtService;

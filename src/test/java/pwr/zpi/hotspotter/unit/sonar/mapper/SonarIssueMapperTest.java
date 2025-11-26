@@ -11,7 +11,7 @@ import pwr.zpi.hotspotter.sonar.mapper.SonarIssueMapper;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssueLocation;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.TextRange;
-import pwr.zpi.hotspotter.sonar.service.SonarIssueTranslatorService;
+import pwr.zpi.hotspotter.sonar.translation.SonarIssueTranslatorService;
 
 import java.util.HashMap;
 import java.util.List;

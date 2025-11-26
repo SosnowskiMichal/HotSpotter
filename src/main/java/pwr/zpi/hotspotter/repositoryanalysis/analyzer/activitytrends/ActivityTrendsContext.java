@@ -15,6 +15,7 @@ public class ActivityTrendsContext {
     private final Map<LocalDate, ActivityTrendsDailyStats> activityTrendsDailyStats;
 
     private LocalDate lastDate;
+    private LocalDate firstCommitDate;
     private final Set<String> uniqueAuthors;
     private final Map<String, LocalDate> authorLastActivity;
 
@@ -30,6 +31,10 @@ public class ActivityTrendsContext {
     }
 
     public void recordContribution(LocalDate date, String author, int linesAdded, int linesDeleted) {
+        if (firstCommitDate == null) {
+            firstCommitDate = date;
+        }
+
         if (lastDate != null && date.isAfter(lastDate)) {
             aggregateStatsForDaysBetween(lastDate, date);
         }

@@ -11,6 +11,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatis
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.nio.file.Path;
@@ -28,6 +29,7 @@ public class KnowledgeAnalyzer {
 
     private final FileKnowledgeRepository fileKnowledgeRepository;
     private final AuthorStatisticsRepository authorStatisticsRepository;
+    private final AnalysisFileFilter analysisFileFilter;
 
     public KnowledgeAnalyzerContext startAnalysis(String analysisId, Path repositoryPath) {
         log.debug("Starting knowledge analysis for ID: {}", analysisId);
@@ -57,7 +59,8 @@ public class KnowledgeAnalyzer {
 
         log.debug("Finishing knowledge analysis for ID: {}", context.getAnalysisId());
 
-        Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
+        Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(),
+                analysisFileFilter);
 
         List<FileKnowledge> knowledgeData = context.getFileContributions().entrySet().stream()
                 .filter(entry -> existingFiles.contains(entry.getKey()))

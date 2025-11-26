@@ -8,8 +8,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.Activ
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.AuthorCoupling;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
@@ -28,12 +26,21 @@ import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisComponentRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RepositoryAnalysisResultsService {
+
+    private static final int MAX_CODE_AGE_DAYS = 365;
 
     private final AnalysisInfoRepository analysisInfoRepository;
     private final AnalysisStatisticsRepository analysisStatisticsRepository;
@@ -76,12 +83,70 @@ public class RepositoryAnalysisResultsService {
         return repositoryStructureService.buildRepositoryStructure(fileInfoData);
     }
 
-    public List<FilePathNameDTO> getAllFilesInRepository(String analysisId) {
+    public List<RepositoryItemDTO> getAllItemsInRepository(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
+
+        var fileProjections = fileInfoRepository.findAllPathNamesByAnalysisId(analysisId);
+
+        List<String> filePaths = fileProjections.stream()
+                .map(FileInfoRepository.RepositoryItemProjection::getFilePath)
+                .toList();
+
+        Set<String> folderPaths = extractUniqueFolderPaths(filePaths);
+
+        Stream<RepositoryItemDTO> fileItems = fileProjections.stream()
+                .map(fileInfoMapper::toRepositoryItemDTO);
+
+        Stream<RepositoryItemDTO> folderItems = folderPaths.stream()
+                .map(folderPath -> {
+                    String folderName = extractFolderName(folderPath);
+                    return new RepositoryItemDTO(folderPath, folderName);
+                });
+
+        return Stream.concat(fileItems, folderItems)
+                .sorted(Comparator.comparing(RepositoryItemDTO::path))
+                .toList();
+    }
+
+    private Set<String> extractUniqueFolderPaths(Collection<String> filePaths) {
+        Set<String> folderPaths = new HashSet<>();
+
+        for (String filePath : filePaths) {
+            int lastSlashIndex = filePath.lastIndexOf('/');
+            while (lastSlashIndex > 0) {
+                folderPaths.add(filePath.substring(0, lastSlashIndex));
+                lastSlashIndex = filePath.lastIndexOf('/', lastSlashIndex - 1);
+            }
+        }
+
+        return folderPaths;
+    }
+
+    private String extractFolderName(String folderPath) {
+        int lastSlashIndex = folderPath.lastIndexOf('/');
+        return lastSlashIndex >= 0 ? folderPath.substring(lastSlashIndex + 1) : folderPath;
+    }
+
+    public List<FileDataDTO> getAllFilesData(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+
         List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
 
+        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+        Map<String, FileKnowledge> knowledgeMap = fileKnowledgeData.stream()
+                .collect(Collectors.toMap(FileKnowledge::getFilePath, fk -> fk));
+
+        List<SonarRepoAnalysisComponent> sonarRepoAnalysisComponents = sonarAnalysisComponentRepository
+                .findAllByRepoAnalysisId(analysisId);
+        Map<String, SonarRepoAnalysisComponent> sonarComponentMap = sonarRepoAnalysisComponents.stream()
+                .collect(Collectors.toMap(SonarRepoAnalysisComponent::getPath, sc -> sc));
+
         return fileInfoData.stream()
-                .map(fileInfoMapper::toPathNameDTO)
+                .map(fileInfo -> {
+                    FileKnowledge fileKnowledge = knowledgeMap.get(fileInfo.getFilePath());
+                    SonarRepoAnalysisComponent sonarAnalysisComponent = sonarComponentMap.get(fileInfo.getFilePath());
+                    return fileDataMapper.toDTO(fileInfo, fileKnowledge, sonarAnalysisComponent);
+                })
                 .toList();
     }
 
@@ -94,78 +159,81 @@ public class RepositoryAnalysisResultsService {
                     return new ObjectNotFoundException("File with path '" + path + "' not found in analysis.");
                 });
 
-        FileCoupling fileCoupling = fileCouplingRepository.findByAnalysisIdAndFilePath(analysisId, path)
-                .orElse(null);
         FileKnowledge fileKnowledge = fileKnowledgeRepository.findByAnalysisIdAndFilePath(analysisId, path)
                 .orElse(null);
         SonarRepoAnalysisComponent sonarAnalysisComponent = sonarAnalysisComponentRepository
                 .findByRepoAnalysisIdAndPath(analysisId, path)
                 .orElse(null);
 
-        return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge, sonarAnalysisComponent);
+        return fileDataMapper.toDTO(fileInfo, fileKnowledge, sonarAnalysisComponent);
+    }
+
+    public List<FileTypeDTO> getAllFilesTypes(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+        var projections = fileInfoRepository.findAllTypesByAnalysisId(analysisId);
+
+        return projections.stream()
+                .map(fileInfoMapper::toTypeDTO)
+                .toList();
     }
 
     public List<FileCouplingDTO> getAllFilesCoupling(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileCoupling> filesCouplings = fileCouplingRepository.findAllByAnalysisId(analysisId);
+        var projections = fileCouplingRepository.findAllCouplingDataByAnalysisId(analysisId);
 
-        return filesCouplings.stream()
+        return projections.stream()
                 .map(fileCouplingMapper::toDTO)
                 .toList();
     }
 
     public List<FileCodeAgeDTO> getAllFilesCodeAge(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+        var projections = fileInfoRepository.findAllCodeAgesByAnalysisId(analysisId);
 
-        int maxCodeAge = fileInfoData.stream()
-                .map(FileInfo::getCodeAgeDays)
-                .max(Integer::compareTo)
-                .orElse(1);
-
-        return fileInfoData.stream()
-                .map(fileInfo -> {
-                    double normalizedValue = Math.round(100.0 - fileInfo.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
-                    return fileInfoMapper.toCodeAgeDTO(fileInfo, normalizedValue);
+        return projections.stream()
+                .filter(projection -> projection.getCodeAgeDays() < MAX_CODE_AGE_DAYS)
+                .map(projection -> {
+                    int cappedCodeAge = Math.min(projection.getCodeAgeDays(), MAX_CODE_AGE_DAYS);
+                    double normalizedValue = Math.round(100.0 - cappedCodeAge * 100.0 / MAX_CODE_AGE_DAYS) / 100.0;
+                    return fileInfoMapper.toCodeAgeDTO(projection, normalizedValue);
                 })
-                .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();
     }
 
     public List<FileKnowledgeLossRiskDTO> getAllFilesKnowledgeLossRisk(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+        var projections = fileKnowledgeRepository.findAllKnowledgeLossRiskByAnalysisId(analysisId);
 
-        return fileKnowledgeData.stream()
-                .map(fileKnowledge -> {
-                    double normalizedValue = Math.round(fileKnowledge.getKnowledgeLoss()) / 100.0;
-                    return fileKnowledgeMapper.toKnowledgeLossRiskDTO(fileKnowledge, normalizedValue);
+        return projections.stream()
+                .map(projection -> {
+                    double normalizedValue = Math.round(projection.getKnowledgeLoss()) / 100.0;
+                    return fileKnowledgeMapper.toKnowledgeLossRiskDTO(projection, normalizedValue);
                 })
                 .toList();
     }
 
     public List<FileLeadAuthorDTO> getAllFilesLeadAuthors(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+        var projections = fileKnowledgeRepository.findAllLeadAuthorsByAnalysisId(analysisId);
 
-        return fileKnowledgeData.stream()
+        return projections.stream()
                 .map(fileKnowledgeMapper::toLeadAuthorDTO)
                 .toList();
     }
 
     public List<HotspotDTO> getHotspots(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+        var projections = fileInfoRepository.findAllHotspotsByAnalysisId(analysisId);
 
         int maxCommits = 1;
         int maxCodeLines = 1;
-        List<FileInfo> codeFiles = new ArrayList<>();
+        List<FileInfoRepository.HotspotProjection> codeFiles = new ArrayList<>();
 
-        for (FileInfo fileInfo : fileInfoData) {
-            if (fileInfo.getCodeLines() != null) {
-                codeFiles.add(fileInfo);
-                maxCommits = Math.max(maxCommits, fileInfo.getCommitsInHotspotAnalysisPeriod());
-                maxCodeLines = Math.max(maxCodeLines, fileInfo.getCodeLines());
+        for (var projection : projections) {
+            if (projection.getCodeLines() != null) {
+                codeFiles.add(projection);
+                maxCommits = Math.max(maxCommits, projection.getCommitsInHotspotAnalysisPeriod());
+                maxCodeLines = Math.max(maxCodeLines, projection.getCodeLines());
             }
         }
 
@@ -177,9 +245,9 @@ public class RepositoryAnalysisResultsService {
         final double invMaxCodeLines = 1.0 / maxCodeLines;
 
         double maxHotspotScore = codeFiles.stream()
-                .mapToDouble(fileInfo -> {
-                    double normalizedCommits = fileInfo.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
-                    double normalizedCodeLines = fileInfo.getCodeLines() * invMaxCodeLines;
+                .mapToDouble(projection -> {
+                    double normalizedCommits = projection.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
+                    double normalizedCodeLines = projection.getCodeLines() * invMaxCodeLines;
                     return calculateHotSpotScore(normalizedCommits, normalizedCodeLines);
                 })
                 .max()
@@ -188,13 +256,13 @@ public class RepositoryAnalysisResultsService {
         final double invMaxHotspotScore = 1.0 / maxHotspotScore;
 
         return codeFiles.stream()
-                .map(fileInfo -> {
-                    double normalizedCommits = fileInfo.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
-                    double normalizedCodeLines = fileInfo.getCodeLines() * invMaxCodeLines;
+                .map(projection -> {
+                    double normalizedCommits = projection.getCommitsInHotspotAnalysisPeriod() * invMaxCommits;
+                    double normalizedCodeLines = projection.getCodeLines() * invMaxCodeLines;
                     double hotspotScore = calculateHotSpotScore(normalizedCommits, normalizedCodeLines);
                     double normalizedValue = Math.round(hotspotScore * invMaxHotspotScore * 100.0) / 100.0;
 
-                    return fileInfoMapper.toHotspotDTO(fileInfo, normalizedValue);
+                    return fileInfoMapper.toHotspotDTO(projection, normalizedValue);
                 })
                 .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();
@@ -206,9 +274,9 @@ public class RepositoryAnalysisResultsService {
 
     public List<AuthorSummaryDTO> getAllAuthors(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<AuthorStatistics> authorStatistics = authorStatisticsRepository.findAllByAnalysisId(analysisId);
+        var projections = authorStatisticsRepository.findAllSummariesByAnalysisId(analysisId);
 
-        return authorStatistics.stream()
+        return projections.stream()
                 .map(authorStatisticsMapper::toSummaryDTO)
                 .toList();
     }
@@ -236,9 +304,9 @@ public class RepositoryAnalysisResultsService {
 
     public List<AuthorCouplingDTO> getAllAuthorsCouplings(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        List<AuthorCoupling> authorsCouplings = authorCouplingRepository.findAllByAnalysisId(analysisId);
+        var projections = authorCouplingRepository.findAllCouplingDataByAnalysisId(analysisId);
 
-        return authorsCouplings.stream()
+        return projections.stream()
                 .map(authorCouplingMapper::toDTO)
                 .toList();
     }

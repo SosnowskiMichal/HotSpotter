@@ -10,6 +10,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCouplin
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.nio.file.Path;
@@ -34,6 +35,7 @@ public class CouplingAnalyzer {
 
     private final FileCouplingRepository fileCouplingRepository;
     private final AuthorCouplingRepository authorCouplingRepository;
+    private final AnalysisFileFilter analysisFileFilter;
 
     public CouplingAnalyzerContext startAnalysis(String analysisId, Path repositoryPath, LocalDate referenceDate) {
         log.debug("Starting coupling analysis for ID: {}", analysisId);
@@ -85,7 +87,8 @@ public class CouplingAnalyzer {
     private List<FileCoupling> computeFileCouplings(CouplingAnalyzerContext context) {
         List<FileCoupling> result = new ArrayList<>();
 
-        Set<String> existingFiles = AnalysisUtils.getExistingFileNames(context.getRepositoryPath());
+        Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(),
+                analysisFileFilter);
         Map<String, Integer> fileCommits = context.getFileCommits();
         Map<String, Map<String, Integer>> fileCouplings = context.getFileCouplings();
 

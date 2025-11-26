@@ -4,7 +4,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.KnowledgeR
 
 public record FileKnowledgeLossRiskDTO(
         String path,
-        String name,
         KnowledgeRisk knowledgeRisk,
         Double knowledgeLoss,
         Double normalizedValue

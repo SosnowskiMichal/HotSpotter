@@ -1,6 +1,6 @@
 package pwr.zpi.hotspotter.repositoryanalysis.dto;
 
-public record FileLeadAuthorDTO(
+public record RepositoryItemDTO(
         String path,
-        String leadAuthor
+        String name
 ) { }

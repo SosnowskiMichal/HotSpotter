@@ -19,6 +19,9 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
 
     int countAllByAnalysisId(String analysisId);
 
+    void deleteAllByAnalysisId(String analysisId);
+
+
     @Aggregation(pipeline = {
             "{ $match: { analysisId: ?0 } }",
             "{ $group: { " +
@@ -51,6 +54,35 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
     })
     List<FileTypeMetrics> getFileTypeMetricsByAnalysisId(String analysisId);
 
-    void deleteAllByAnalysisId(String analysisId);
+
+    interface RepositoryItemProjection {
+        String getFilePath();
+        String getFileName();
+    }
+
+    interface FileTypeProjection {
+        String getFilePath();
+        String getFileType();
+    }
+
+    interface FileCodeAgeProjection {
+        String getFilePath();
+        Integer getCodeAgeDays();
+    }
+
+    interface HotspotProjection {
+        String getFilePath();
+        Integer getCodeLines();
+        Integer getCommitsInHotspotAnalysisPeriod();
+    }
+
+
+    List<RepositoryItemProjection> findAllPathNamesByAnalysisId(String analysisId);
+
+    List<FileTypeProjection> findAllTypesByAnalysisId(String analysisId);
+
+    List<FileCodeAgeProjection> findAllCodeAgesByAnalysisId(String analysisId);
+
+    List<HotspotProjection> findAllHotspotsByAnalysisId(String analysisId);
 
 }

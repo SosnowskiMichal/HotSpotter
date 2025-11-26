@@ -11,7 +11,10 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
+import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.repositoryanalysis.util.RepositoryFileUrlBuilder;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -25,6 +28,8 @@ class FileInfoAnalyzerTest {
 
     @Mock
     private FileInfoRepository repo;
+    @Mock
+    private AnalysisFileFilter analysisFileFilter;
     @Mock
     private Process clocProcess;
 
@@ -61,7 +66,7 @@ class FileInfoAnalyzerTest {
         try (MockedStatic<AnalysisUtils> utils = mockStatic(AnalysisUtils.class);
              MockedStatic<FileUtils> fileUtils = mockStatic(FileUtils.class)) {
 
-            utils.when(() -> AnalysisUtils.getExistingFileNames(repoPath))
+            utils.when(() -> AnalysisUtils.getFilteredExistingFileNames(repoPath, analysisFileFilter))
                     .thenReturn(Set.of("src/X.java"));
 
             utils.when(() -> AnalysisUtils.saveDataInBatches(eq(repo), anyCollection()))
@@ -76,7 +81,7 @@ class FileInfoAnalyzerTest {
                                     language,file,blank,comment,code
                                     Java,./src/X.java,1,2,3
                                     SUM,0,0,0,0
-                                    """).getBytes()
+                            """).getBytes()
                     ));
             when(clocProcess.waitFor()).thenReturn(0);
 
@@ -87,7 +92,16 @@ class FileInfoAnalyzerTest {
                         when(pb.redirectErrorStream(true)).thenReturn(pb);
                     });
 
-            analyzer.finishAnalysis(ctx);
+            AnalysisInfo analysisInfo = AnalysisInfo.builder()
+                    .id("A1")
+                    .repositoryPlatform("github")
+                    .repositoryUrl("https://github.com/owner/repo")
+                    .repositoryOwner("owner")
+                    .repositoryName("repo")
+                    .lastCommitHash("abc123")
+                    .build();
+
+            analyzer.finishAnalysis(ctx, analysisInfo);
             processBuilderMock.close();
         }
 
@@ -100,5 +114,7 @@ class FileInfoAnalyzerTest {
         assertThat(info.getCommentLines()).isEqualTo(2);
         assertThat(info.getBlankLines()).isEqualTo(1);
         assertThat(info.getTotalLines()).isEqualTo(6);
+        assertThat(info.getFileUrl()).isEqualTo("https://github.com/owner/repo/blob/abc123/src/X.java");
     }
+
 }

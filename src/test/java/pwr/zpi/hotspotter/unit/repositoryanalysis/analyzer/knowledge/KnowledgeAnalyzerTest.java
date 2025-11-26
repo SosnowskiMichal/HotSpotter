@@ -13,6 +13,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.model.KnowledgeR
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileKnowledgeRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 
 import java.nio.file.Path;
@@ -27,6 +28,9 @@ class KnowledgeAnalyzerTest {
 
     @Mock
     private AuthorStatisticsRepository authorStatisticsRepository;
+
+    @Mock
+    private AnalysisFileFilter analysisFileFilter;
 
     @InjectMocks
     private KnowledgeAnalyzer analyzer;
@@ -68,17 +72,15 @@ class KnowledgeAnalyzerTest {
 
         try (MockedStatic<AnalysisUtils> utils = mockStatic(AnalysisUtils.class)) {
 
-            utils.when(() -> AnalysisUtils.getExistingFileNames(Path.of("/repo")))
+            utils.when(() -> AnalysisUtils.getFilteredExistingFileNames(Path.of("/repo"), analysisFileFilter))
                     .thenReturn(Set.of("A.java"));
 
-            utils.when(() ->
-                            AnalysisUtils.saveDataInBatches(eq(fileKnowledgeRepository), anyCollection()))
+            utils.when(() -> AnalysisUtils.saveDataInBatches(eq(fileKnowledgeRepository), anyCollection()))
                     .thenAnswer(_ -> null);
 
             analyzer.finishAnalysis(ctx);
 
-            ArgumentCaptor<Collection<FileKnowledge>> captor =
-                    ArgumentCaptor.forClass(Collection.class);
+            ArgumentCaptor<Collection<FileKnowledge>> captor = ArgumentCaptor.forClass(Collection.class);
 
             utils.verify(
                     () -> AnalysisUtils.saveDataInBatches(eq(fileKnowledgeRepository), captor.capture())

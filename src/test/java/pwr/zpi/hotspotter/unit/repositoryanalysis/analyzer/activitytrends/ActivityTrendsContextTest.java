@@ -22,6 +22,7 @@ class ActivityTrendsContextTest {
         assertThat(ctx.getReferenceDate()).isEqualTo(refDate);
         assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(2);
         assertThat(ctx.getLastDate()).isNull();
+        assertThat(ctx.getFirstCommitDate()).isNull();
         assertThat(ctx.getActivityTrendsDailyStats()).isNotNull();
         assertThat(ctx.getUniqueAuthors()).isNotNull();
         assertThat(ctx.getAuthorLastActivity()).isNotNull();
@@ -36,6 +37,7 @@ class ActivityTrendsContextTest {
         assertThat(ctx.getReferenceDate()).isEqualTo(refDate);
         assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(2);
         assertThat(ctx.getLastDate()).isNull();
+        assertThat(ctx.getFirstCommitDate()).isNull();
         assertThat(ctx.getActivityTrendsDailyStats()).isEmpty();
         assertThat(ctx.getUniqueAuthors()).isEmpty();
         assertThat(ctx.getAuthorLastActivity()).isEmpty();
@@ -258,6 +260,47 @@ class ActivityTrendsContextTest {
         ActivityTrendsDailyStats jan5 = ctx.getActivityTrendsDailyStats().get(LocalDate.of(2024, 1, 5));
         assertThat(jan5.getCommits()).isEqualTo(2);
         assertThat(jan5.getUniqueAuthors()).isEqualTo(2);
+    }
+
+    @Test
+    void getFirstCommitDate_emptyContext_returnsNull() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+
+        assertThat(ctx.getFirstCommitDate()).isNull();
+    }
+
+    @Test
+    void getFirstCommitDate_singleContribution_returnsDate() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+
+        ctx.recordContribution(LocalDate.of(2024, 1, 5), "Alice", 10, 2);
+
+        assertThat(ctx.getFirstCommitDate()).isEqualTo(LocalDate.of(2024, 1, 5));
+    }
+
+    @Test
+    void getFirstCommitDate_afterFinishAnalysis_remainsConsistent() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+
+        ctx.recordContribution(LocalDate.of(2024, 1, 3), "Alice", 10, 2);
+        LocalDate firstDateBeforeFinish = ctx.getFirstCommitDate();
+
+        ctx.finishAnalysis();
+        LocalDate firstDateAfterFinish = ctx.getFirstCommitDate();
+
+        assertThat(firstDateBeforeFinish).isEqualTo(LocalDate.of(2024, 1, 3));
+        assertThat(firstDateAfterFinish).isEqualTo(LocalDate.of(2024, 1, 3));
+    }
+
+    @Test
+    void getFirstCommitDate_chronologicalContributions_returnsEarliestDate() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+
+        ctx.recordContribution(LocalDate.of(2024, 1, 3), "Alice", 10, 2);
+        ctx.recordContribution(LocalDate.of(2024, 1, 5), "Bob", 5, 1);
+        ctx.recordContribution(LocalDate.of(2024, 1, 7), "Charlie", 8, 3);
+
+        assertThat(ctx.getFirstCommitDate()).isEqualTo(LocalDate.of(2024, 1, 3));
     }
 
 }

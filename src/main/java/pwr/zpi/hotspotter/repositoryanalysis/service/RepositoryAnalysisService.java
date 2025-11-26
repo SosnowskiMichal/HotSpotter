@@ -17,6 +17,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerCon
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
@@ -24,6 +25,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
@@ -45,6 +47,7 @@ public class RepositoryAnalysisService {
     private final LogParser logParser;
     private final RepositoryAnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
+    private final AnalysisFileFilter analysisFileFilter;
 
     private final KnowledgeAnalyzer knowledgeAnalyzer;
     private final AuthorsAnalyzer authorsAnalyzer;
@@ -55,8 +58,8 @@ public class RepositoryAnalysisService {
 
     public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
-        LocalDateTime analysisStartedAt = LocalDateTime.now();
 
+        LocalDateTime analysisStartedAt = LocalDateTime.now();
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
         AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
@@ -83,19 +86,26 @@ public class RepositoryAnalysisService {
 
             try (commits) {
                 commits.forEach(commit -> {
-                    knowledgeAnalyzer.processCommit(commit, knowledgeContext);
-                    authorsAnalyzer.processCommit(commit, authorsContext);
-                    fileInfoAnalyzer.processCommit(commit, fileInfoContext);
-                    activityTrendsAnalyzer.processCommit(commit, activityTrendsContext);
-                    couplingAnalyzer.processCommit(commit, couplingContext);
+                    Commit filteredCommit = analysisFileFilter.filterCommit(commit);
+                    knowledgeAnalyzer.processCommit(filteredCommit, knowledgeContext);
+                    authorsAnalyzer.processCommit(filteredCommit, authorsContext);
+                    fileInfoAnalyzer.processCommit(filteredCommit, fileInfoContext);
+                    activityTrendsAnalyzer.processCommit(filteredCommit, activityTrendsContext);
+                    couplingAnalyzer.processCommit(filteredCommit, couplingContext);
                 });
+            }
+
+            try {
+                sonarAnalysisFuture.get();
+            } catch (Exception e) {
+                log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
             }
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
-            fileInfoAnalyzer.finishAnalysis(fileInfoContext);
+            fileInfoAnalyzer.finishAnalysis(fileInfoContext, analysisInfo);
             activityTrendsAnalyzer.finishAnalysis(activityTrendsContext);
             couplingAnalyzer.finishAnalysis(couplingContext);
 
@@ -104,11 +114,7 @@ public class RepositoryAnalysisService {
 
             analysisStatisticsCalculator.calculateStatistics(analysisId);
 
-            try {
-                sonarAnalysisFuture.get();
-            } catch (Exception e) {
-                log.warn("Failed to retrieve SonarQube analysis results for analysis ID {}: {}", analysisId, e.getMessage());
-            }
+            setStartDateFromFirstCommitIfEmpty(analysisInfo, activityTrendsContext.getFirstCommitDate());
 
             analysisInfo.markAsCompleted();
             analysisInfoRepository.save(analysisInfo);
@@ -140,6 +146,11 @@ public class RepositoryAnalysisService {
             LocalDateTime analysisStartedAt
     ) {
         String analysisId = UUID.randomUUID().toString();
+        LocalDate nonNullEndDate = endDate != null ? endDate : LocalDate.now();
+
+        Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
+        String lastCommitHash = AnalysisUtils.getLastCommitHash(repositoryPath);
+
         return AnalysisInfo.builder()
                 .id(analysisId)
                 .repositoryUrl(repositoryInfo.getRemoteUrl())
@@ -147,9 +158,16 @@ public class RepositoryAnalysisService {
                 .repositoryOwner(repositoryInfo.getOwner())
                 .repositoryPlatform(repositoryInfo.getPlatform())
                 .startDate(startDate)
-                .endDate(endDate)
+                .endDate(nonNullEndDate)
+                .lastCommitHash(lastCommitHash)
                 .analysisStartedAt(analysisStartedAt)
                 .build();
+    }
+
+    private void setStartDateFromFirstCommitIfEmpty(AnalysisInfo analysisInfo, LocalDate firstCommitDate) {
+        if (analysisInfo.getStartDate() == null && firstCommitDate != null) {
+            analysisInfo.setStartDate(firstCommitDate);
+        }
     }
 
 }

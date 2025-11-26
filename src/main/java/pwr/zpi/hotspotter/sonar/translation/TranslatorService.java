@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.google.translation;
+package pwr.zpi.hotspotter.sonar.translation;
 
 import com.google.cloud.translate.v3.LocationName;
 import com.google.cloud.translate.v3.Translation;
@@ -6,7 +6,7 @@ import com.google.cloud.translate.v3.TranslationServiceClient;
 import com.google.cloud.translate.v3.TranslateTextRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pwr.zpi.hotspotter.google.config.GoogleProperties;
+import pwr.zpi.hotspotter.common.config.GoogleProperties;
 
 import java.io.IOException;
 

@@ -6,6 +6,7 @@ import org.eclipse.jgit.dircache.DirCache;
 import org.eclipse.jgit.dircache.DirCacheEntry;
 import org.eclipse.jgit.lib.Repository;
 import org.springframework.data.repository.CrudRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -71,6 +72,37 @@ public class AnalysisUtils {
         } catch (IOException _) { }
 
         return existingFiles;
+    }
+
+    public static Set<String> getFilteredExistingFileNames(Path repositoryPath, AnalysisFileFilter analysisFileFilter) {
+        Set<String> existingFiles = getExistingFileNames(repositoryPath);
+        if (analysisFileFilter == null) {
+            return existingFiles;
+        }
+        return analysisFileFilter.filterFileNames(existingFiles);
+    }
+
+    // ==================================================
+    // Getting last commit hash from git repository
+    // ==================================================
+
+    public static String getLastCommitHash(Path repositoryPath) {
+        ProcessBuilder pb = new ProcessBuilder("git", "rev-parse", "--short", "HEAD");
+        pb.directory(repositoryPath.toFile());
+
+        try {
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes()).trim();
+
+            if (process.waitFor() == 0 && !output.isEmpty()) {
+                return output;
+            }
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+        }
+
+        return null;
     }
 
 }
