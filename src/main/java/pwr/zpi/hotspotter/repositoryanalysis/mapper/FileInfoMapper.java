@@ -33,10 +33,10 @@ public class FileInfoMapper {
         );
     }
 
-    public FilePathNameDTO toPathNameDTO(FilePathNameProjection projection) {
+    public RepositoryItemDTO toRepositoryItemDTO(RepositoryItemProjection projection) {
         if (projection == null) return null;
 
-        return new FilePathNameDTO(
+        return new RepositoryItemDTO(
                 projection.getFilePath(),
                 projection.getFileName()
         );

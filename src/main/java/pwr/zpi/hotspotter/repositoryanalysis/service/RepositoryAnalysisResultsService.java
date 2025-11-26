@@ -8,7 +8,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.Activ
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
@@ -27,7 +26,14 @@ import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisComponentRepository;
 import pwr.zpi.hotspotter.sonar.repository.SonarRepoAnalysisRepository;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -75,12 +81,70 @@ public class RepositoryAnalysisResultsService {
         return repositoryStructureService.buildRepositoryStructure(fileInfoData);
     }
 
-    public List<FilePathNameDTO> getAllFilesInRepository(String analysisId) {
+    public List<RepositoryItemDTO> getAllItemsInRepository(String analysisId) {
         checkIfAnalysisCompleted(analysisId);
-        var projections = fileInfoRepository.findAllPathNamesByAnalysisId(analysisId);
 
-        return projections.stream()
-                .map(fileInfoMapper::toPathNameDTO)
+        var fileProjections = fileInfoRepository.findAllPathNamesByAnalysisId(analysisId);
+
+        List<String> filePaths = fileProjections.stream()
+                .map(FileInfoRepository.RepositoryItemProjection::getFilePath)
+                .toList();
+
+        Set<String> folderPaths = extractUniqueFolderPaths(filePaths);
+
+        Stream<RepositoryItemDTO> fileItems = fileProjections.stream()
+                .map(fileInfoMapper::toRepositoryItemDTO);
+
+        Stream<RepositoryItemDTO> folderItems = folderPaths.stream()
+                .map(folderPath -> {
+                    String folderName = extractFolderName(folderPath);
+                    return new RepositoryItemDTO(folderPath, folderName);
+                });
+
+        return Stream.concat(fileItems, folderItems)
+                .sorted(Comparator.comparing(RepositoryItemDTO::path))
+                .toList();
+    }
+
+    private Set<String> extractUniqueFolderPaths(Collection<String> filePaths) {
+        Set<String> folderPaths = new HashSet<>();
+
+        for (String filePath : filePaths) {
+            int lastSlashIndex = filePath.lastIndexOf('/');
+            while (lastSlashIndex > 0) {
+                folderPaths.add(filePath.substring(0, lastSlashIndex));
+                lastSlashIndex = filePath.lastIndexOf('/', lastSlashIndex - 1);
+            }
+        }
+
+        return folderPaths;
+    }
+
+    private String extractFolderName(String folderPath) {
+        int lastSlashIndex = folderPath.lastIndexOf('/');
+        return lastSlashIndex >= 0 ? folderPath.substring(lastSlashIndex + 1) : folderPath;
+    }
+
+    public List<FileDataDTO> getAllFilesData(String analysisId) {
+        checkIfAnalysisCompleted(analysisId);
+
+        List<FileInfo> fileInfoData = fileInfoRepository.findAllByAnalysisId(analysisId);
+
+        List<FileKnowledge> fileKnowledgeData = fileKnowledgeRepository.findAllByAnalysisId(analysisId);
+        Map<String, FileKnowledge> knowledgeMap = fileKnowledgeData.stream()
+                .collect(Collectors.toMap(FileKnowledge::getFilePath, fk -> fk));
+
+        List<SonarRepoAnalysisComponent> sonarRepoAnalysisComponents = sonarAnalysisComponentRepository
+                .findAllByRepoAnalysisId(analysisId);
+        Map<String, SonarRepoAnalysisComponent> sonarComponentMap = sonarRepoAnalysisComponents.stream()
+                .collect(Collectors.toMap(SonarRepoAnalysisComponent::getPath, sc -> sc));
+
+        return fileInfoData.stream()
+                .map(fileInfo -> {
+                    FileKnowledge fileKnowledge = knowledgeMap.get(fileInfo.getFilePath());
+                    SonarRepoAnalysisComponent sonarAnalysisComponent = sonarComponentMap.get(fileInfo.getFilePath());
+                    return fileDataMapper.toDTO(fileInfo, fileKnowledge, sonarAnalysisComponent);
+                })
                 .toList();
     }
 

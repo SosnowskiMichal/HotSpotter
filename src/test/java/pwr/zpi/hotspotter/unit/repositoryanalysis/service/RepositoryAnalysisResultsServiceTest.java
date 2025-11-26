@@ -90,6 +90,7 @@ class RepositoryAnalysisResultsServiceTest {
 
     @Nested
     class WithSetup {
+
         @BeforeEach
         void setup() {
             when(analysisInfoRepository.existsById(ANALYSIS_ID)).thenReturn(true);
@@ -244,19 +245,58 @@ class RepositoryAnalysisResultsServiceTest {
         }
 
         @Test
-        void getAllFilesInRepository_ReturnsMappedList() {
-            FileInfoRepository.FilePathNameProjection projection = mock(FileInfoRepository.FilePathNameProjection.class);
+        void getAllItemsInRepository_ReturnsFilesAndFolders() {
+            FileInfoRepository.RepositoryItemProjection fileProjection1 = mock(
+                    FileInfoRepository.RepositoryItemProjection.class);
+            when(fileProjection1.getFilePath()).thenReturn("src/main/App.java");
+
+            FileInfoRepository.RepositoryItemProjection fileProjection2 = mock(
+                    FileInfoRepository.RepositoryItemProjection.class);
+            when(fileProjection2.getFilePath()).thenReturn("src/test/AppTest.java");
 
             when(fileInfoRepository.findAllPathNamesByAnalysisId(ANALYSIS_ID))
-                    .thenReturn(List.of(projection));
+                    .thenReturn(List.of(fileProjection1, fileProjection2));
 
-            FilePathNameDTO dto = new FilePathNameDTO("path", "name");
-            when(fileInfoMapper.toPathNameDTO(projection)).thenReturn(dto);
+            RepositoryItemDTO item1 = new RepositoryItemDTO("src/main/App.java", "App.java");
+            RepositoryItemDTO item2 = new RepositoryItemDTO("src/test/AppTest.java", "AppTest.java");
+            when(fileInfoMapper.toRepositoryItemDTO(fileProjection1)).thenReturn(item1);
+            when(fileInfoMapper.toRepositoryItemDTO(fileProjection2)).thenReturn(item2);
 
-            List<FilePathNameDTO> result = service.getAllFilesInRepository(ANALYSIS_ID);
+            List<RepositoryItemDTO> result = service.getAllItemsInRepository(ANALYSIS_ID);
 
+            assertNotNull(result);
+            assertEquals(5, result.size());
+
+            assertTrue(result.stream().anyMatch(item ->
+                    item.path().equals("src/main/App.java")));
+
+            assertTrue(result.stream().anyMatch(item ->
+                    item.path().equals("src") && item.name().equals("src")));
+        }
+
+        @Test
+        void getAllFilesData_ReturnsFullFileDataList() {
+            FileInfo fileInfo1 = new FileInfo();
+            fileInfo1.setFilePath("src/App.java");
+
+            FileKnowledge fileKnowledge1 = new FileKnowledge();
+            fileKnowledge1.setFilePath("src/App.java");
+
+            when(fileInfoRepository.findAllByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(fileInfo1));
+            when(fileKnowledgeRepository.findAllByAnalysisId(ANALYSIS_ID))
+                    .thenReturn(List.of(fileKnowledge1));
+            when(sonarAnalysisComponentRepository.findAllByRepoAnalysisId(anyString()))
+                    .thenReturn(List.of());
+
+            FileDataDTO dto1 = new FileDataDTO(mock(FileInfoDTO.class), mock(FileKnowledgeDTO.class), null);
+            when(fileDataMapper.toDTO(any(), any(), any())).thenReturn(dto1);
+
+            List<FileDataDTO> result = service.getAllFilesData(ANALYSIS_ID);
+
+            assertNotNull(result);
             assertEquals(1, result.size());
-            assertEquals(dto, result.getFirst());
+            verify(fileDataMapper).toDTO(fileInfo1, fileKnowledge1, null);
         }
 
         @Test
@@ -410,6 +450,7 @@ class RepositoryAnalysisResultsServiceTest {
             assertEquals(1, result.size());
             assertEquals(dto, result.getFirst());
         }
+
     }
 
     @Nested
@@ -419,7 +460,7 @@ class RepositoryAnalysisResultsServiceTest {
             when(analysisInfoRepository.existsById("X")).thenReturn(true);
             when(analysisInfoRepository.isAnalysisCompleted("X")).thenReturn(false);
 
-            assertThrows(IllegalStateException.class, () -> service.getAllFilesInRepository("X"));
+            assertThrows(IllegalStateException.class, () -> service.getAllItemsInRepository("X"));
         }
 
         @Test
@@ -429,4 +470,5 @@ class RepositoryAnalysisResultsServiceTest {
             assertThrows(ObjectNotFoundException.class, () -> service.getAllAuthors("X"));
         }
     }
+
 }

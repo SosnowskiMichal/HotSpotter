@@ -55,7 +55,7 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
     List<FileTypeMetrics> getFileTypeMetricsByAnalysisId(String analysisId);
 
 
-    interface FilePathNameProjection {
+    interface RepositoryItemProjection {
         String getFilePath();
         String getFileName();
     }
@@ -77,7 +77,7 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
     }
 
 
-    List<FilePathNameProjection> findAllPathNamesByAnalysisId(String analysisId);
+    List<RepositoryItemProjection> findAllPathNamesByAnalysisId(String analysisId);
 
     List<FileTypeProjection> findAllTypesByAnalysisId(String analysisId);
 

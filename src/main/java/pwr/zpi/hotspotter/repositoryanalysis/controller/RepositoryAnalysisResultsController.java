@@ -27,6 +27,12 @@ public class RepositoryAnalysisResultsController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{analysisId}/items")
+    public ResponseEntity<List<RepositoryItemDTO>> getAllItemsInRepository(@PathVariable String analysisId) {
+        List<RepositoryItemDTO> items = repositoryAnalysisResultsService.getAllItemsInRepository(analysisId);
+        return ResponseEntity.ok(items);
+    }
+
     @GetMapping("/{analysisId}/files")
     public ResponseEntity<?> getAllFilesInRepository(
             @PathVariable String analysisId,
@@ -37,7 +43,7 @@ public class RepositoryAnalysisResultsController {
             return ResponseEntity.ok(fileData);
         }
 
-        List<FilePathNameDTO> files = repositoryAnalysisResultsService.getAllFilesInRepository(analysisId);
+        List<FileDataDTO> files = repositoryAnalysisResultsService.getAllFilesData(analysisId);
         return ResponseEntity.ok(files);
     }
 
