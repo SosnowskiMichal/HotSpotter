@@ -22,16 +22,13 @@ public interface FileKnowledgeRepository extends MongoRepository<FileKnowledge, 
 
     interface FileKnowledgeLossRiskProjection {
         String getFilePath();
-        String getFileName();
         KnowledgeRisk getKnowledgeRisk();
         Double getKnowledgeLoss();
     }
 
     interface FileLeadAuthorProjection {
         String getFilePath();
-        String getFileName();
         String getLeadAuthor();
-        Double getLeadAuthorKnowledgePercentage();
     }
 
 

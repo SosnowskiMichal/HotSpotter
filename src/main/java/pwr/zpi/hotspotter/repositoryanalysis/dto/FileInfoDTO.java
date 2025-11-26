@@ -7,6 +7,7 @@ public record FileInfoDTO(
         String name,
         String type,
         String size,
+        String url,
 
         Integer totalLines,
         Integer codeLines,

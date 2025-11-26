@@ -93,15 +93,13 @@ public class RepositoryAnalysisResultsService {
                     return new ObjectNotFoundException("File with path '" + path + "' not found in analysis.");
                 });
 
-        FileCoupling fileCoupling = fileCouplingRepository.findByAnalysisIdAndFilePath(analysisId, path)
-                .orElse(null);
         FileKnowledge fileKnowledge = fileKnowledgeRepository.findByAnalysisIdAndFilePath(analysisId, path)
                 .orElse(null);
         SonarRepoAnalysisComponent sonarAnalysisComponent = sonarAnalysisComponentRepository
                 .findByRepoAnalysisIdAndPath(analysisId, path)
                 .orElse(null);
 
-        return fileDataMapper.toDTO(fileInfo, fileCoupling, fileKnowledge, sonarAnalysisComponent);
+        return fileDataMapper.toDTO(fileInfo, fileKnowledge, sonarAnalysisComponent);
     }
 
     public List<FileTypeDTO> getAllFilesTypes(String analysisId) {

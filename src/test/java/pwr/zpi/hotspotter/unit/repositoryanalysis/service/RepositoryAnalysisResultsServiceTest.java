@@ -12,7 +12,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.Activ
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.model.FileCoupling;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.AuthorCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
@@ -120,21 +119,18 @@ class RepositoryAnalysisResultsServiceTest {
             String path = "src/File.java";
 
             FileInfo fileInfo = new FileInfo();
-            FileCoupling coupling = new FileCoupling();
             FileKnowledge knowledge = new FileKnowledge();
             SonarRepoAnalysisComponent sonar = new SonarRepoAnalysisComponent();
 
             when(fileInfoRepository.findByAnalysisIdAndFilePath(ANALYSIS_ID, path))
                     .thenReturn(Optional.of(fileInfo));
-            when(fileCouplingRepository.findByAnalysisIdAndFilePath(ANALYSIS_ID, path))
-                    .thenReturn(Optional.of(coupling));
             when(fileKnowledgeRepository.findByAnalysisIdAndFilePath(ANALYSIS_ID, path))
                     .thenReturn(Optional.of(knowledge));
             when(sonarAnalysisComponentRepository.findByRepoAnalysisIdAndPath(ANALYSIS_ID, path))
                     .thenReturn(Optional.of(sonar));
 
-            FileDataDTO dto = new FileDataDTO(any(), any(), any(), any());
-            when(fileDataMapper.toDTO(fileInfo, coupling, knowledge, sonar)).thenReturn(dto);
+            FileDataDTO dto = new FileDataDTO(any(),any(), any());
+            when(fileDataMapper.toDTO(fileInfo, knowledge, sonar)).thenReturn(dto);
 
             FileDataDTO result = service.getFileData(ANALYSIS_ID, path);
 
@@ -146,8 +142,7 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileInfoRepository.findByAnalysisIdAndFilePath(ANALYSIS_ID, "missing"))
                     .thenReturn(Optional.empty());
 
-            assertThrows(ObjectNotFoundException.class,
-                    () -> service.getFileData(ANALYSIS_ID, "missing"));
+            assertThrows(ObjectNotFoundException.class, () -> service.getFileData(ANALYSIS_ID, "missing"));
         }
 
         @Test
@@ -163,8 +158,8 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileInfoRepository.findAllHotspotsByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(p1, p2));
 
-            HotspotDTO dto1 = new HotspotDTO("path1", "name1", 10, 100, 1.0);
-            HotspotDTO dto2 = new HotspotDTO("path2", "name2", 5, 200, 0.79);
+            HotspotDTO dto1 = new HotspotDTO("path1", 1.0);
+            HotspotDTO dto2 = new HotspotDTO("path2", 0.79);
 
             when(fileInfoMapper.toHotspotDTO(eq(p1), anyDouble())).thenReturn(dto1);
             when(fileInfoMapper.toHotspotDTO(eq(p2), anyDouble())).thenReturn(dto2);
@@ -197,7 +192,7 @@ class RepositoryAnalysisResultsServiceTest {
                     LocalDate.of(1970, 1, 1),
                     LocalDate.of(1970, 1, 1),
                     true,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    0, 0, 0, 0, 0, 0, 0);
             when(authorStatisticsMapper.toDTO(stats)).thenReturn(dto);
 
             assertEquals(dto, service.getAuthorStatistics(ANALYSIS_ID, "John"));
@@ -208,8 +203,7 @@ class RepositoryAnalysisResultsServiceTest {
             when(authorStatisticsRepository.findByAnalysisIdAndName(ANALYSIS_ID, "Missing"))
                     .thenReturn(Optional.empty());
 
-            assertThrows(ObjectNotFoundException.class,
-                    () -> service.getAuthorStatistics(ANALYSIS_ID, "Missing"));
+            assertThrows(ObjectNotFoundException.class, () -> service.getAuthorStatistics(ANALYSIS_ID, "Missing"));
         }
 
         @Test
@@ -230,8 +224,7 @@ class RepositoryAnalysisResultsServiceTest {
             when(activityTrendsRepository.findById(ANALYSIS_ID))
                     .thenReturn(Optional.empty());
 
-            assertThrows(ObjectNotFoundException.class,
-                    () -> service.getActivityTrends(ANALYSIS_ID));
+            assertThrows(ObjectNotFoundException.class, () -> service.getActivityTrends(ANALYSIS_ID));
         }
 
         @Test
@@ -273,7 +266,7 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileInfoRepository.findAllTypesByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(projection));
 
-            FileTypeDTO dto = new FileTypeDTO("path", "name", "java");
+            FileTypeDTO dto = new FileTypeDTO("path", "java");
             when(fileInfoMapper.toTypeDTO(projection)).thenReturn(dto);
 
             List<FileTypeDTO> result = service.getAllFilesTypes(ANALYSIS_ID);
@@ -293,8 +286,8 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileInfoRepository.findAllCodeAgesByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(p1, p2));
 
-            FileCodeAgeDTO dto1 = new FileCodeAgeDTO("path1", "name1", 10, 0.5);
-            FileCodeAgeDTO dto2 = new FileCodeAgeDTO("path2", "name2", 20, 0.5);
+            FileCodeAgeDTO dto1 = new FileCodeAgeDTO("path1", 10, 0.5);
+            FileCodeAgeDTO dto2 = new FileCodeAgeDTO("path2", 20, 0.5);
 
             when(fileInfoMapper.toCodeAgeDTO(eq(p1), anyDouble())).thenReturn(dto1);
             when(fileInfoMapper.toCodeAgeDTO(eq(p2), anyDouble())).thenReturn(dto2);
@@ -308,20 +301,18 @@ class RepositoryAnalysisResultsServiceTest {
         void getAllFilesKnowledgeLossRisk_ReturnsMappedList() {
             FileKnowledgeRepository.FileKnowledgeLossRiskProjection projection =
                     mock(FileKnowledgeRepository.FileKnowledgeLossRiskProjection.class);
-            when(projection.getKnowledgeLoss()).thenReturn(50.0);
 
+            when(projection.getKnowledgeLoss()).thenReturn(50.0);
             when(fileKnowledgeRepository.findAllKnowledgeLossRiskByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(projection));
 
             FileKnowledgeLossRiskDTO dto = new FileKnowledgeLossRiskDTO(
-                    "path", "name", KnowledgeRisk.SINGLE_OWNER, 0.5, 0.5
+                    "path", KnowledgeRisk.SINGLE_OWNER, 0.5, 0.5
             );
-
             when(fileKnowledgeMapper.toKnowledgeLossRiskDTO(eq(projection), anyDouble()))
                     .thenReturn(dto);
 
-            List<FileKnowledgeLossRiskDTO> result =
-                    service.getAllFilesKnowledgeLossRisk(ANALYSIS_ID);
+            List<FileKnowledgeLossRiskDTO> result = service.getAllFilesKnowledgeLossRisk(ANALYSIS_ID);
 
             assertEquals(1, result.size());
             assertEquals(dto, result.getFirst());
@@ -335,11 +326,10 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileKnowledgeRepository.findAllLeadAuthorsByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(projection));
 
-            FileLeadAuthorDTO dto = new FileLeadAuthorDTO("path", "name", "leadAuthor", 50.0);
+            FileLeadAuthorDTO dto = new FileLeadAuthorDTO("path", "leadAuthor");
             when(fileKnowledgeMapper.toLeadAuthorDTO(projection)).thenReturn(dto);
 
-            List<FileLeadAuthorDTO> result =
-                    service.getAllFilesLeadAuthors(ANALYSIS_ID);
+            List<FileLeadAuthorDTO> result = service.getAllFilesLeadAuthors(ANALYSIS_ID);
 
             assertEquals(1, result.size());
             assertEquals(dto, result.getFirst());
@@ -378,7 +368,7 @@ class RepositoryAnalysisResultsServiceTest {
                     LocalDate.of(1970, 1, 1),
                     LocalDate.of(1970, 1, 1),
                     true,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    0, 0, 0, 0, 0, 0, 0);
             when(authorStatisticsMapper.toDTO(s)).thenReturn(dto);
 
             List<AuthorStatisticsDTO> result = service.getAllAuthorsStatistics(ANALYSIS_ID);
@@ -429,16 +419,14 @@ class RepositoryAnalysisResultsServiceTest {
             when(analysisInfoRepository.existsById("X")).thenReturn(true);
             when(analysisInfoRepository.isAnalysisCompleted("X")).thenReturn(false);
 
-            assertThrows(IllegalStateException.class, () ->
-                    service.getAllFilesInRepository("X"));
+            assertThrows(IllegalStateException.class, () -> service.getAllFilesInRepository("X"));
         }
 
         @Test
         void checkIfAnalysisCompleted_ThrowsIfAnalysisDoesNotExist() {
             when(analysisInfoRepository.existsById("X")).thenReturn(false);
 
-            assertThrows(ObjectNotFoundException.class, () ->
-                    service.getAllAuthors("X"));
+            assertThrows(ObjectNotFoundException.class, () -> service.getAllAuthors("X"));
         }
     }
 }

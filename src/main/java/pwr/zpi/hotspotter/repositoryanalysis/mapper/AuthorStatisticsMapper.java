@@ -21,9 +21,7 @@ public class AuthorStatisticsMapper {
                 statistics.getIsActive(),
 
                 statistics.getDaysSinceLastCommit(),
-                statistics.getMonthsSinceLastCommit(),
                 statistics.getDaysSinceFirstCommit(),
-                statistics.getMonthsSinceFirstCommit(),
 
                 statistics.getCommits(),
                 statistics.getTotalLinesAdded(),

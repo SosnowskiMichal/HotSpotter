@@ -59,7 +59,6 @@ public class FileKnowledgeMapper {
 
         return new FileKnowledgeLossRiskDTO(
                 projection.getFilePath(),
-                projection.getFileName(),
                 projection.getKnowledgeRisk(),
                 projection.getKnowledgeLoss(),
                 normalizedValue
@@ -71,9 +70,7 @@ public class FileKnowledgeMapper {
 
         return new FileLeadAuthorDTO(
                 projection.getFilePath(),
-                projection.getFileName(),
-                projection.getLeadAuthor(),
-                projection.getLeadAuthorKnowledgePercentage()
+                projection.getLeadAuthor()
         );
     }
 

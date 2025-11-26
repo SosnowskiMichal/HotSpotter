@@ -62,19 +62,16 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
 
     interface FileTypeProjection {
         String getFilePath();
-        String getFileName();
         String getFileType();
     }
 
     interface FileCodeAgeProjection {
         String getFilePath();
-        String getFileName();
         Integer getCodeAgeDays();
     }
 
     interface HotspotProjection {
         String getFilePath();
-        String getFileName();
         Integer getCodeLines();
         Integer getCommitsInHotspotAnalysisPeriod();
     }

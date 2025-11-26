@@ -12,9 +12,7 @@ public record AuthorStatisticsDTO(
         Boolean isActive,
 
         Integer daysSinceLastCommit,
-        Integer monthsSinceLastCommit,
         Integer daysSinceFirstCommit,
-        Integer monthsSinceFirstCommit,
 
         Integer commits,
         Integer linesAdded,

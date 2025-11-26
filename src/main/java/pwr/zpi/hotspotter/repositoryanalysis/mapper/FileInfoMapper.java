@@ -16,6 +16,7 @@ public class FileInfoMapper {
                 fileInfo.getFileName(),
                 fileInfo.getFileType(),
                 fileInfo.getFileSize(),
+                fileInfo.getFileUrl(),
 
                 fileInfo.getTotalLines(),
                 fileInfo.getCodeLines(),
@@ -46,7 +47,6 @@ public class FileInfoMapper {
 
         return new FileTypeDTO(
                 projection.getFilePath(),
-                projection.getFileName(),
                 projection.getFileType()
         );
     }
@@ -56,7 +56,6 @@ public class FileInfoMapper {
 
         return new FileCodeAgeDTO(
                 projection.getFilePath(),
-                projection.getFileName(),
                 projection.getCodeAgeDays(),
                 normalizedValue
         );
@@ -67,9 +66,6 @@ public class FileInfoMapper {
 
         return new HotspotDTO(
                 projection.getFilePath(),
-                projection.getFileName(),
-                projection.getCommitsInHotspotAnalysisPeriod(),
-                projection.getCodeLines(),
                 normalizedValue
         );
     }
