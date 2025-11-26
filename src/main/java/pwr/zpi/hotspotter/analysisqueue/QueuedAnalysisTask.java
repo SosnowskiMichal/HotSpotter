@@ -10,12 +10,14 @@ import java.util.UUID;
 public class QueuedAnalysisTask {
 
     private final String taskId;
+    private final String repositoryUrl;
     private final LocalDate endDate;
     private final SseEmitter emitter;
     private final Runnable analysisTask;
 
-    public QueuedAnalysisTask(LocalDate endDate, SseEmitter emitter, Runnable analysisTask) {
+    public QueuedAnalysisTask(String repositoryUrl, LocalDate endDate, SseEmitter emitter, Runnable analysisTask) {
         this.taskId = UUID.randomUUID().toString();
+        this.repositoryUrl = repositoryUrl;
         this.endDate = endDate != null ? endDate : LocalDate.now();
         this.emitter = emitter;
         this.analysisTask = analysisTask;

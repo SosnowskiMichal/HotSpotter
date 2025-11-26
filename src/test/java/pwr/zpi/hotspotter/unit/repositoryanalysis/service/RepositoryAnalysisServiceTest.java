@@ -18,7 +18,6 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerC
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
@@ -29,6 +28,9 @@ import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
 import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
+import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
+import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
@@ -42,8 +44,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,65 +118,6 @@ public class RepositoryAnalysisServiceTest {
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.FINALIZING);
         verify(ssePublisher).sendSuccess(eq(emitter), anyString());
         verify(logExtractor).deleteLogFile(logFilePath);
-    }
-
-    @Test
-    void handlesLogProcessingExceptionAndMarksAnalysisAsFailed() {
-        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
-        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
-        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
-        when(repositoryInfo.getName()).thenReturn("repo-name");
-        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
-        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
-
-        LocalDate startDate = LocalDate.of(2023, 1, 1);
-        SseEmitter emitter = mock(SseEmitter.class);
-
-        Path repositoryPath = Path.of("/local/repo");
-        AnalysisInfo analysisInfo = mock(AnalysisInfo.class);
-
-        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenThrow(new LogProcessingException("Log extraction failed"));
-
-        assertThrows(LogProcessingException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter)
-        );
-
-        ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
-        verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
-        AnalysisInfo failed = captor.getValue();
-        assertEquals(AnalysisInfo.AnalysisStatus.FAILED, failed.getStatus());
-    }
-
-    @Test
-    void handlesUnexpectedExceptionAndMarksAnalysisAsFailed() {
-        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
-        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
-        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
-        when(repositoryInfo.getName()).thenReturn("repo-name");
-        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
-        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
-
-        LocalDate startDate = LocalDate.of(2023, 1, 1);
-        SseEmitter emitter = mock(SseEmitter.class);
-
-        Path repositoryPath = Path.of("/local/repo");
-        AnalysisInfo analysisInfo = new AnalysisInfo();
-        analysisInfo.setId("123");
-
-        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenThrow(new RuntimeException("Unexpected error"));
-
-        assertThrows(AnalysisException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter)
-        );
-
-        ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
-        verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
-        AnalysisInfo failed = captor.getValue();
-        assertEquals(AnalysisInfo.AnalysisStatus.FAILED, failed.getStatus());
     }
 
     @Test
@@ -529,9 +471,9 @@ public class RepositoryAnalysisServiceTest {
     }
 
     @Test
-    void handlesExceptionDuringAnalyzerStart() {
+    void handlesInvalidRepositoryUrlExceptionWithSseError() {
         RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
-        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getRemoteUrl()).thenReturn("invalid-url");
         when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
         when(repositoryInfo.getName()).thenReturn("repo-name");
         when(repositoryInfo.getOwner()).thenReturn("repo-owner");
@@ -541,41 +483,18 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
-        Stream<Commit> commits = Stream.empty();
-        AnalysisInfo analysisInfo = new AnalysisInfo();
-        analysisInfo.setId("123");
 
-        CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
-                CompletableFuture.completedFuture(
-                        new SonarResultDownloader.SonarAnalysisResults(
-                                new SonarRepoAnalysisResult(),
-                                List.of(new SonarRepoAnalysisComponent()),
-                                List.of(new SonarIssue())
-                        )
-                );
-
-        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
         when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
-        when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
-                .thenReturn(sonarResults);
-        when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
-                .thenThrow(new RuntimeException("Analyzer start failed"));
+                .thenThrow(new InvalidRepositoryUrlException("Invalid URL"));
 
-        assertThrows(AnalysisException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter)
-        );
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
 
-        ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
-        verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
-        AnalysisInfo failed = captor.getValue();
-        assertEquals(AnalysisInfo.AnalysisStatus.FAILED, failed.getStatus());
+        verify(ssePublisher).sendError(emitter, "Invalid URL");
+        verify(emitter).complete();
     }
 
     @Test
-    void handlesExceptionDuringStatisticsCalculation() {
+    void handlesRepositoryCloneExceptionWithSseError() {
         RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
         when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
         when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
@@ -587,50 +506,65 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
-        Stream<Commit> commits = Stream.empty();
-        AnalysisInfo analysisInfo = new AnalysisInfo();
-        analysisInfo.setId("123");
 
-        CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
-                CompletableFuture.completedFuture(
-                        new SonarResultDownloader.SonarAnalysisResults(
-                                new SonarRepoAnalysisResult(),
-                                List.of(new SonarRepoAnalysisComponent()),
-                                List.of(new SonarIssue())                        )
-                );
-
-        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
         when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
-        when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
-                .thenReturn(sonarResults);
-        when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
-                .thenReturn(mock(KnowledgeAnalyzerContext.class));
-        when(authorsAnalyzer.startAnalysis(anyString(), eq(null)))
-                .thenReturn(mock(AuthorsAnalyzerContext.class));
-        when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
-                .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
-                .thenReturn(mock(ActivityTrendsContext.class));
-        when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
-                .thenReturn(mock(CouplingAnalyzerContext.class));
-        doThrow(new RuntimeException("Statistics calculation failed"))
-                .when(analysisStatisticsCalculator).calculateStatistics(anyString());
+                .thenThrow(new RepositoryCloneException("Clone failed"));
 
-        assertThrows(AnalysisException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter)
-        );
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
 
-        ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
-        verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
-        AnalysisInfo failed = captor.getValue();
-        assertEquals(AnalysisInfo.AnalysisStatus.FAILED, failed.getStatus());
+        verify(ssePublisher).sendError(emitter, "Clone failed");
+        verify(emitter).complete();
     }
 
     @Test
-    void deletesLogFileOnException() {
+    void handlesRepositoryUpdateExceptionWithSseError() {
+        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
+        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
+        when(repositoryInfo.getName()).thenReturn("repo-name");
+        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
+        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
+
+        LocalDate startDate = LocalDate.of(2023, 1, 1);
+        SseEmitter emitter = mock(SseEmitter.class);
+
+        Path repositoryPath = Path.of("/local/repo");
+
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+                .thenThrow(new RepositoryUpdateException("Update failed"));
+
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+
+        verify(ssePublisher).sendError(emitter, "Update failed");
+        verify(emitter).complete();
+    }
+
+    @Test
+    void handlesLogProcessingExceptionWithSseError() {
+        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
+        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
+        when(repositoryInfo.getName()).thenReturn("repo-name");
+        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
+        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
+
+        LocalDate startDate = LocalDate.of(2023, 1, 1);
+        SseEmitter emitter = mock(SseEmitter.class);
+
+        Path repositoryPath = Path.of("/local/repo");
+
+        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+                .thenThrow(new LogProcessingException("Log processing failed"));
+
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+
+        verify(ssePublisher).sendError(emitter, "Log processing failed");
+        verify(emitter).complete();
+    }
+
+    @Test
+    void handlesAnalysisExceptionWithSseError() {
         RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
         when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
         when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
@@ -643,19 +577,137 @@ public class RepositoryAnalysisServiceTest {
 
         Path repositoryPath = Path.of("/local/repo");
         Path logFilePath = Path.of("/logs/logfile");
-        AnalysisInfo analysisInfo = new AnalysisInfo();
-        analysisInfo.setId("123");
 
-        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
+        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
                 .thenReturn(logFilePath);
         when(logParser.parseLogs(logFilePath))
                 .thenThrow(new RuntimeException("Parsing failed"));
 
-        assertThrows(AnalysisException.class, () ->
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter)
-        );
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+
+        verify(ssePublisher).sendError(emitter, "Parsing failed");
+        verify(emitter).complete();
+    }
+
+    @Test
+    void handlesUnexpectedExceptionWithSseErrorMessage() {
+        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
+        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
+        when(repositoryInfo.getName()).thenReturn("repo-name");
+        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
+        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
+
+        LocalDate startDate = LocalDate.of(2023, 1, 1);
+        SseEmitter emitter = mock(SseEmitter.class);
+
+        Path repositoryPath = Path.of("/local/repo");
+
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+
+        verify(ssePublisher).sendError(emitter, "Unexpected error");
+        verify(emitter).complete();
+    }
+
+    @Test
+    void deletesLogFileAfterExceptionOccurs() {
+        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
+        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
+        when(repositoryInfo.getName()).thenReturn("repo-name");
+        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
+        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
+
+        LocalDate startDate = LocalDate.of(2023, 1, 1);
+        SseEmitter emitter = mock(SseEmitter.class);
+
+        Path repositoryPath = Path.of("/local/repo");
+        Path logFilePath = Path.of("/logs/logfile");
+
+        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+                .thenReturn(logFilePath);
+        when(logParser.parseLogs(logFilePath))
+                .thenThrow(new RuntimeException("Parsing failed"));
+
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
 
         verify(logExtractor).deleteLogFile(logFilePath);
+        verify(ssePublisher).sendError(emitter, "Parsing failed");
+        verify(emitter).complete();
     }
+
+    @Test
+    void marksAnalysisAsFailedWhenLogProcessingFails() {
+        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
+        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
+        when(repositoryInfo.getName()).thenReturn("repo-name");
+        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
+        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
+
+        LocalDate startDate = LocalDate.of(2023, 1, 1);
+        SseEmitter emitter = mock(SseEmitter.class);
+
+        Path repositoryPath = Path.of("/local/repo");
+        AnalysisInfo analysisInfo = new AnalysisInfo();
+        analysisInfo.setId("test-id");
+
+        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+                .thenThrow(new LogProcessingException("Log extraction failed"));
+
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+
+        ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
+        verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
+
+        boolean hasFailedStatus = captor.getAllValues().stream()
+                .anyMatch(info -> info.getStatus() == AnalysisInfo.AnalysisStatus.FAILED);
+        assertTrue(hasFailedStatus, "Analysis should be marked as FAILED");
+
+        verify(ssePublisher).sendError(emitter, "Log extraction failed");
+        verify(emitter).complete();
+    }
+
+    @Test
+    void marksAnalysisAsFailedWhenUnexpectedErrorOccurs() {
+        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
+        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
+        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
+        when(repositoryInfo.getName()).thenReturn("repo-name");
+        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
+        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
+
+        LocalDate startDate = LocalDate.of(2023, 1, 1);
+        SseEmitter emitter = mock(SseEmitter.class);
+
+        Path repositoryPath = Path.of("/local/repo");
+        Path logFilePath = Path.of("/logs/logfile");
+        AnalysisInfo analysisInfo = new AnalysisInfo();
+        analysisInfo.setId("test-id");
+
+        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+                .thenReturn(logFilePath);
+        when(logParser.parseLogs(logFilePath))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+
+        ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
+        verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
+
+        boolean hasFailedStatus = captor.getAllValues().stream()
+                .anyMatch(info -> info.getStatus() == AnalysisInfo.AnalysisStatus.FAILED);
+        assertTrue(hasFailedStatus, "Analysis should be marked as FAILED");
+
+        verify(ssePublisher).sendError(emitter, "Unexpected error");
+        verify(emitter).complete();
+    }
+
 }

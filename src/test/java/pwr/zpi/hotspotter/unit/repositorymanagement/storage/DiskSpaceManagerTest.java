@@ -7,7 +7,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pwr.zpi.hotspotter.analysisqueue.RepositoryAnalysisQueue;
+import pwr.zpi.hotspotter.analysisqueue.AnalysisQueue;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
@@ -34,7 +34,7 @@ class DiskSpaceManagerTest {
     @Mock
     private RepositoryManagementConfig repositoryManagementConfig;
     @Mock
-    private RepositoryAnalysisQueue repositoryAnalysisQueue;
+    private AnalysisQueue analysisQueue;
 
     @InjectMocks
     private DiskSpaceManager diskSpaceManager;
@@ -88,6 +88,7 @@ class DiskSpaceManagerTest {
                 new RepositoryInfo("1", "/repo1", null, null, null, "local/path", null, LocalDateTime.now(), 100, 100L)
         ));
         when(repositoryManagementConfig.getBaseDirectory()).thenReturn("/base/dir");
+
         try (MockedStatic<Files> filesMock = mockStatic(Files.class)) {
             FileStore fileStoreMock = mock(FileStore.class);
             filesMock.when(() -> Files.getFileStore(any(Path.class))).thenReturn(fileStoreMock);
@@ -141,4 +142,5 @@ class DiskSpaceManagerTest {
             assertFalse(result);
         }
     }
+
 }

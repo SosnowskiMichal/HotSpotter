@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.analysisqueue.RepositoryAnalysisQueue;
+import pwr.zpi.hotspotter.analysisqueue.AnalysisQueue;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
@@ -23,16 +23,16 @@ public class DiskSpaceManager {
 
     private final RepositoryInfoRepository repositoryInfoRepository;
     private final RepositoryManagementConfig repositoryManagementConfig;
-    private final RepositoryAnalysisQueue repositoryAnalysisQueue;
+    private final AnalysisQueue analysisQueue;
 
     public DiskSpaceManager(
             RepositoryInfoRepository repositoryInfoRepository,
             RepositoryManagementConfig repositoryManagementConfig,
-            @Lazy RepositoryAnalysisQueue repositoryAnalysisQueue
+            @Lazy AnalysisQueue analysisQueue
     ) {
         this.repositoryInfoRepository = repositoryInfoRepository;
         this.repositoryManagementConfig = repositoryManagementConfig;
-        this.repositoryAnalysisQueue = repositoryAnalysisQueue;
+        this.analysisQueue = analysisQueue;
     }
 
     @PostConstruct
@@ -139,7 +139,7 @@ public class DiskSpaceManager {
     }
 
     public boolean deleteRepositoryDirectory(File directory, String repositoryUrl) {
-        if (repositoryAnalysisQueue.isRepositoryInUse(repositoryUrl)) {
+        if (analysisQueue.isRepositoryInUse(repositoryUrl)) {
             log.warn("Cannot delete repository at {} - repository {} is currently in use", directory, repositoryUrl);
             return false;
         }
