@@ -161,6 +161,22 @@ class AnalysisFileFilterTest {
     }
 
     @Test
+    void shouldExcludeExtensionlessDotfiles() {
+        assertFalse(analysisFileFilter.shouldIncludeFile(".gitignore"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".dockerignore"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".npmignore"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".prettierrc"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".eslintrc"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".babelrc"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".editorconfig"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".nvmrc"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".ruby-version"));
+        assertFalse(analysisFileFilter.shouldIncludeFile(".python-version"));
+        assertFalse(analysisFileFilter.shouldIncludeFile("src/.gitignore"));
+        assertFalse(analysisFileFilter.shouldIncludeFile("docs/.prettierrc"));
+    }
+
+    @Test
     void shouldHandleNullAndEmptyPaths() {
         assertFalse(analysisFileFilter.shouldIncludeFile(null));
         assertFalse(analysisFileFilter.shouldIncludeFile(""));

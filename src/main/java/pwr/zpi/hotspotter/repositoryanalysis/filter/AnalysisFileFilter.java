@@ -105,6 +105,9 @@ public class AnalysisFileFilter {
         patterns.add("(.*/)?\\.gradle/.*");
         patterns.add("(.*/)?\\.mvn/.*");
 
+        // Dotfiles without extensions (configuration files like .gitignore, .dockerignore, .prettierrc, etc.)
+        patterns.add("(.*/)?\\.(?!.*/)[^/.]+$");
+
         // Files without extensions (extensionless files)
         // Exclude common extensionless files that might be important (like Dockerfile, Makefile)
         patterns.add("^(?!.*(Dockerfile|Makefile|Rakefile|Vagrantfile|Jenkinsfile|Procfile|Gemfile|Guardfile|Brewfile)).*[^/]+/[^/.]+$");
