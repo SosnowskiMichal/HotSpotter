@@ -17,7 +17,7 @@ public class HotSpotterApplication {
         log.info("Application timezone set to: {}", TimeZone.getDefault().getID());
     }
 
-	static void main(String[] args) {
+	public static void main(String[] args) {
 		SpringApplication.run(HotSpotterApplication.class, args);
 	}
 

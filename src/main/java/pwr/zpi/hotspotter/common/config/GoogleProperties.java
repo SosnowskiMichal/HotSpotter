@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "google")
-public class GoogleConfig {
+public class GoogleProperties {
     private String redirectUri;
     private String projectId;
 }

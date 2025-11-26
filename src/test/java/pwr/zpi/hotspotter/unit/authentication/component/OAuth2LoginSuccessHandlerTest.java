@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.RedirectStrategy;
 import pwr.zpi.hotspotter.authentication.component.CookieUtil;
 import pwr.zpi.hotspotter.authentication.component.OAuth2LoginSuccessHandler;
-import pwr.zpi.hotspotter.common.config.GoogleConfig;
+import pwr.zpi.hotspotter.common.config.GoogleProperties;
 import pwr.zpi.hotspotter.authentication.service.JwtService;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
@@ -32,7 +32,7 @@ class OAuth2LoginSuccessHandlerTest {
     @Mock
     private JwtService jwtService;
     @Mock
-    private GoogleConfig googleConfig;
+    private GoogleProperties googleProperties;
     @Mock
     private CookieUtil cookieUtil;
 
@@ -45,7 +45,7 @@ class OAuth2LoginSuccessHandlerTest {
 
     @Test
     void createsNewUserWhenEmailNotExists() throws IOException {
-        when(googleConfig.getRedirectUri()).thenReturn("/home");
+        when(googleProperties.getRedirectUri()).thenReturn("/home");
 
         var redirectStrategy = mock(RedirectStrategy.class);
         handler.setRedirectStrategy(redirectStrategy);
@@ -86,7 +86,7 @@ class OAuth2LoginSuccessHandlerTest {
 
     @Test
     void updatesNameWhenChanged() throws IOException {
-        when(googleConfig.getRedirectUri()).thenReturn("/dashboard");
+        when(googleProperties.getRedirectUri()).thenReturn("/dashboard");
 
         var redirectStrategy = mock(org.springframework.security.web.RedirectStrategy.class);
         handler.setRedirectStrategy(redirectStrategy);

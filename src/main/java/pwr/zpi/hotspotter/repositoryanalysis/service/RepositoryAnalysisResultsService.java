@@ -40,6 +40,8 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class RepositoryAnalysisResultsService {
 
+    private static final int MAX_CODE_AGE_DAYS = 365;
+
     private final AnalysisInfoRepository analysisInfoRepository;
     private final AnalysisStatisticsRepository analysisStatisticsRepository;
     private final FileInfoRepository fileInfoRepository;
@@ -188,17 +190,13 @@ public class RepositoryAnalysisResultsService {
         checkIfAnalysisCompleted(analysisId);
         var projections = fileInfoRepository.findAllCodeAgesByAnalysisId(analysisId);
 
-        int maxCodeAge = projections.stream()
-                .map(FileInfoRepository.FileCodeAgeProjection::getCodeAgeDays)
-                .max(Integer::compareTo)
-                .orElse(1);
-
         return projections.stream()
+                .filter(projection -> projection.getCodeAgeDays() < MAX_CODE_AGE_DAYS)
                 .map(projection -> {
-                    double normalizedValue = Math.round(100.0 - projection.getCodeAgeDays() * 100.0 / maxCodeAge) / 100.0;
+                    int cappedCodeAge = Math.min(projection.getCodeAgeDays(), MAX_CODE_AGE_DAYS);
+                    double normalizedValue = Math.round(100.0 - cappedCodeAge * 100.0 / MAX_CODE_AGE_DAYS) / 100.0;
                     return fileInfoMapper.toCodeAgeDTO(projection, normalizedValue);
                 })
-                .filter(dto -> dto.normalizedValue() != 0.0)
                 .toList();
     }
 
