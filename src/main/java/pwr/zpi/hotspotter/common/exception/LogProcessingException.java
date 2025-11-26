@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.exception;
+package pwr.zpi.hotspotter.common.exception;
 
 public class LogProcessingException extends RuntimeException {
     public LogProcessingException(String message) {

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exception.ObjectNotFoundException;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.ActivityTrends;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;

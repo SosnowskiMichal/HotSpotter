@@ -8,7 +8,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
-import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exception.ObjectNotFoundException;
 
 import java.util.Collections;
 

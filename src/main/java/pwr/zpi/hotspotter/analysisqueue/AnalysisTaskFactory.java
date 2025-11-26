@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.fileanalysis.service.FileAnalysisService;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
+import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;

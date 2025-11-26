@@ -1,7 +1,7 @@
 package pwr.zpi.hotspotter.repositorymanagement.parser;
 
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
 
 import java.nio.file.Path;
 import java.util.regex.Matcher;

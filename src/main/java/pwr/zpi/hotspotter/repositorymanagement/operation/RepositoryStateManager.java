@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.repositorymanagement.operation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
+import pwr.zpi.hotspotter.common.exception.AnalysisException;
 
 import java.io.BufferedReader;
 import java.io.IOException;

@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.config.LogExtractorConfig;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;

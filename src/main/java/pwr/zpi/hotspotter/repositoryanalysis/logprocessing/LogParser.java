@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.logprocessing;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 

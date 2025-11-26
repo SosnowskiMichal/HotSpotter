@@ -15,11 +15,11 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyze
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
-import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
-import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
-import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
+import pwr.zpi.hotspotter.common.exception.AnalysisException;
+import pwr.zpi.hotspotter.common.exception.LogProcessingException;
+import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.common.exception.RepositoryCloneException;
+import pwr.zpi.hotspotter.common.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;

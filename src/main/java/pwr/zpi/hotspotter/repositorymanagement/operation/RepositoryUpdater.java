@@ -9,7 +9,7 @@ import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
-import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
+import pwr.zpi.hotspotter.common.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
 import pwr.zpi.hotspotter.repositorymanagement.storage.DiskSpaceManager;

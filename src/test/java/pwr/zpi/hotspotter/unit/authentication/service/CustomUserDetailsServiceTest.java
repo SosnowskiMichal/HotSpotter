@@ -8,7 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import pwr.zpi.hotspotter.authentication.service.CustomUserDetailsService;
-import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exception.ObjectNotFoundException;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
 

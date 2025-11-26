@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.common.exceptions;
+package pwr.zpi.hotspotter.common.exception;
 
 public class ObjectNotFoundException extends RuntimeException {
     public ObjectNotFoundException(String message) {

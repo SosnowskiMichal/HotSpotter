@@ -8,7 +8,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
-import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
+import pwr.zpi.hotspotter.common.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
 import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;

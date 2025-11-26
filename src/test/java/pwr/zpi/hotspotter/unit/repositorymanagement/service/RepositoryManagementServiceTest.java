@@ -7,7 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
-import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryUpdater;

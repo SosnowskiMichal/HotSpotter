@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
-import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;

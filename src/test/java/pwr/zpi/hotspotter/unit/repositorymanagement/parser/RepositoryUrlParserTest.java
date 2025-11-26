@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
-import pwr.zpi.hotspotter.repositorymanagement.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

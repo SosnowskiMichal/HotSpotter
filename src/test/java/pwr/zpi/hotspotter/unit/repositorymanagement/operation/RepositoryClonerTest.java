@@ -13,7 +13,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
-import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryCloneException;
+import pwr.zpi.hotspotter.common.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryCloner;
 import pwr.zpi.hotspotter.repositorymanagement.parser.RepositoryUrlParser;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;
