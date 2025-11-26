@@ -35,6 +35,8 @@ public class FileInfo {
 
     private String fileSize;
 
+    private String fileUrl;
+
     private Integer totalLines;
 
     private Integer codeLines;

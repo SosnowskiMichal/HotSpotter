@@ -58,8 +58,8 @@ public class RepositoryAnalysisService {
 
     public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
-        LocalDateTime analysisStartedAt = LocalDateTime.now();
 
+        LocalDateTime analysisStartedAt = LocalDateTime.now();
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
         AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
@@ -105,7 +105,7 @@ public class RepositoryAnalysisService {
 
             knowledgeAnalyzer.finishAnalysis(knowledgeContext);
             authorsAnalyzer.finishAnalysis(authorsContext);
-            fileInfoAnalyzer.finishAnalysis(fileInfoContext);
+            fileInfoAnalyzer.finishAnalysis(fileInfoContext, analysisInfo);
             activityTrendsAnalyzer.finishAnalysis(activityTrendsContext);
             couplingAnalyzer.finishAnalysis(couplingContext);
 

@@ -9,7 +9,9 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileIn
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
+import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.repositoryanalysis.util.RepositoryFileUrlBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -51,13 +53,12 @@ public class FileInfoAnalyzer {
         }
     }
 
-    public void finishAnalysis(FileInfoAnalyzerContext context) {
-        if (context == null) return;
+    public void finishAnalysis(FileInfoAnalyzerContext context, AnalysisInfo analysisInfo) {
+        if (context == null || analysisInfo == null) return;
 
         log.debug("Finishing file info analysis for ID: {}", context.getAnalysisId());
 
-        Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(),
-                analysisFileFilter);
+        Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(), analysisFileFilter);
         Map<String, FileLinesData> fileLinesData = getFileLinesDataFromProcess(context.getClocProcess());
         Collection<FileInfo> fileInfos = context.getFileInfos().values();
 
@@ -69,6 +70,7 @@ public class FileInfoAnalyzer {
             calculateFileSize(fileInfo, context.getRepositoryPath());
             calculateCodeAge(fileInfo, context.getReferenceDate());
             addLinesData(fileInfo, fileLinesData);
+            addFileUrl(fileInfo, analysisInfo);
         });
 
         try {
@@ -88,9 +90,7 @@ public class FileInfoAnalyzer {
             pb.directory(repositoryPath.toFile());
             pb.redirectErrorStream(true);
 
-            Process process = pb.start();
-            log.debug("Started cloc process for {}", repositoryPath);
-            return process;
+            return pb.start();
         } catch (IOException e) {
             log.error("Error starting cloc process for {}: {}", repositoryPath, e.getMessage(), e);
             return null;
@@ -174,6 +174,16 @@ public class FileInfoAnalyzer {
             fileInfo.setBlankLines(linesData.blank());
             fileInfo.setTotalLines(linesData.total());
         }
+    }
+
+    private void addFileUrl(FileInfo fileInfo, AnalysisInfo analysisInfo) {
+        String fileUrl = RepositoryFileUrlBuilder.buildFileUrl(
+            analysisInfo.getRepositoryPlatform(),
+            analysisInfo.getRepositoryUrl(),
+            fileInfo.getFilePath(),
+            analysisInfo.getLastCommitHash()
+        );
+        fileInfo.setFileUrl(fileUrl);
     }
 
     public record FileLinesData(String language, int code, int comment, int blank) {
