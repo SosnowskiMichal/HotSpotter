@@ -257,15 +257,15 @@ class RepositoryAnalysisResultsServiceTest {
             when(fileInfoRepository.findAllPathNamesByAnalysisId(ANALYSIS_ID))
                     .thenReturn(List.of(fileProjection1, fileProjection2));
 
-            RepositoryItemDTO item1 = new RepositoryItemDTO("src/main/App.java", "App.java");
-            RepositoryItemDTO item2 = new RepositoryItemDTO("src/test/AppTest.java", "AppTest.java");
+            RepositoryItemDTO item1 = new RepositoryItemDTO("src/main/App.java", "App.java", "file");
+            RepositoryItemDTO item2 = new RepositoryItemDTO("src/test/AppTest.java", "AppTest.java", "file");
             when(fileInfoMapper.toRepositoryItemDTO(fileProjection1)).thenReturn(item1);
             when(fileInfoMapper.toRepositoryItemDTO(fileProjection2)).thenReturn(item2);
 
             List<RepositoryItemDTO> result = service.getAllItemsInRepository(ANALYSIS_ID);
 
             assertNotNull(result);
-            assertEquals(5, result.size());
+            assertEquals(6, result.size());
 
             assertTrue(result.stream().anyMatch(item ->
                     item.path().equals("src/main/App.java")));

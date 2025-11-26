@@ -38,7 +38,8 @@ public class FileInfoMapper {
 
         return new RepositoryItemDTO(
                 projection.getFilePath(),
-                projection.getFileName()
+                projection.getFileName(),
+                "file"
         );
     }
 

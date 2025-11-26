@@ -100,10 +100,13 @@ public class RepositoryAnalysisResultsService {
         Stream<RepositoryItemDTO> folderItems = folderPaths.stream()
                 .map(folderPath -> {
                     String folderName = extractFolderName(folderPath);
-                    return new RepositoryItemDTO(folderPath, folderName);
+                    return new RepositoryItemDTO(folderPath, folderName, "dir");
                 });
 
-        return Stream.concat(fileItems, folderItems)
+        return Stream.concat(
+                    Stream.of(new RepositoryItemDTO("/", "root", "dir")),
+                    Stream.concat(folderItems, fileItems)
+                )
                 .sorted(Comparator.comparing(RepositoryItemDTO::path))
                 .toList();
     }

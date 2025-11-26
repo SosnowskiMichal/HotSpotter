@@ -2,5 +2,6 @@ package pwr.zpi.hotspotter.repositoryanalysis.dto;
 
 public record RepositoryItemDTO(
         String path,
-        String name
+        String name,
+        String type
 ) { }
