@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AnalysisTaskFactory {
+public class AnalysisQueueTaskFactory {
 
     private final RepositoryAnalysisService repositoryAnalysisService;
     private final FileAnalysisService fileAnalysisService;
@@ -27,7 +27,7 @@ public class AnalysisTaskFactory {
     @Setter
     private ConcurrentHashMap<String, RepositoryInfo> repositoryInfoCache;
 
-    public QueuedAnalysisTask createRepositoryAnalysisTask(
+    public AnalysisQueueTask createRepositoryAnalysisTask(
             String repositoryUrl,
             LocalDate startDate,
             LocalDate endDate,
@@ -45,10 +45,10 @@ public class AnalysisTaskFactory {
             }
         };
 
-        return new QueuedAnalysisTask(repositoryUrl, endDate, emitter, analysisTask);
+        return new AnalysisQueueTask(repositoryUrl, endDate, emitter, analysisTask);
     }
 
-    public QueuedAnalysisTask createFileAnalysisTask(String analysisId, String filePath, SseEmitter emitter) {
+    public AnalysisQueueTask createFileAnalysisTask(String analysisId, String filePath, SseEmitter emitter) {
         log.debug("Creating file analysis task for analysisId: {}, file: {}", analysisId, filePath);
 
         AnalysisInfo analysisInfo = analysisInfoRepository.findById(analysisId)
@@ -74,7 +74,7 @@ public class AnalysisTaskFactory {
             }
         };
 
-        return new QueuedAnalysisTask(analysisInfo.getRepositoryUrl(), endDate, emitter, analysisTask);
+        return new AnalysisQueueTask(analysisInfo.getRepositoryUrl(), endDate, emitter, analysisTask);
     }
 
 }

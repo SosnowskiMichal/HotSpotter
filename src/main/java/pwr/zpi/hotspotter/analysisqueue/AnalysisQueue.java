@@ -28,9 +28,9 @@ public class AnalysisQueue {
     private final AnalysisSsePublisher ssePublisher;
     private final RepositoryManagementService repositoryManagementService;
     private final RepositoryStateManager repositoryStateManager;
-    private final AnalysisTaskFactory analysisTaskFactory;
+    private final AnalysisQueueTaskFactory analysisQueueTaskFactory;
 
-    private final ConcurrentHashMap<String, BlockingQueue<QueuedAnalysisTask>> repositoryQueues;
+    private final ConcurrentHashMap<String, BlockingQueue<AnalysisQueueTask>> repositoryQueues;
     private final ConcurrentHashMap<String, AtomicBoolean> repositoryProcessingFlags;
     private final ConcurrentHashMap<String, LocalDate> currentProcessingDates;
     private final ConcurrentHashMap<String, AtomicInteger> runningTasksCount;
@@ -42,13 +42,13 @@ public class AnalysisQueue {
             AnalysisSsePublisher ssePublisher,
             RepositoryManagementService repositoryManagementService,
             RepositoryStateManager repositoryStateManager,
-            AnalysisTaskFactory analysisTaskFactory
+            AnalysisQueueTaskFactory analysisQueueTaskFactory
     ) {
         this.executorService = ((ThreadPoolTaskExecutor) analysisQueueExecutor).getThreadPoolExecutor();
         this.ssePublisher = ssePublisher;
         this.repositoryManagementService = repositoryManagementService;
         this.repositoryStateManager = repositoryStateManager;
-        this.analysisTaskFactory = analysisTaskFactory;
+        this.analysisQueueTaskFactory = analysisQueueTaskFactory;
 
         this.repositoryQueues = new ConcurrentHashMap<>();
         this.repositoryProcessingFlags = new ConcurrentHashMap<>();
@@ -57,26 +57,26 @@ public class AnalysisQueue {
         this.dateCompletionPhasers = new ConcurrentHashMap<>();
         this.repositoryInfoCache = new ConcurrentHashMap<>();
 
-        this.analysisTaskFactory.setRepositoryInfoCache(this.repositoryInfoCache);
+        this.analysisQueueTaskFactory.setRepositoryInfoCache(this.repositoryInfoCache);
     }
 
     public void submitRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
-        QueuedAnalysisTask task = analysisTaskFactory.createRepositoryAnalysisTask(repositoryUrl, startDate, endDate, emitter);
+        AnalysisQueueTask task = analysisQueueTaskFactory.createRepositoryAnalysisTask(repositoryUrl, startDate, endDate, emitter);
         submitAnalysis(task);
     }
 
     public void submitFileAnalysis(String analysisId, String filePath, SseEmitter emitter) {
-        QueuedAnalysisTask task = analysisTaskFactory.createFileAnalysisTask(analysisId, filePath, emitter);
+        AnalysisQueueTask task = analysisQueueTaskFactory.createFileAnalysisTask(analysisId, filePath, emitter);
         submitAnalysis(task);
     }
 
-    private void submitAnalysis(QueuedAnalysisTask task) {
+    private void submitAnalysis(AnalysisQueueTask task) {
         String repositoryUrl = task.getRepositoryUrl();
 
         log.info("Submitting analysis task {} for repository: {} with endDate: {}",
                 task.getTaskId(), repositoryUrl, task.getEndDate());
 
-        BlockingQueue<QueuedAnalysisTask> queue = repositoryQueues.computeIfAbsent(
+        BlockingQueue<AnalysisQueueTask> queue = repositoryQueues.computeIfAbsent(
                 repositoryUrl, _ -> new LinkedBlockingQueue<>()
         );
 
@@ -126,7 +126,7 @@ public class AnalysisQueue {
     private void processQueue(String repositoryUrl) {
         log.info("Queue processing started for repository: {}", repositoryUrl);
 
-        BlockingQueue<QueuedAnalysisTask> queue = repositoryQueues.get(repositoryUrl);
+        BlockingQueue<AnalysisQueueTask> queue = repositoryQueues.get(repositoryUrl);
         if (queue == null) {
             log.warn("No queue found for repository: {}", repositoryUrl);
             repositoryProcessingFlags.get(repositoryUrl).set(false);
@@ -135,20 +135,20 @@ public class AnalysisQueue {
 
         try {
             while (true) {
-                QueuedAnalysisTask firstTask = queue.peek();
+                AnalysisQueueTask firstTask = queue.peek();
                 if (firstTask == null) {
                     log.debug("Queue empty for repository: {}", repositoryUrl);
                     break;
                 }
 
                 LocalDate batchDate = firstTask.getEndDate();
-                List<QueuedAnalysisTask> batch = new ArrayList<>();
+                List<AnalysisQueueTask> batch = new ArrayList<>();
 
                 synchronized (repositoryUrl.intern()) {
                     currentProcessingDates.put(repositoryUrl, batchDate);
 
                     while (true) {
-                        QueuedAnalysisTask task = queue.peek();
+                        AnalysisQueueTask task = queue.peek();
                         if (task == null || !task.getEndDate().equals(batchDate)) {
                             break;
                         }
@@ -199,7 +199,7 @@ public class AnalysisQueue {
                     log.info("Executing batch of {} tasks for repository: {} with endDate: {}",
                             batch.size(), repositoryUrl, batchDate);
 
-                    for (QueuedAnalysisTask task : batch) {
+                    for (AnalysisQueueTask task : batch) {
                         executeTask(repositoryUrl, task);
                     }
                 }
@@ -249,7 +249,7 @@ public class AnalysisQueue {
         }
     }
 
-    private void executeTask(String repositoryUrl, QueuedAnalysisTask task) {
+    private void executeTask(String repositoryUrl, AnalysisQueueTask task) {
         executorService.submit(() -> {
             log.debug("Executing task {} for repository: {}", task.getTaskId(), repositoryUrl);
             try {
@@ -280,9 +280,9 @@ public class AnalysisQueue {
         });
     }
 
-    private void failEntireBatch(List<QueuedAnalysisTask> batch, String errorMessage) {
+    private void failEntireBatch(List<AnalysisQueueTask> batch, String errorMessage) {
         log.error("Failing entire batch of {} tasks: {}", batch.size(), errorMessage);
-        for (QueuedAnalysisTask task : batch) {
+        for (AnalysisQueueTask task : batch) {
             try {
                 ssePublisher.sendError(task.getEmitter(), errorMessage);
                 task.getEmitter().complete();
