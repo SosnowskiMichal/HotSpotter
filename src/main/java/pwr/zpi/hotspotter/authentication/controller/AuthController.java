@@ -18,7 +18,7 @@ import pwr.zpi.hotspotter.authentication.dto.AuthResponseDTO;
 import pwr.zpi.hotspotter.user.model.User;
 import pwr.zpi.hotspotter.user.repository.UserRepository;
 import pwr.zpi.hotspotter.authentication.service.JwtService;
-import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exception.ObjectNotFoundException;
 
 import java.util.Map;
 import java.util.Optional;

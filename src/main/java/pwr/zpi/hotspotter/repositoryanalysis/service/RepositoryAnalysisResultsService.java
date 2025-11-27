@@ -3,7 +3,7 @@ package pwr.zpi.hotspotter.repositoryanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exception.ObjectNotFoundException;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.model.ActivityTrends;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.activitytrends.repository.ActivityTrendsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatistics;

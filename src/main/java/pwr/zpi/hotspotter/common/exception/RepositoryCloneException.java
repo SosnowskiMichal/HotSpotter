@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositorymanagement.exception;
+package pwr.zpi.hotspotter.common.exception;
 
 public class RepositoryCloneException extends RuntimeException {
     public RepositoryCloneException(String message) {

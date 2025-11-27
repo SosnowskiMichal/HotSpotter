@@ -11,7 +11,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
-import pwr.zpi.hotspotter.repositorymanagement.exception.RepositoryUpdateException;
+import pwr.zpi.hotspotter.common.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.repositorymanagement.operation.RepositoryUpdater;
 import pwr.zpi.hotspotter.repositorymanagement.repository.RepositoryInfoRepository;

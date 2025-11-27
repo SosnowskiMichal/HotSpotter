@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.config.LogExtractorConfig;
 import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
 

@@ -15,16 +15,19 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyze
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.AuthorsAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.AnalysisException;
-import pwr.zpi.hotspotter.repositoryanalysis.exception.LogProcessingException;
+import pwr.zpi.hotspotter.common.exception.AnalysisException;
+import pwr.zpi.hotspotter.common.exception.LogProcessingException;
+import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
+import pwr.zpi.hotspotter.common.exception.RepositoryCloneException;
+import pwr.zpi.hotspotter.common.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.AnalysisSseStatus;
-import pwr.zpi.hotspotter.repositoryanalysis.sse.RepositoryAnalysisSsePublisher;
+import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
@@ -45,7 +48,7 @@ public class RepositoryAnalysisService {
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
     private final LogParser logParser;
-    private final RepositoryAnalysisSsePublisher ssePublisher;
+    private final AnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
     private final AnalysisFileFilter analysisFileFilter;
 
@@ -57,6 +60,35 @@ public class RepositoryAnalysisService {
     private final AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
     public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
+        try {
+            executeRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter);
+
+        } catch (InvalidRepositoryUrlException e) {
+            log.warn("Invalid repository URL {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
+
+        } catch (RepositoryCloneException | RepositoryUpdateException e) {
+            log.error("Repository operation failed for {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
+
+        } catch (LogProcessingException e) {
+            log.warn("Log processing failed for repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
+
+        } catch (AnalysisException e) {
+            log.error("Analysis failed for repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
+
+        } catch (Exception e) {
+            log.error("Unexpected error during analysis of repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
+            ssePublisher.sendError(emitter, e.getMessage());
+
+        } finally {
+            emitter.complete();
+        }
+    }
+
+    private void executeRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
 
         LocalDateTime analysisStartedAt = LocalDateTime.now();
@@ -122,15 +154,10 @@ public class RepositoryAnalysisService {
             log.info("Analysis completed for repository {}, ID: {}", repositoryInfo.getRemoteUrl(), analysisId);
             ssePublisher.sendSuccess(emitter, analysisId);
 
-        } catch (LogProcessingException e) {
-            analysisInfo.markAsFailed();
-            analysisInfoRepository.save(analysisInfo);
-            throw e;
-
         } catch (Exception e) {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
-            throw new AnalysisException("Analysis failed: " + e.getMessage());
+            throw e;
 
         } finally {
             if (logFilePath != null) {

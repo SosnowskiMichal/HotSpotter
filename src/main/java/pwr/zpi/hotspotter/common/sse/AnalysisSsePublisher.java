@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.sse;
+package pwr.zpi.hotspotter.common.sse;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -6,7 +6,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 
 @Component
-public class RepositoryAnalysisSsePublisher {
+public class AnalysisSsePublisher {
 
     public void sendProgress(SseEmitter emitter, AnalysisSseStatus status) {
         sendEvent(emitter, "progress", status);

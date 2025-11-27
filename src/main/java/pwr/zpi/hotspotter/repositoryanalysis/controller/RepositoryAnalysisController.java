@@ -9,8 +9,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import pwr.zpi.hotspotter.repositoryanalysis.queue.RepositoryAnalysisQueue;
-import pwr.zpi.hotspotter.repositoryanalysis.service.AsyncRepositoryAnalysisService;
+import pwr.zpi.hotspotter.analysisqueue.AnalysisQueue;
 import pwr.zpi.hotspotter.repositoryanalysis.validation.ValidDateRange;
 
 import java.time.LocalDate;
@@ -20,19 +19,17 @@ import java.time.LocalDate;
 @RequestMapping("/analysis")
 public class RepositoryAnalysisController {
 
-    private final AsyncRepositoryAnalysisService asyncRepositoryAnalysisService;
-    private final RepositoryAnalysisQueue repositoryAnalysisQueue;
+    private final AnalysisQueue analysisQueue;
 
     @GetMapping
-    public SseEmitter analyzeRepository(@Valid @ModelAttribute AnalysisRequest request) {
+    public SseEmitter startRepositoryAnalysis(@Valid @ModelAttribute AnalysisRequest request) {
         SseEmitter emitter = new SseEmitter(0L);
 
-        repositoryAnalysisQueue.submitAnalysis(
+        analysisQueue.submitRepositoryAnalysis(
                 request.repositoryUrl(),
                 request.startDate(),
                 request.endDate(),
-                emitter,
-                asyncRepositoryAnalysisService
+                emitter
         );
 
         return emitter;

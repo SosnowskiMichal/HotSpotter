@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import pwr.zpi.hotspotter.common.exceptions.ObjectNotFoundException;
+import pwr.zpi.hotspotter.common.exception.ObjectNotFoundException;
 import pwr.zpi.hotspotter.sonar.dto.SonarIssueDTO;
 import pwr.zpi.hotspotter.sonar.mapper.SonarIssueMapper;
 import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssue;
