@@ -127,6 +127,13 @@ public class JavaProjectCompiler {
             throw new Exception("Failed to start external mvn executable. Ensure Maven is installed and 'mvn' is in PATH.", e);
         }
 
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.info("[mvn] {}", line);
+            }
+        }
+
         int exit = process.waitFor();
         if (exit != 0) {
             throw new RuntimeException("Failed to start external mvn executable. Exit value is " + exit);
