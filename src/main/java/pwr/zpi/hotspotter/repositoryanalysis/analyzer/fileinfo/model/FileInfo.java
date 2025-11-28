@@ -37,13 +37,17 @@ public class FileInfo {
 
     private String fileUrl;
 
-    private Integer totalLines;
+    @Builder.Default
+    private Integer totalLines = 0;
 
-    private Integer codeLines;
+    @Builder.Default
+    private Integer codeLines = 0;
 
-    private Integer commentLines;
+    @Builder.Default
+    private Integer commentLines = 0;
 
-    private Integer blankLines;
+    @Builder.Default
+    private Integer blankLines = 0;
 
     @Builder.Default
     private Integer commitsLastMonth = 0;
