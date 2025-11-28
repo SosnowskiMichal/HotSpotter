@@ -21,8 +21,8 @@ import pwr.zpi.hotspotter.common.exception.InvalidRepositoryUrlException;
 import pwr.zpi.hotspotter.common.exception.RepositoryCloneException;
 import pwr.zpi.hotspotter.common.exception.RepositoryUpdateException;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.CommitStream;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
-import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
@@ -47,7 +47,6 @@ public class RepositoryAnalysisService {
 
     private final AnalysisInfoRepository analysisInfoRepository;
     private final LogExtractor logExtractor;
-    private final LogParser logParser;
     private final AnalysisSsePublisher ssePublisher;
     private final SonarService sonarService;
     private final AnalysisFileFilter analysisFileFilter;
@@ -98,15 +97,11 @@ public class RepositoryAnalysisService {
         String analysisId = analysisInfo.getId();
         analysisInfoRepository.save(analysisInfo);
 
-        Path logFilePath = null;
         try {
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
 
             CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
-
-            logFilePath = logExtractor.extractLogs(repositoryPath, analysisId, startDate, endDate);
-            Stream<Commit> commits = logParser.parseLogs(logFilePath);
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
@@ -116,15 +111,17 @@ public class RepositoryAnalysisService {
             ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, endDate, 6);
             CouplingAnalyzerContext couplingContext = couplingAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
 
-            try (commits) {
-                commits.forEach(commit -> {
-                    Commit filteredCommit = analysisFileFilter.filterCommit(commit);
-                    knowledgeAnalyzer.processCommit(filteredCommit, knowledgeContext);
-                    authorsAnalyzer.processCommit(filteredCommit, authorsContext);
-                    fileInfoAnalyzer.processCommit(filteredCommit, fileInfoContext);
-                    activityTrendsAnalyzer.processCommit(filteredCommit, activityTrendsContext);
-                    couplingAnalyzer.processCommit(filteredCommit, couplingContext);
-                });
+            try (CommitStream commitStream = logExtractor.extractAndParseCommits(repositoryPath, startDate, endDate)) {
+                try (Stream<Commit> commits = commitStream.getStream()) {
+                    commits.forEach(commit -> {
+                        Commit filteredCommit = analysisFileFilter.filterCommit(commit);
+                        knowledgeAnalyzer.processCommit(filteredCommit, knowledgeContext);
+                        authorsAnalyzer.processCommit(filteredCommit, authorsContext);
+                        fileInfoAnalyzer.processCommit(filteredCommit, fileInfoContext);
+                        activityTrendsAnalyzer.processCommit(filteredCommit, activityTrendsContext);
+                        couplingAnalyzer.processCommit(filteredCommit, couplingContext);
+                    });
+                }
             }
 
             try {
@@ -158,11 +155,6 @@ public class RepositoryAnalysisService {
             analysisInfo.markAsFailed();
             analysisInfoRepository.save(analysisInfo);
             throw e;
-
-        } finally {
-            if (logFilePath != null) {
-                logExtractor.deleteLogFile(logFilePath);
-            }
         }
     }
 

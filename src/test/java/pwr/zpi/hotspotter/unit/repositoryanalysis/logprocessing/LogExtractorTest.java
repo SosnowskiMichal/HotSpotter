@@ -1,20 +1,21 @@
 package pwr.zpi.hotspotter.unit.repositoryanalysis.logprocessing;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.CommitStream;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
-import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.config.LogExtractorConfig;
-import pwr.zpi.hotspotter.repositorymanagement.config.RepositoryManagementConfig;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.*;
+import java.io.InputStream;
+import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -23,139 +24,115 @@ import static org.mockito.Mockito.*;
 class LogExtractorTest {
 
     @Mock
-    private RepositoryManagementConfig repositoryManagementConfig;
-
-    @Mock
-    private LogExtractorConfig logExtractorConfig;
+    private LogParser logParser;
 
     @InjectMocks
     private LogExtractor logExtractor;
 
     private final Path repo = Path.of("/repo");
-    private final Path baseDir = Path.of("/base");
-    private final Path logDir = baseDir.resolve("logs");
-    private final Path logFile = logDir.resolve("123.log");
 
     @Test
-    void extractLogs_shouldCreateDirectoryAndReturnLogFilePath() throws Exception {
-        when(repositoryManagementConfig.getBaseDirectory()).thenReturn(baseDir.toString());
-        when(logExtractorConfig.getLogDirectoryName()).thenReturn("logs");
-        when(logExtractorConfig.getProcessTimeoutMinutes()).thenReturn(1);
+    void extractAndParseCommits_shouldReturnCommitStream() throws Exception {
+        Process process = mock(Process.class);
+        InputStream inputStream = new ByteArrayInputStream("test".getBytes());
+        when(process.getInputStream()).thenReturn(inputStream);
 
-        try (MockedStatic<FileUtils> utils = mockStatic(FileUtils.class)) {
-            utils.when(() -> FileUtils.forceMkdir(logDir.toFile())).thenAnswer(_ -> null);
+        Stream<Commit> commitStream = Stream.empty();
+        when(logParser.parseLogs(any(InputStream.class))).thenReturn(commitStream);
 
-            try (MockedStatic<Files> _ = mockStatic(Files.class)) {
+        try (MockedConstruction<ProcessBuilder> pb = mockConstruction(
+                ProcessBuilder.class,
+                (builder, _) -> when(builder.start()).thenReturn(process))) {
 
-                Process process = mock(Process.class);
-                when(process.waitFor(1, TimeUnit.MINUTES)).thenReturn(true);
-                when(process.exitValue()).thenReturn(0);
-
-                MockedConstruction<ProcessBuilder> pb = mockConstruction(
-                        ProcessBuilder.class,
-                        (builder, _) -> when(builder.start()).thenReturn(process)
-                );
-
-                Path result = logExtractor.extractLogs(repo, "123",
-                        LocalDate.parse("2024-01-01"),
-                        LocalDate.parse("2024-01-10"));
-
-                assertThat(result).isEqualTo(logFile);
-
-                utils.verify(() -> FileUtils.forceMkdir(logDir.toFile()));
-                pb.close();
-            }
-        }
-    }
-
-    @Test
-    void extractLogs_shouldThrowExceptionWhenDirectoryCannotBeCreated() {
-        when(repositoryManagementConfig.getBaseDirectory()).thenReturn(baseDir.toString());
-        when(logExtractorConfig.getLogDirectoryName()).thenReturn("logs");
-
-        try (MockedStatic<FileUtils> utils = mockStatic(FileUtils.class)) {
-            utils.when(() -> FileUtils.forceMkdir(any(File.class)))
-                    .thenThrow(new IOException("mkdir error"));
-
-            assertThatThrownBy(() ->
-                    logExtractor.extractLogs(repo, "123",
-                            LocalDate.now(), LocalDate.now())
-            ).isInstanceOf(LogProcessingException.class)
-                    .hasMessageContaining("Failed to create log directory");
-        }
-    }
-
-    @Test
-    void extractLogs_shouldTimeoutAndRemoveLogFile() throws Exception {
-        when(repositoryManagementConfig.getBaseDirectory()).thenReturn(baseDir.toString());
-        when(logExtractorConfig.getLogDirectoryName()).thenReturn("logs");
-        when(logExtractorConfig.getProcessTimeoutMinutes()).thenReturn(1);
-
-        try (MockedStatic<FileUtils> utils = mockStatic(FileUtils.class);
-             MockedStatic<Files> filesMock = mockStatic(Files.class)) {
-
-            utils.when(() -> FileUtils.forceMkdir(any())).thenAnswer(_ -> null);
-
-            Process process = mock(Process.class);
-            when(process.waitFor(1, TimeUnit.MINUTES)).thenReturn(false);
-
-            MockedConstruction<ProcessBuilder> pb = mockConstruction(
-                    ProcessBuilder.class,
-                    (builder, _) -> when(builder.start()).thenReturn(process)
+            CommitStream result = logExtractor.extractAndParseCommits(
+                    repo,
+                    LocalDate.parse("2024-01-01"),
+                    LocalDate.parse("2024-01-10")
             );
 
-            filesMock.when(() -> Files.deleteIfExists(logFile)).thenReturn(true);
+            assertThat(result).isNotNull();
+            assertThat(result.getStream()).isEqualTo(commitStream);
 
-            assertThatThrownBy(() ->
-                    logExtractor.extractLogs(repo, "123",
-                            LocalDate.now(), LocalDate.now())
-            ).isInstanceOf(LogProcessingException.class)
-                    .hasMessageContaining("timed out");
+            verify(logParser).parseLogs(any(InputStream.class));
 
-            pb.close();
+            result.close();
         }
     }
 
     @Test
-    void extractLogs_shouldFailWhenExitCodeNonZero() throws Exception {
-        when(repositoryManagementConfig.getBaseDirectory()).thenReturn(baseDir.toString());
-        when(logExtractorConfig.getLogDirectoryName()).thenReturn("logs");
-        when(logExtractorConfig.getProcessTimeoutMinutes()).thenReturn(1);
+    void extractAndParseCommits_shouldHandleDateRange() throws Exception {
+        Process process = mock(Process.class);
+        InputStream inputStream = new ByteArrayInputStream("".getBytes());
+        when(process.getInputStream()).thenReturn(inputStream);
+        when(logParser.parseLogs(any(InputStream.class))).thenReturn(Stream.empty());
 
-        try (MockedStatic<FileUtils> utils = mockStatic(FileUtils.class);
-             MockedStatic<Files> filesMock = mockStatic(Files.class)) {
+        try (MockedConstruction<ProcessBuilder> pb = mockConstruction(
+                ProcessBuilder.class,
+                (builder, context) -> {
+                    when(builder.start()).thenReturn(process);
+                })) {
 
-            utils.when(() -> FileUtils.forceMkdir(any())).thenAnswer(_ -> null);
+            logExtractor.extractAndParseCommits(
+                    repo,
+                    LocalDate.parse("2024-01-01"),
+                    LocalDate.parse("2024-12-31")
+            ).close();
 
-            Process process = mock(Process.class);
-            when(process.waitFor(1, TimeUnit.MINUTES)).thenReturn(true);
-            when(process.exitValue()).thenReturn(99);
+            assertThat(pb.constructed()).hasSize(1);
+        }
+    }
 
-            MockedConstruction<ProcessBuilder> pb = mockConstruction(
-                    ProcessBuilder.class,
-                    (builder, _) -> when(builder.start()).thenReturn(process)
-            );
+    @Test
+    void extractAndParseCommits_shouldHandleNullDates() throws Exception {
+        Process process = mock(Process.class);
+        when(process.getInputStream()).thenReturn(new ByteArrayInputStream("".getBytes()));
+        when(logParser.parseLogs(any(InputStream.class))).thenReturn(Stream.empty());
 
-            filesMock.when(() -> Files.deleteIfExists(any())).thenReturn(true);
+        try (MockedConstruction<ProcessBuilder> pb = mockConstruction(
+                ProcessBuilder.class,
+                (builder, _) -> when(builder.start()).thenReturn(process))) {
+
+            logExtractor.extractAndParseCommits(repo, null, null).close();
+
+            assertThat(pb.constructed()).isNotEmpty();
+        }
+    }
+
+    @Test
+    void extractAndParseCommits_shouldThrowExceptionWhenProcessStartFails() {
+        try (MockedConstruction<ProcessBuilder> pb = mockConstruction(
+                ProcessBuilder.class,
+                (builder, _) -> when(builder.start()).thenThrow(new IOException("Process error")))) {
 
             assertThatThrownBy(() ->
-                    logExtractor.extractLogs(repo, "123", LocalDate.now(), LocalDate.now()))
+                    logExtractor.extractAndParseCommits(repo, null, null))
                     .isInstanceOf(LogProcessingException.class)
-                    .hasMessageContaining("exit code: 99");
-
-            pb.close();
+                    .hasMessageContaining("Failed to start git log process");
         }
     }
 
     @Test
-    void deleteLogFile_shouldNotThrow() {
-        try (MockedStatic<Files> filesMock = mockStatic(Files.class)) {
-            filesMock.when(() -> Files.deleteIfExists(logFile)).thenReturn(true);
+    void handleProcessCompletion_shouldValidateExitCode() throws Exception {
+        Process process = mock(Process.class);
+        when(process.isAlive()).thenReturn(false);
+        when(process.exitValue()).thenReturn(0);
+        when(process.getInputStream()).thenReturn(new ByteArrayInputStream("".getBytes()));
 
-            assertThatCode(() -> logExtractor.deleteLogFile(logFile))
+        Stream<Commit> mockStream = Stream.empty();
+        when(logParser.parseLogs(any(InputStream.class))).thenReturn(mockStream);
+
+        try (MockedConstruction<ProcessBuilder> pb = mockConstruction(
+                ProcessBuilder.class,
+                (builder, _) -> when(builder.start()).thenReturn(process))) {
+
+            CommitStream commitStream = logExtractor.extractAndParseCommits(repo, null, null);
+
+            assertThatCode(() -> commitStream.getStream().close())
                     .doesNotThrowAnyException();
 
-            filesMock.verify(() -> Files.deleteIfExists(logFile));
+            verify(process).exitValue();
+            commitStream.close();
         }
     }
+
 }
