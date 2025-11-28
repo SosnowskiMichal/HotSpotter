@@ -1,8 +1,7 @@
 package pwr.zpi.hotspotter.unit.sonar.service;
 
-import org.apache.maven.cli.MavenCli;
-import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.GradleConnector;
+import org.gradle.tooling.ProjectConnection;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -69,10 +68,10 @@ class JavaProjectCompilerTest {
             Path java1 = root.resolve("a/src").resolve("Test1.java");
             Path java2 = root.resolve("a/b/src").resolve("Test2.java");
 
-            Stream<Path> walk = Stream.of(java1, java2);
+            List<Path> walk = List.of(java1, java2);
 
             files.when(() -> Files.exists(root)).thenReturn(true);
-            files.when(() -> Files.walk(root)).thenReturn(walk);
+            files.when(() -> Files.walk(root)).thenAnswer(_ -> walk.stream());
             files.when(() -> Files.isRegularFile(any())).thenReturn(true);
 
             Optional<Path> result = compiler.findCommonJavaSourceRoot(root);
@@ -88,7 +87,7 @@ class JavaProjectCompilerTest {
             Path root = Path.of("repo");
 
             files.when(() -> Files.exists(root)).thenReturn(true);
-            files.when(() -> Files.walk(root)).thenReturn(Stream.empty());
+            files.when(() -> Files.walk(root)).thenAnswer(_ -> Stream.empty());
 
             Optional<Path> result = compiler.findCommonJavaSourceRoot(root);
 
@@ -100,18 +99,16 @@ class JavaProjectCompilerTest {
     void compileJavaProject_UsesMaven_WhenPomExists() throws Exception {
         Path project = Path.of("repo");
 
-        try (MockedStatic<Files> files = mockStatic(Files.class);
-             MockedStatic<JavaProjectCompiler> mockedJavaCompiler = mockStatic(JavaProjectCompiler.class)) {
+        try (MockedStatic<Files> files = mockStatic(Files.class)) {
             files.when(() -> Files.exists(project)).thenReturn(true);
             files.when(() -> Files.exists(project.resolve("pom.xml"))).thenReturn(true);
             files.when(() -> Files.walk(project)).thenReturn(Stream.of(project.resolve("target/classes")));
 
-            MavenCli cli = mock(MavenCli.class);
-            mockedJavaCompiler.when(JavaProjectCompiler::getMavenCli).thenReturn(cli);
+            JavaProjectCompiler spyCompiler = spy(compiler);
+            doReturn(List.of(project.resolve("target/classes").toString()))
+                    .when(spyCompiler).compileMavenProject(project);
 
-            when(cli.doMain(any(), any(), any(), any())).thenReturn(0);
-
-            List<String> result = compiler.compileJavaProject(project);
+            List<String> result = spyCompiler.compileJavaProject(project);
 
             assertEquals(1, result.size());
             assertTrue(result.getFirst().endsWith(Path.of("target", "classes").toString()));
@@ -122,18 +119,17 @@ class JavaProjectCompilerTest {
     void compileJavaProject_Throws_WhenMavenFails() {
         Path project = Path.of("repo");
 
-        try (MockedStatic<Files> files = mockStatic(Files.class);
-             MockedStatic<JavaProjectCompiler> mockedJavaCompiler = mockStatic(JavaProjectCompiler.class)) {
+        try (MockedStatic<Files> files = mockStatic(Files.class)) {
 
             files.when(() -> Files.exists(project)).thenReturn(true);
             files.when(() -> Files.exists(project.resolve("pom.xml"))).thenReturn(true);
 
-            MavenCli cli = mock(MavenCli.class);
-            mockedJavaCompiler.when(JavaProjectCompiler::getMavenCli).thenReturn(cli);
+            JavaProjectCompiler spyCompiler = spy(compiler);
+            try {
+                when(spyCompiler.compileMavenProject(project)).thenThrow(new Exception("mvn failed"));
+            } catch (Exception ignored) {}
 
-            when(cli.doMain(any(), any(), any(), any())).thenReturn(1);
-
-            assertThrows(Exception.class, () -> compiler.compileJavaProject(project));
+            assertThrows(Exception.class, () -> spyCompiler.compileJavaProject(project));
         }
     }
 

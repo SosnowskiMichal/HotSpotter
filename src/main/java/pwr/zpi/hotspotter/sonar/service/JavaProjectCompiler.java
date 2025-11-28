@@ -1,14 +1,11 @@
 package pwr.zpi.hotspotter.sonar.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.maven.cli.MavenCli;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,6 +28,16 @@ public class JavaProjectCompiler {
 
         if (isJavaProject(projectPath)) {
             return Optional.of(projectPath);
+        }
+
+        Optional<Path> pomDir = findAnyPomDirectory(projectPath);
+        if (pomDir.isPresent()) {
+            return pomDir;
+        }
+
+        Optional<Path> gradleDir = findAnyBuildGradleDirectory(projectPath);
+        if (gradleDir.isPresent()) {
+            return gradleDir;
         }
 
         List<Path> javaParents;
@@ -61,6 +68,29 @@ public class JavaProjectCompiler {
         return Optional.empty();
     }
 
+    public static Optional<Path> findAnyPomDirectory(Path start) throws IOException {
+        if (start == null || !Files.exists(start)) return Optional.empty();
+        try (Stream<Path> stream = Files.walk(start)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> "pom.xml".equals(p.getFileName().toString()))
+                    .findFirst()
+                    .map(Path::getParent);
+        }
+    }
+
+    public static Optional<Path> findAnyBuildGradleDirectory(Path start) throws IOException {
+        if (start == null || !Files.exists(start)) return Optional.empty();
+        try (Stream<Path> stream = Files.walk(start)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> "build.gradle".equals(p.getFileName().toString())
+                            || "build.gradle.kts".equals(p.getFileName().toString()))
+                    .findFirst()
+                    .map(Path::getParent);
+        }
+    }
+
     public List<String> compileJavaProject(Path projectPath) throws Exception {
         log.info("Starting compilation for project: {}", projectPath);
 
@@ -84,18 +114,22 @@ public class JavaProjectCompiler {
         }
     }
 
-    private List<String> compileMavenProject(Path projectPath) throws Exception {
-        System.setProperty("maven.multiModuleProjectDirectory", projectPath.toString());
-        MavenCli cli = getMavenCli();
-        PrintStream nullOut = new PrintStream(OutputStream.nullOutputStream());
-        int result = cli.doMain(
-                new String[]{"clean", "compile"},
-                projectPath.toFile().getAbsolutePath(),
-                nullOut, nullOut
-        );
+    public List<String> compileMavenProject(Path projectPath) throws Exception {
+        log.info("Invoking external mvn for project: {}", projectPath);
+        ProcessBuilder pb = new ProcessBuilder("mvn", "-B", "clean", "compile");
+        pb.directory(projectPath.toFile());
+        pb.redirectErrorStream(true);
 
-        if (result != 0) {
-            throw new Exception("Maven build failed with exit code: " + result);
+        Process process;
+        try {
+            process = pb.start();
+        } catch (IOException e) {
+            throw new Exception("Failed to start external mvn executable. Ensure Maven is installed and 'mvn' is in PATH.", e);
+        }
+
+        int exit = process.waitFor();
+        if (exit != 0) {
+            throw new RuntimeException("Failed to start external mvn executable. Exit value is " + exit);
         }
 
         try (Stream<Path> walk = Files.walk(projectPath)) {
@@ -103,10 +137,6 @@ public class JavaProjectCompiler {
                     .map(Path::toString)
                     .collect(Collectors.toList());
         }
-    }
-
-    public static MavenCli getMavenCli() {
-        return new MavenCli();
     }
 
     private List<String> compileGradleProject(Path projectPath) throws Exception {

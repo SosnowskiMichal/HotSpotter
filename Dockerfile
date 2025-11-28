@@ -7,7 +7,7 @@ COPY . .
 RUN mvn clean package -DskipTests
 
 
-FROM openjdk:25-ea-25-jdk-slim
+FROM maven:3.9.11-eclipse-temurin-25
 
 WORKDIR /app
 
