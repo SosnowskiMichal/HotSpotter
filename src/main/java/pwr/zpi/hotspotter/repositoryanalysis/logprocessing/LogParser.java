@@ -2,14 +2,14 @@ package pwr.zpi.hotspotter.repositoryanalysis.logprocessing;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,17 +35,8 @@ public class LogParser {
             "\\{(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)}"
     );
 
-    public Stream<Commit> parseLogs(Path logFilePath) {
-        try {
-            return getCommitStream(logFilePath);
-        } catch (IOException e) {
-            log.error("Failed to initialize commit stream for log file ({}): {}", logFilePath.toAbsolutePath(), e.getMessage());
-            throw new LogProcessingException("Failed to initialize commit stream: " + e.getMessage());
-        }
-    }
-
-    private Stream<Commit> getCommitStream(Path logFilePath) throws IOException {
-        CommitIterator iterator = new CommitIterator(logFilePath);
+    public Stream<Commit> parseLogs(InputStream inputStream) {
+        CommitIterator iterator = new CommitIterator(inputStream);
         return StreamSupport.stream(
                 Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED),
                 false
@@ -57,16 +48,14 @@ public class LogParser {
     // ====================================================================================================
 
     private class CommitIterator implements Iterator<Commit>, AutoCloseable {
-        private final Path logFilePath;
         private final BufferedReader reader;
         private final StringBuilder block;
         private Commit nextCommit;
         private boolean hasNextCached = false;
         private boolean closed = false;
 
-        public CommitIterator(Path logFilePath) throws IOException {
-            this.logFilePath = logFilePath;
-            this.reader = new BufferedReader(new FileReader(logFilePath.toFile()));
+        public CommitIterator(InputStream inputStream) {
+            this.reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
             this.block = new StringBuilder(512);
             cacheNextCommit();
         }
@@ -128,7 +117,7 @@ public class LogParser {
                 close();
 
             } catch (IOException e) {
-                log.error("Error reading log file ({}): {}", logFilePath.toAbsolutePath(), e.getMessage());
+                log.error("Error reading log stream: {}", e.getMessage());
                 hasNextCached = false;
                 nextCommit = null;
                 close();
@@ -144,7 +133,7 @@ public class LogParser {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    log.error("Error closing log file ({}): {}", logFilePath.toAbsolutePath(), e.getMessage());
+                    log.error("Error closing log stream: {}", e.getMessage());
                 }
             }
         }
@@ -162,6 +151,10 @@ public class LogParser {
         int headerEnd = matcher.end();
         String filesBlock = block.substring(headerEnd).trim();
         List<FileChange> changedFiles = parseFileChanges(filesBlock);
+
+        if (changedFiles.isEmpty()) {
+            return null;
+        }
 
         return new Commit(hash, date, author, email, changedFiles);
     }

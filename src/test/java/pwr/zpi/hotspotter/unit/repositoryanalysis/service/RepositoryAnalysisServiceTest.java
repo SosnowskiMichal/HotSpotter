@@ -20,8 +20,8 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.KnowledgeAnalyze
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.statistics.AnalysisStatisticsCalculator;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
+import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.CommitStream;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogExtractor;
-import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.LogParser;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
@@ -52,7 +52,6 @@ public class RepositoryAnalysisServiceTest {
 
     @Mock private AnalysisInfoRepository analysisInfoRepository;
     @Mock private LogExtractor logExtractor;
-    @Mock private LogParser logParser;
     @Mock private AnalysisSsePublisher ssePublisher;
     @Mock private SonarService sonarService;
     @Mock private KnowledgeAnalyzer knowledgeAnalyzer;
@@ -65,6 +64,12 @@ public class RepositoryAnalysisServiceTest {
 
     @InjectMocks
     private RepositoryAnalysisService repositoryAnalysisService;
+
+    private CommitStream mockCommitStream(Stream<Commit> commits) {
+        CommitStream commitStream = mock(CommitStream.class);
+        when(commitStream.getStream()).thenReturn(commits);
+        return commitStream;
+    }
 
     @Test
     void completesAnalysisSuccessfullyWhenAllStepsSucceed() {
@@ -80,9 +85,9 @@ public class RepositoryAnalysisServiceTest {
 
         Path repositoryPath = Path.of("/local/repo");
         AnalysisInfo analysisInfo = mock(AnalysisInfo.class);
-        Path logFilePath = Path.of("/logs/logfile");
 
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.completedFuture(
@@ -94,9 +99,8 @@ public class RepositoryAnalysisServiceTest {
                 );
 
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenReturn(analysisInfo);
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
 
@@ -117,7 +121,7 @@ public class RepositoryAnalysisServiceTest {
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.ANALYZING);
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.FINALIZING);
         verify(ssePublisher).sendSuccess(eq(emitter), anyString());
-        verify(logExtractor).deleteLogFile(logFilePath);
+        verify(commitStream).close();
     }
 
     @Test
@@ -133,8 +137,8 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.completedFuture(
@@ -145,9 +149,8 @@ public class RepositoryAnalysisServiceTest {
                         )
                 );
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
@@ -186,8 +189,8 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path customPath = Path.of("/custom/path/to/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.completedFuture(
@@ -198,9 +201,8 @@ public class RepositoryAnalysisServiceTest {
                         )
                 );
 
-        when(logExtractor.extractLogs(eq(customPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(customPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(customPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(customPath)))
@@ -216,7 +218,7 @@ public class RepositoryAnalysisServiceTest {
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
 
-        verify(logExtractor).extractLogs(eq(customPath), anyString(), eq(startDate), eq(null));
+        verify(logExtractor).extractAndParseCommits(eq(customPath), eq(startDate), eq(null));
         verify(knowledgeAnalyzer).startAnalysis(anyString(), eq(customPath));
         verify(fileInfoAnalyzer).startAnalysis(anyString(), eq(customPath), eq(null));
         verify(couplingAnalyzer).startAnalysis(anyString(), eq(customPath), eq(null));
@@ -237,8 +239,8 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.completedFuture(
@@ -249,9 +251,8 @@ public class RepositoryAnalysisServiceTest {
                         )
                 );
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(endDate)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(endDate)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
@@ -287,12 +288,12 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
 
         Commit commit1 = mock(Commit.class);
         Commit commit2 = mock(Commit.class);
         Commit commit3 = mock(Commit.class);
         Stream<Commit> commits = Stream.of(commit1, commit2, commit3);
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.completedFuture(
@@ -309,9 +310,8 @@ public class RepositoryAnalysisServiceTest {
         ActivityTrendsContext activityTrendsContext = mock(ActivityTrendsContext.class);
         CouplingAnalyzerContext couplingContext = mock(CouplingAnalyzerContext.class);
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
 
@@ -347,8 +347,8 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.completedFuture(
@@ -362,9 +362,8 @@ public class RepositoryAnalysisServiceTest {
         KnowledgeAnalyzerContext knowledgeContext = mock(KnowledgeAnalyzerContext.class);
         AuthorsAnalyzerContext authorsContext = mock(AuthorsAnalyzerContext.class);
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath))).thenReturn(knowledgeContext);
@@ -395,15 +394,14 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults =
                 CompletableFuture.failedFuture(new RuntimeException("Sonar analysis failed"));
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
@@ -439,15 +437,14 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         Stream<Commit> commits = Stream.empty();
+        CommitStream commitStream = mockCommitStream(commits);
 
         CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarResults = mock(CompletableFuture.class);
         when(sonarResults.get()).thenThrow(new InterruptedException("Interrupted"));
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath)).thenReturn(commits);
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
+                .thenReturn(commitStream);
         when(sonarService.runAnalysis(anyString(), eq(repositoryPath), anyString(), anyString()))
                 .thenReturn(sonarResults);
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath)))
@@ -484,7 +481,7 @@ public class RepositoryAnalysisServiceTest {
 
         Path repositoryPath = Path.of("/local/repo");
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new InvalidRepositoryUrlException("Invalid URL"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
@@ -507,7 +504,7 @@ public class RepositoryAnalysisServiceTest {
 
         Path repositoryPath = Path.of("/local/repo");
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RepositoryCloneException("Clone failed"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
@@ -530,7 +527,7 @@ public class RepositoryAnalysisServiceTest {
 
         Path repositoryPath = Path.of("/local/repo");
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RepositoryUpdateException("Update failed"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
@@ -554,7 +551,7 @@ public class RepositoryAnalysisServiceTest {
         Path repositoryPath = Path.of("/local/repo");
 
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new LogProcessingException("Log processing failed"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
@@ -576,12 +573,9 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
 
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Parsing failed"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
@@ -604,40 +598,12 @@ public class RepositoryAnalysisServiceTest {
 
         Path repositoryPath = Path.of("/local/repo");
 
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
 
         verify(ssePublisher).sendError(emitter, "Unexpected error");
-        verify(emitter).complete();
-    }
-
-    @Test
-    void deletesLogFileAfterExceptionOccurs() {
-        RepositoryInfo repositoryInfo = mock(RepositoryInfo.class);
-        when(repositoryInfo.getRemoteUrl()).thenReturn("https://example.com/repo.git");
-        when(repositoryInfo.getLocalPath()).thenReturn("/local/repo");
-        when(repositoryInfo.getName()).thenReturn("repo-name");
-        when(repositoryInfo.getOwner()).thenReturn("repo-owner");
-        when(repositoryInfo.getPlatform()).thenReturn("GitHub");
-
-        LocalDate startDate = LocalDate.of(2023, 1, 1);
-        SseEmitter emitter = mock(SseEmitter.class);
-
-        Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
-
-        when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath))
-                .thenThrow(new RuntimeException("Parsing failed"));
-
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
-
-        verify(logExtractor).deleteLogFile(logFilePath);
-        verify(ssePublisher).sendError(emitter, "Parsing failed");
         verify(emitter).complete();
     }
 
@@ -658,7 +624,7 @@ public class RepositoryAnalysisServiceTest {
         analysisInfo.setId("test-id");
 
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new LogProcessingException("Log extraction failed"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
@@ -687,14 +653,11 @@ public class RepositoryAnalysisServiceTest {
         SseEmitter emitter = mock(SseEmitter.class);
 
         Path repositoryPath = Path.of("/local/repo");
-        Path logFilePath = Path.of("/logs/logfile");
         AnalysisInfo analysisInfo = new AnalysisInfo();
         analysisInfo.setId("test-id");
 
         when(analysisInfoRepository.save(any(AnalysisInfo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(logExtractor.extractLogs(eq(repositoryPath), anyString(), eq(startDate), eq(null)))
-                .thenReturn(logFilePath);
-        when(logParser.parseLogs(logFilePath))
+        when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
         repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
