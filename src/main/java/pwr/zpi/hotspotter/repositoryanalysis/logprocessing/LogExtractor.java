@@ -27,11 +27,10 @@ public class LogExtractor {
     private final LogParser logParser;
 
     public CommitStream extractAndParseCommits(Path repositoryPath, LocalDate startDate, LocalDate endDate) {
-        String startDateStr = getDateString(startDate);
-        String endDatePlusOneDayStr = getDatePlusOneDayString(endDate);
+        LocalDate endDatePlusOneDay = endDate != null ? endDate.plusDays(1) : null;
 
         try {
-            ProcessBuilder pb = createStreamingProcessBuilder(repositoryPath, startDateStr, endDatePlusOneDayStr);
+            ProcessBuilder pb = createStreamingProcessBuilder(repositoryPath, startDate, endDatePlusOneDay);
             Process process = pb.start();
 
             InputStream inputStream = process.getInputStream();
@@ -46,7 +45,7 @@ public class LogExtractor {
         }
     }
 
-    private ProcessBuilder createStreamingProcessBuilder(Path repositoryPath, String sinceDateStr, String untilDateStr) {
+    private ProcessBuilder createStreamingProcessBuilder(Path repositoryPath, LocalDate sinceDate, LocalDate untilDateStr) {
         ProcessBuilder pb = new ProcessBuilder();
         pb.directory(repositoryPath.toFile());
 
@@ -56,8 +55,8 @@ public class LogExtractor {
                     "--date=short",
                     "--numstat",
                     "--reverse",
-                    sinceDateStr != null ? "--since=" + sinceDateStr : null,
-                    untilDateStr != null ? "--until=" + untilDateStr : null
+                    sinceDate != null ? "--since=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) : null,
+                    untilDateStr != null ? "--until=" + untilDateStr.format(DateTimeFormatter.ISO_LOCAL_DATE) : null
                 ).filter(Objects::nonNull)
                 .toList();
 
@@ -86,14 +85,6 @@ public class LogExtractor {
             Thread.currentThread().interrupt();
             throw new LogProcessingException("Interrupted while waiting for git log process");
         }
-    }
-
-    private String getDateString(LocalDate date) {
-        return (date != null) ? date.format(DateTimeFormatter.ISO_LOCAL_DATE) : null;
-    }
-
-    private String getDatePlusOneDayString(LocalDate date) {
-        return (date != null) ? date.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE) : null;
     }
 
 }
