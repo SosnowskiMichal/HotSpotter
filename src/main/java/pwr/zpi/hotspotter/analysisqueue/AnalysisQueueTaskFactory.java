@@ -40,7 +40,7 @@ public class AnalysisQueueTaskFactory {
             if (repositoryInfo != null) {
                 repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter);
             } else {
-                log.error("RepositoryInfo not found in cache for repository: {}", repositoryUrl);
+                log.error("Repository info not found in cache for repository: {}", repositoryUrl);
                 throw new AnalysisException("Repository information not available");
             }
         };
@@ -54,12 +54,12 @@ public class AnalysisQueueTaskFactory {
         AnalysisInfo analysisInfo = analysisInfoRepository.findById(analysisId)
                 .orElseThrow(() -> {
                     log.error("Analysis not found with ID: {}", analysisId);
-                    return new AnalysisException("Analysis with ID '" + analysisId + "' does not exist.");
+                    return new IllegalArgumentException("Analysis with ID '" + analysisId + "' does not exist.");
                 });
 
         if (analysisInfo.getStatus() != AnalysisInfo.AnalysisStatus.COMPLETED) {
             log.error("Analysis '{}' is not completed. Current status: {}", analysisId, analysisInfo.getStatus());
-            throw new AnalysisException("Analysis with ID '" + analysisId + "' is not completed.");
+            throw new IllegalStateException("Analysis with ID '" + analysisId + "' is not completed.");
         }
 
         LocalDate endDate = analysisInfo.getEndDate();
@@ -69,7 +69,7 @@ public class AnalysisQueueTaskFactory {
             if (repositoryInfo != null) {
                 fileAnalysisService.runFileAnalysis(repositoryInfo, analysisInfo, filePath, emitter);
             } else {
-                log.error("RepositoryInfo not found in cache for analysisId: {}", analysisId);
+                log.error("Repository info not found in cache for analysis ID: {}", analysisId);
                 throw new AnalysisException("Repository information not available");
             }
         };

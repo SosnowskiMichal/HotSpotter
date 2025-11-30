@@ -17,6 +17,8 @@ public interface FileInfoRepository extends MongoRepository<FileInfo, String> {
 
     Optional<FileInfo> findByAnalysisIdAndFilePath(String analysisId, String filePath);
 
+    boolean existsByAnalysisIdAndFilePath(String analysisId, String filePath);
+
     int countAllByAnalysisId(String analysisId);
 
     void deleteAllByAnalysisId(String analysisId);
