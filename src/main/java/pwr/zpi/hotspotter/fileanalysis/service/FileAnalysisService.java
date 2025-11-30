@@ -13,7 +13,6 @@ import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
 import pwr.zpi.hotspotter.fileanalysis.versionextraction.FileVersionExtractor;
-import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 
@@ -30,7 +29,6 @@ public class FileAnalysisService {
     private final FileAnalysisConfig fileAnalysisConfig;
     private final FileLogExtractor fileLogExtractor;
     private final FileVersionExtractor fileVersionExtractor;
-    private final FileInfoRepository fileInfoRepository;
 
     public void runFileAnalysis(
             RepositoryInfo repositoryInfo,
@@ -44,7 +42,7 @@ public class FileAnalysisService {
             // TODO: Custom exception handling
 
         } catch (IllegalArgumentException e) {
-            log.warn("File {} not found in analysis {}", filePath, analysisInfo.getId());
+            log.warn("Invalid argument in file analysis: {}", e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (LogProcessingException e) {
@@ -71,9 +69,6 @@ public class FileAnalysisService {
             SseEmitter emitter
     ) {
         log.info("Starting analysis for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
-
-        checkIfFileExistsInAnalysis(analysisInfo.getId(), filePath);
-
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
 
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
@@ -94,9 +89,9 @@ public class FileAnalysisService {
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
-            // TODO: Calculate complexity for each file version and collect results
-
             // TODO: Run cloc analysis on each file version and collect results
+
+            // TODO: Calculate complexity for each file version and collect results
 
             // TODO: Collect information about methods and changes
 
@@ -113,14 +108,6 @@ public class FileAnalysisService {
             } catch (IOException e) {
                 log.warn("Could not delete directory {}", outputPath.toFile(), e);
             }
-        }
-    }
-
-    private void checkIfFileExistsInAnalysis(String analysisId, String filePath) {
-        boolean fileExistsInAnalysis = fileInfoRepository.existsByAnalysisIdAndFilePath(analysisId, filePath);
-        if (!fileExistsInAnalysis) {
-            log.warn("File {} does not exist in analysis {}", filePath, analysisId);
-            throw new IllegalArgumentException("File '" + filePath + "' does not exist in analysis.");
         }
     }
 

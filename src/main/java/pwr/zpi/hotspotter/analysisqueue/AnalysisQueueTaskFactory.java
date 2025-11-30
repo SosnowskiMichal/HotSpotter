@@ -9,6 +9,7 @@ import pwr.zpi.hotspotter.fileanalysis.service.FileAnalysisService;
 import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
+import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 
@@ -23,6 +24,7 @@ public class AnalysisQueueTaskFactory {
     private final RepositoryAnalysisService repositoryAnalysisService;
     private final FileAnalysisService fileAnalysisService;
     private final AnalysisInfoRepository analysisInfoRepository;
+    private final FileInfoRepository fileInfoRepository;
 
     @Setter
     private ConcurrentHashMap<String, RepositoryInfo> repositoryInfoCache;
@@ -60,6 +62,12 @@ public class AnalysisQueueTaskFactory {
         if (analysisInfo.getStatus() != AnalysisInfo.AnalysisStatus.COMPLETED) {
             log.error("Analysis '{}' is not completed. Current status: {}", analysisId, analysisInfo.getStatus());
             throw new IllegalStateException("Analysis with ID '" + analysisId + "' is not completed.");
+        }
+
+        boolean fileExistsInAnalysis = fileInfoRepository.existsByAnalysisIdAndFilePath(analysisId, filePath);
+        if (!fileExistsInAnalysis) {
+            log.warn("File '{}' does not exist in analysis '{}'", filePath, analysisId);
+            throw new IllegalArgumentException("File '" + filePath + "' does not exist in analysis.");
         }
 
         LocalDate endDate = analysisInfo.getEndDate();
