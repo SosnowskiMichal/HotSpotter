@@ -71,7 +71,7 @@ public class RepositoryAnalysisService {
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (LogProcessingException e) {
-            log.warn("Log processing failed for repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
+            log.error("Log processing failed for repository {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
             ssePublisher.sendError(emitter, e.getMessage());
 
         } catch (AnalysisException e) {
@@ -90,6 +90,8 @@ public class RepositoryAnalysisService {
     private void executeRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
         log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
 
+        ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
+
         LocalDateTime analysisStartedAt = LocalDateTime.now();
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
@@ -97,13 +99,11 @@ public class RepositoryAnalysisService {
         String analysisId = analysisInfo.getId();
         analysisInfoRepository.save(analysisInfo);
 
-        try {
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
+        ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
+        try {
             CompletableFuture<SonarResultDownloader.SonarAnalysisResults> sonarAnalysisFuture =
                     sonarService.runAnalysis(analysisId, repositoryPath, analysisId, repositoryInfo.getName());
-
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
