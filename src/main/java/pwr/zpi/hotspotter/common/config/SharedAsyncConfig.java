@@ -32,6 +32,11 @@ public class SharedAsyncConfig {
         return createIOBoundExecutor("SonarAnalysis-");
     }
 
+    @Bean(name = "fileComplexityExecutor")
+    public Executor fileComplexityExecutor() {
+        return createCPUBoundExecutor("FileComplexity-");
+    }
+
     private Executor createIOBoundExecutor(String threadNamePrefix) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(Runtime.getRuntime().availableProcessors() * 2);
