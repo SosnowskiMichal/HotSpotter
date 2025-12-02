@@ -3,12 +3,15 @@ package pwr.zpi.hotspotter.fileanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
+import pwr.zpi.hotspotter.fileanalysis.complexity.service.FileComplexityService;
 import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
@@ -19,6 +22,8 @@ import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -29,6 +34,7 @@ public class FileAnalysisService {
     private final FileAnalysisConfig fileAnalysisConfig;
     private final FileLogExtractor fileLogExtractor;
     private final FileVersionExtractor fileVersionExtractor;
+    private final FileComplexityService fileComplexityService;
 
     public void runFileAnalysis(
             RepositoryInfo repositoryInfo,
@@ -92,12 +98,16 @@ public class FileAnalysisService {
             // TODO: Run cloc analysis on each file version and collect results
 
             // TODO: Calculate complexity for each file version and collect results
+            String extension = FilenameUtils.getExtension(filePath);
+            CompletableFuture<Map<String, FileComplexityReport>> complexityFuture =
+                    fileComplexityService.analyze(outputPath, extension);
 
             // TODO: Collect information about methods and changes
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
             // TODO: Save collected results to database
+            Map<String, FileComplexityReport> complexityReports = complexityFuture.join();
 
             log.info("Analysis completed for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
             ssePublisher.sendSuccess(emitter, analysisInfo.getId());
