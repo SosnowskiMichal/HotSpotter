@@ -1,12 +1,14 @@
 package pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo;
 
 import lombok.Getter;
+import pwr.zpi.hotspotter.common.cloc.model.FileLinesData;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Getter
 public class FileInfoAnalyzerContext {
@@ -17,14 +19,19 @@ public class FileInfoAnalyzerContext {
     private final String analysisId;
     private final Path repositoryPath;
     private final LocalDate referenceDate;
-    private final Process clocProcess;
+    private final CompletableFuture<Map<String, FileLinesData>> clocFuture;
     private final Map<String, FileInfo> fileInfos;
 
-    public FileInfoAnalyzerContext(String analysisId, Path repositoryPath, LocalDate referenceDate, Process clocProcess) {
+    public FileInfoAnalyzerContext(
+            String analysisId,
+            Path repositoryPath,
+            LocalDate referenceDate,
+            CompletableFuture<Map<String, FileLinesData>> clocFuture
+    ) {
         this.analysisId = analysisId;
         this.repositoryPath = repositoryPath;
         this.referenceDate = referenceDate != null ? referenceDate : LocalDate.now();
-        this.clocProcess = clocProcess;
+        this.clocFuture = clocFuture;
         this.fileInfos = new HashMap<>();
     }
 

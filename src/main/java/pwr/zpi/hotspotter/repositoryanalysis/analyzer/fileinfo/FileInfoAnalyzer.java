@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.common.cloc.ClocService;
+import pwr.zpi.hotspotter.common.cloc.model.FileLinesData;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
@@ -13,14 +15,14 @@ import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositoryanalysis.util.RepositoryFileUrlBuilder;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Component
@@ -29,11 +31,12 @@ public class FileInfoAnalyzer {
 
     private final FileInfoRepository fileInfoRepository;
     private final AnalysisFileFilter analysisFileFilter;
+    private final ClocService clocService;
 
     public FileInfoAnalyzerContext startAnalysis(String analysisId, Path repositoryPath, LocalDate referenceDate) {
         log.debug("Starting file info analysis for ID: {}", analysisId);
-        Process clocProcess = startClocProcess(repositoryPath);
-        return new FileInfoAnalyzerContext(analysisId, repositoryPath, referenceDate, clocProcess);
+        CompletableFuture<Map<String, FileLinesData>> clocFuture = clocService.analyzeDirectory(repositoryPath);
+        return new FileInfoAnalyzerContext(analysisId, repositoryPath, referenceDate, clocFuture);
     }
 
     public void processCommit(Commit commit, FileInfoAnalyzerContext context) {
@@ -59,19 +62,32 @@ public class FileInfoAnalyzer {
         log.debug("Finishing file info analysis for ID: {}", context.getAnalysisId());
 
         Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(), analysisFileFilter);
-        Map<String, FileLinesData> fileLinesData = getFileLinesDataFromProcess(context.getClocProcess());
+
+        // TODO: Verify
+        Map<String, FileLinesData> fileLinesData;
+        try {
+            fileLinesData = context.getClocFuture().get(120, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            log.warn("Cloc analysis timed out for analysis {}", context.getAnalysisId());
+            fileLinesData = new HashMap<>();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Error retrieving cloc results for analysis {}: {}", context.getAnalysisId(), e.getMessage(), e);
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            fileLinesData = new HashMap<>();
+        }
+
         Collection<FileInfo> fileInfos = context.getFileInfos().values();
 
         List<FileInfo> fileInfosFiltered = fileInfos.stream()
                 .filter(fileInfo -> existingFiles.contains(fileInfo.getFilePath()))
                 .toList();
 
-        fileInfosFiltered.forEach(fileInfo -> {
+        for (FileInfo fileInfo : fileInfosFiltered) {
             calculateFileSize(fileInfo, context.getRepositoryPath());
             calculateCodeAge(fileInfo, context.getReferenceDate());
             addLinesData(fileInfo, fileLinesData);
             addFileUrl(fileInfo, analysisInfo);
-        });
+        }
 
         try {
             AnalysisUtils.saveDataInBatches(fileInfoRepository, fileInfosFiltered);
@@ -79,73 +95,6 @@ public class FileInfoAnalyzer {
         } catch (Exception e) {
             log.error("Error saving file info data for analysis ID: {}: {}", context.getAnalysisId(), e.getMessage(), e);
         }
-    }
-
-    private Process startClocProcess(Path repositoryPath) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(
-                    "bash", "-c",
-                    "cloc --by-file --unix --csv --quiet --skip-uniqueness --timeout 60 ."
-            );
-            pb.directory(repositoryPath.toFile());
-            pb.redirectErrorStream(true);
-
-            return pb.start();
-        } catch (IOException e) {
-            log.error("Error starting cloc process for {}: {}", repositoryPath, e.getMessage(), e);
-            return null;
-        }
-    }
-
-    private Map<String, FileLinesData> getFileLinesDataFromProcess(Process process) {
-        Map<String, FileLinesData> fileLinesData = new HashMap<>();
-        if (process == null) return fileLinesData;
-
-        try {
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)
-            );
-
-            String line;
-            boolean isFirstLine = true;
-
-            while ((line = reader.readLine()) != null) {
-                if (isFirstLine) {
-                    isFirstLine = false;
-                    continue;
-                }
-                if (line.startsWith("SUM,")) {
-                    while (reader.readLine() != null) { }
-                    break;
-                }
-
-                String[] parts = line.split(",", 5);
-                if (parts.length >= 5) {
-                    try {
-                        String language = parts[0].trim();
-                        String filePath = parts[1].trim().replace("./", "");
-                        int blank = Integer.parseInt(parts[2].trim());
-                        int comment = Integer.parseInt(parts[3].trim());
-                        int code = Integer.parseInt(parts[4].trim());
-
-                        FileLinesData data = new FileLinesData(language, code, comment, blank);
-                        fileLinesData.put(filePath, data);
-
-                    } catch (NumberFormatException _) { }
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                log.warn("cloc process exited with code {}", exitCode);
-            }
-
-        } catch (IOException | InterruptedException e) {
-            log.error("Error reading cloc process output: {}", e.getMessage(), e);
-            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-        }
-
-        return fileLinesData;
     }
 
     private void calculateFileSize(FileInfo fileInfo, Path repositoryPath) {
@@ -184,12 +133,6 @@ public class FileInfoAnalyzer {
             analysisInfo.getLastCommitHash()
         );
         fileInfo.setFileUrl(fileUrl);
-    }
-
-    public record FileLinesData(String language, int code, int comment, int blank) {
-        public int total() {
-            return code + comment + blank;
-        }
     }
 
 }

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import pwr.zpi.hotspotter.common.cloc.ClocService;
+import pwr.zpi.hotspotter.common.cloc.model.FileLinesData;
 import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
@@ -12,13 +14,19 @@ import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
+import pwr.zpi.hotspotter.fileanalysis.model.FileAnalysisResult;
+import pwr.zpi.hotspotter.fileanalysis.repository.FileAnalysisResultRepository;
 import pwr.zpi.hotspotter.fileanalysis.versionextraction.FileVersionExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @Service
@@ -29,6 +37,8 @@ public class FileAnalysisService {
     private final FileAnalysisConfig fileAnalysisConfig;
     private final FileLogExtractor fileLogExtractor;
     private final FileVersionExtractor fileVersionExtractor;
+    private final ClocService clocService;
+    private final FileAnalysisResultRepository fileAnalysisResultRepository;
 
     public void runFileAnalysis(
             RepositoryInfo repositoryInfo,
@@ -71,6 +81,7 @@ public class FileAnalysisService {
         log.info("Starting analysis for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
 
+        FileAnalysisResult fileAnalysisResult = createFileAnalysisResult(analysisInfo.getId(), filePath);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
         Path outputPath = getOutputPath(analysisInfo.getId(), filePath);
 
@@ -89,15 +100,23 @@ public class FileAnalysisService {
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
-            // TODO: Run cloc analysis on each file version and collect results
+            CompletableFuture<Map<String, FileLinesData>> clocFuture = clocService.analyzeDirectory(outputPath);
 
-            // TODO: Calculate complexity for each file version and collect results
+            // TODO: Run complexity analysis for each file version
 
             // TODO: Collect information about methods and changes
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
+            Map<String, FileLinesData> clocResults = collectClocResults(clocFuture);
+
+            // TODO: Collect complexity analysis results
+
+            // TODO: Combine results into FileVersionStatistics
+
             // TODO: Save collected results to database
+            fileAnalysisResult.markAsCompleted();
+            fileAnalysisResultRepository.save(fileAnalysisResult);
 
             log.info("Analysis completed for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
             ssePublisher.sendSuccess(emitter, analysisInfo.getId());
@@ -111,9 +130,26 @@ public class FileAnalysisService {
         }
     }
 
+    private FileAnalysisResult createFileAnalysisResult(String analysisId, String filePath) {
+        return FileAnalysisResult.builder()
+                .analysisId(analysisId)
+                .filePath(filePath)
+                .build();
+    }
+
     private Path getOutputPath(String analysisId, String filePath) {
         String filePathHash = Integer.toHexString(filePath.hashCode());
         return Path.of(fileAnalysisConfig.getBaseDirectory(), "x-ray", analysisId, filePathHash);
+    }
+
+    private Map<String, FileLinesData> collectClocResults(CompletableFuture<Map<String, FileLinesData>> clocFuture) {
+        try {
+            return clocFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("Error retrieving cloc results: {}", e.getMessage(), e);
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            return new HashMap<>();
+        }
     }
 
 }
