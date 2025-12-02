@@ -10,7 +10,8 @@ import java.util.List;
 public class LizardRunner {
     public List<String> runLizard(Path path) throws IOException {
         List<String> outputLines = new ArrayList<>();
-        ProcessBuilder pb = new ProcessBuilder("lizard", path.toAbsolutePath().toString(), "--csv");
+        ProcessBuilder pb = new ProcessBuilder("lizard", ".", "--csv");
+        pb.directory(path.toFile());
         Process process = pb.start();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
