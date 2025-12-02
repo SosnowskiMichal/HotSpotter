@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.fileanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.common.cloc.ClocService;
@@ -11,6 +12,8 @@ import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
+import pwr.zpi.hotspotter.fileanalysis.complexity.service.FileComplexityService;
 import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
@@ -37,6 +40,7 @@ public class FileAnalysisService {
     private final FileAnalysisConfig fileAnalysisConfig;
     private final FileLogExtractor fileLogExtractor;
     private final FileVersionExtractor fileVersionExtractor;
+    private final FileComplexityService fileComplexityService;
     private final ClocService clocService;
     private final FileAnalysisResultRepository fileAnalysisResultRepository;
 
@@ -84,6 +88,7 @@ public class FileAnalysisService {
         FileAnalysisResult fileAnalysisResult = createFileAnalysisResult(analysisInfo.getId(), filePath);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
         Path outputPath = getOutputPath(analysisInfo.getId(), filePath);
+        String fileExtension = FilenameUtils.getExtension(filePath);
 
         List<FileCommit> fileCommits = fileLogExtractor.extractAndParseFileCommits(
                 repositoryPath,
@@ -102,7 +107,9 @@ public class FileAnalysisService {
 
             CompletableFuture<Map<String, FileLinesData>> clocFuture = clocService.analyzeDirectory(outputPath);
 
-            // TODO: Run complexity analysis for each file version
+            // TODO: Calculate complexity for each file version and collect results
+            CompletableFuture<Map<String, FileComplexityReport>> complexityFuture =
+                    fileComplexityService.analyze(outputPath, fileExtension);
 
             // TODO: Collect information about methods and changes
 
@@ -111,6 +118,7 @@ public class FileAnalysisService {
             Map<String, FileLinesData> clocResults = collectClocResults(clocFuture);
 
             // TODO: Collect complexity analysis results
+            Map<String, FileComplexityReport> complexityReports = complexityFuture.join();
 
             // TODO: Combine results into FileVersionStatistics
 
