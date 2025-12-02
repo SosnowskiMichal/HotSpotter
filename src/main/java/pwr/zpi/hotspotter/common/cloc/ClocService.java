@@ -20,6 +20,8 @@ public class ClocService {
 
     @Async("repositoryAnalysisExecutor")
     public CompletableFuture<Map<String, FileLinesData>> analyzeDirectory(Path directoryPath) {
+        log.info("Starting cloc analysis for directory: {}", directoryPath);
+
         if (!validateDirectory(directoryPath)) {
             return CompletableFuture.completedFuture(new HashMap<>());
         }
@@ -33,7 +35,6 @@ public class ClocService {
             pb.redirectErrorStream(true);
 
             Process process = pb.start();
-            log.debug("Started cloc directory analysis for: {}", directoryPath);
 
             Map<String, FileLinesData> fileLinesData = new HashMap<>();
 

@@ -105,20 +105,16 @@ public class FileAnalysisService {
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
-            CompletableFuture<Map<String, FileLinesData>> clocFuture = clocService.analyzeDirectory(outputPath);
-
-            // TODO: Calculate complexity for each file version and collect results
             CompletableFuture<Map<String, FileComplexityReport>> complexityFuture =
                     fileComplexityService.analyze(outputPath, fileExtension);
+            CompletableFuture<Map<String, FileLinesData>> clocFuture = clocService.analyzeDirectory(outputPath);
 
             // TODO: Collect information about methods and changes
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
-            Map<String, FileLinesData> clocResults = collectClocResults(clocFuture);
-
-            // TODO: Collect complexity analysis results
-            Map<String, FileComplexityReport> complexityReports = complexityFuture.join();
+            Map<String, FileLinesData> clocResults = collectFutureResults(clocFuture, "cloc");
+            Map<String, FileComplexityReport> complexityReports = collectFutureResults(complexityFuture, "complexity");
 
             // TODO: Combine results into FileVersionStatistics
 
@@ -150,11 +146,11 @@ public class FileAnalysisService {
         return Path.of(fileAnalysisConfig.getBaseDirectory(), "x-ray", analysisId, filePathHash);
     }
 
-    private Map<String, FileLinesData> collectClocResults(CompletableFuture<Map<String, FileLinesData>> clocFuture) {
+    private <T> Map<String, T> collectFutureResults(CompletableFuture<Map<String, T>> future, String resultType) {
         try {
-            return clocFuture.get();
+            return future.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("Error retrieving cloc results: {}", e.getMessage(), e);
+            log.error("Error retrieving {} results: {}", resultType, e.getMessage(), e);
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             return new HashMap<>();
         }
