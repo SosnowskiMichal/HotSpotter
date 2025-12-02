@@ -12,6 +12,8 @@ import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
 import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.fileanalysis.blame.FileBlameExtractor;
+import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
 import pwr.zpi.hotspotter.fileanalysis.complexity.service.FileComplexityService;
 import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
@@ -42,6 +44,7 @@ public class FileAnalysisService {
     private final FileVersionExtractor fileVersionExtractor;
     private final FileComplexityService fileComplexityService;
     private final ClocService clocService;
+    private final FileBlameExtractor fileBlameExtractor;
     private final FileAnalysisResultRepository fileAnalysisResultRepository;
 
     public void runFileAnalysis(
@@ -83,11 +86,13 @@ public class FileAnalysisService {
             SseEmitter emitter
     ) {
         log.info("Starting analysis for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
+
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
 
         FileAnalysisResult fileAnalysisResult = createFileAnalysisResult(analysisInfo.getId(), filePath);
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
         Path outputPath = getOutputPath(analysisInfo.getId(), filePath);
+        Path currentFilePath = repositoryPath.resolve(filePath);
         String fileExtension = FilenameUtils.getExtension(filePath);
 
         List<FileCommit> fileCommits = fileLogExtractor.extractAndParseFileCommits(
@@ -109,16 +114,17 @@ public class FileAnalysisService {
                     fileComplexityService.analyze(outputPath, fileExtension);
             CompletableFuture<Map<String, FileLinesData>> clocFuture = clocService.analyzeDirectory(outputPath);
 
+            List<FileAuthorStatistics> currentAuthors = fileBlameExtractor.extractCurrentAuthors(currentFilePath);
+
             // TODO: Collect information about methods and changes
+
+            Map<String, FileLinesData> clocResults = collectFutureResults(clocFuture, "cloc");
+            Map<String, FileComplexityReport> complexityResults = collectFutureResults(complexityFuture, "complexity");
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
-            Map<String, FileLinesData> clocResults = collectFutureResults(clocFuture, "cloc");
-            Map<String, FileComplexityReport> complexityReports = collectFutureResults(complexityFuture, "complexity");
+            // TODO: Combine results
 
-            // TODO: Combine results into FileVersionStatistics
-
-            // TODO: Save collected results to database
             fileAnalysisResult.markAsCompleted();
             fileAnalysisResultRepository.save(fileAnalysisResult);
 
@@ -127,9 +133,9 @@ public class FileAnalysisService {
 
         } finally {
             try {
-                FileUtils.deleteDirectory(outputPath.toFile());
+                cleanupOutputDirectory(outputPath);
             } catch (IOException e) {
-                log.warn("Could not delete directory {}", outputPath.toFile(), e);
+                log.warn("Could not delete directory {}", outputPath, e);
             }
         }
     }
@@ -153,6 +159,18 @@ public class FileAnalysisService {
             log.error("Error retrieving {} results: {}", resultType, e.getMessage(), e);
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             return new HashMap<>();
+        }
+    }
+
+    private void cleanupOutputDirectory(Path outputPath) throws IOException {
+        FileUtils.deleteDirectory(outputPath.toFile());
+
+        Path parentPath = outputPath.getParent();
+        if (parentPath != null && parentPath.toFile().exists()) {
+            if (FileUtils.isEmptyDirectory(parentPath.toFile())) {
+                FileUtils.deleteDirectory(parentPath.toFile());
+                log.debug("Deleted empty parent directory: {}", parentPath);
+            }
         }
     }
 
