@@ -81,12 +81,13 @@ class HeuristicStrategyTest {
     }
 
     @Test
-    void analyze_ShouldHandleOperatorsAndSwitchCases(@TempDir Path tempDir) throws IOException {
+    void analyze_ShouldHandleOperatorsAndSwitchCasesAndIgnoreKeyWordsInStrings(@TempDir Path tempDir) throws IOException {
         Path file = tempDir.resolve("Complex.js");
         String content = """
                 function x() {
                    return (a && b) || c ? d : e; // &&(+1), ||(+1), ?(+1)
                 }
+                String s = "if else for while";
                 switch(x) {
                     case 1: break; // +1
                     case 2: break; // +1

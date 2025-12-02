@@ -3,6 +3,7 @@ package pwr.zpi.hotspotter.fileanalysis.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.common.exception.AnalysisException;
@@ -97,8 +98,9 @@ public class FileAnalysisService {
             // TODO: Run cloc analysis on each file version and collect results
 
             // TODO: Calculate complexity for each file version and collect results
+            String extension = FilenameUtils.getExtension(filePath);
             CompletableFuture<Map<String, FileComplexityReport>> complexityFuture =
-                    fileComplexityService.analyze(outputPath);
+                    fileComplexityService.analyze(outputPath, extension);
 
             // TODO: Collect information about methods and changes
 

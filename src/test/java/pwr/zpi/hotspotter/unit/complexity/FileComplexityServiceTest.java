@@ -35,15 +35,6 @@ class FileComplexityServiceTest {
     private FileComplexityService fileComplexityService;
 
     @Test
-    void analyze_ShouldReturnEmptyMap_WhenDirectoryIsEmpty(@TempDir Path tempDir) throws ExecutionException, InterruptedException {
-        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir);
-        Map<String, FileComplexityReport> result = future.get();
-
-        assertTrue(result.isEmpty());
-        verifyNoInteractions(lizardStrategy, heuristicStrategy);
-    }
-
-    @Test
     void analyze_ShouldUseLizard_WhenFirstFileIsSupported(@TempDir Path tempDir) throws IOException, ExecutionException, InterruptedException {
         Path file = tempDir.resolve("Service.java");
         Files.createFile(file);
@@ -52,7 +43,7 @@ class FileComplexityServiceTest {
         when(lizardStrategy.isSupported("java")).thenReturn(true);
         when(lizardStrategy.analyze(tempDir)).thenReturn(expectedMap);
 
-        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir);
+        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir, "java");
         Map<String, FileComplexityReport> result = future.get();
 
         assertEquals(expectedMap, result);
@@ -70,7 +61,7 @@ class FileComplexityServiceTest {
         when(lizardStrategy.isSupported("txt")).thenReturn(false);
         when(heuristicStrategy.analyze(tempDir)).thenReturn(expectedMap);
 
-        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir);
+        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir, "txt");
         Map<String, FileComplexityReport> result = future.get();
 
         assertEquals(expectedMap, result);
@@ -89,7 +80,7 @@ class FileComplexityServiceTest {
         when(lizardStrategy.analyze(tempDir)).thenThrow(new RuntimeException("Lizard process crashed"));
         when(heuristicStrategy.analyze(tempDir)).thenReturn(fallbackMap);
 
-        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir);
+        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir, "java");
         Map<String, FileComplexityReport> result = future.get();
 
         assertEquals(fallbackMap, result);
@@ -107,7 +98,7 @@ class FileComplexityServiceTest {
         when(lizardStrategy.isSupported("py")).thenReturn(true);
         when(lizardStrategy.analyze(tempDir)).thenReturn(expectedMap);
 
-        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir);
+        CompletableFuture<Map<String, FileComplexityReport>> future = fileComplexityService.analyze(tempDir, "py");
         Map<String, FileComplexityReport> result = future.get();
 
         assertEquals(expectedMap, result);
@@ -122,7 +113,7 @@ class FileComplexityServiceTest {
         when(lizardStrategy.isSupported("java")).thenReturn(true);
         when(lizardStrategy.analyze(tempDir)).thenReturn(Collections.emptyMap());
 
-        fileComplexityService.analyze(tempDir).get();
+        fileComplexityService.analyze(tempDir, "java").get();
 
         verify(lizardStrategy).isSupported("java");
     }

@@ -2,8 +2,8 @@ package pwr.zpi.hotspotter.fileanalysis.complexity.component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Component;
-import pwr.zpi.hotspotter.common.utils.FileUtils;
 import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
 
 import java.io.IOException;
@@ -55,7 +55,7 @@ public class LizardStrategy {
                         int startLine = (parts.length >= START_LINE_INDEX) ? parseSafeInt(parts[START_LINE_INDEX]) : 0;
                         int endLine = (parts.length >= END_LINE_INDEX) ? parseSafeInt(parts[END_LINE_INDEX]) : 0;
 
-                        String key = FileUtils.getFileNameWithoutExtension(Path.of(fullFilePath));
+                        String key = FilenameUtils.getBaseName(fullFilePath);
                         reportMap.computeIfAbsent(key, _ -> new FileComplexityReport())
                                 .addFunctionStats(functionName, ccn, params, startLine, endLine);
 
