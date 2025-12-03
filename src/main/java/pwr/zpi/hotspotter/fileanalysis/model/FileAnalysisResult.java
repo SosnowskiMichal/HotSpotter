@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
+import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
+import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -38,9 +40,17 @@ public class FileAnalysisResult {
 
     private Long analysisTimeInSeconds;
 
+    private List<FileCommit> fileCommits;
+
     private Integer totalFileVersions;
 
     List<FileVersionStatistics> fileVersionStatistics;
+
+    // TODO: Current methods statistics and metrics for each file version
+
+    private Integer numberOfCurrentAuthors;
+
+    private List<FileAuthorStatistics> currentAuthors;
 
     // TODO: Add more fields...
 

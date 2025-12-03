@@ -237,6 +237,124 @@ class FileLogParserTest {
         assertThat(commits.getFirst().email()).isEqualTo("user.name+tag@example.co.uk");
     }
 
+    @Test
+    void handlesFullRename() {
+        String log = """
+            [abc123] 2024-01-15 John Doe <john@example.com>
+            5 3 old/path/File.java => new/path/File.java
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("new/path/File.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(5);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(3);
+    }
+
+    @Test
+    void handlesPartialRenameFilename() {
+        String log = """
+            [def456] 2024-01-16 Jane Smith <jane@example.com>
+            10 2 src/main/{OldName.java => NewName.java}
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/main/NewName.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(10);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(2);
+    }
+
+    @Test
+    void handlesPartialRenameDirectory() {
+        String log = """
+            [ghi789] 2024-01-17 Dev User <dev@example.com>
+            7 4 src/{old/package => new/package}/File.java
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/new/package/File.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(7);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(4);
+    }
+
+    @Test
+    void handlesMultiplePartialRenames() {
+        String log = """
+            [jkl012] 2024-01-18 Dev User <dev@example.com>
+            3 1 {old => new}/src/{pkg1 => pkg2}/File.java
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("new/src/pkg2/File.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(3);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(1);
+    }
+
+    @Test
+    void handlesNonRenamedPathWithNumstat() {
+        String log = """
+            [mno345] 2024-01-19 Dev User <dev@example.com>
+            8 5 src/main/java/File.java
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/main/java/File.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(8);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(5);
+    }
+
+    @Test
+    void normalizesPathWithMultipleSlashes() {
+        String log = """
+            [pqr678] 2024-01-20 Dev User <dev@example.com>
+            2 1 old//path => new///path//File.java
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("new/path/File.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(2);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(1);
+    }
+
+    @Test
+    void handlesNullPathGracefully() {
+        String log = """
+            [stu901] 2024-01-21 Dev User <dev@example.com>
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isNull();
+    }
+
+    @Test
+    void handlesRealWorldPartialRename() {
+        String log = """
+            [8c8218b] 2025-11-27 Michał Sosnowski <sosnowskimichal.028@gmail.com>
+            2 2 src/main/java/pwr/zpi/hotspotter/analysisqueue/{QueuedAnalysisTask.java => AnalysisQueueTask.java}
+            """;
+
+        List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
+
+        assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path())
+                .isEqualTo("src/main/java/pwr/zpi/hotspotter/analysisqueue/AnalysisQueueTask.java");
+        assertThat(commits.getFirst().linesAdded()).isEqualTo(2);
+        assertThat(commits.getFirst().linesDeleted()).isEqualTo(2);
+    }
+
     private InputStream toInputStream(String content) {
         return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
     }

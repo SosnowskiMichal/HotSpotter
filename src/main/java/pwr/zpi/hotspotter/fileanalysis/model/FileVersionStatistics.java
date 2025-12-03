@@ -3,17 +3,19 @@ package pwr.zpi.hotspotter.fileanalysis.model;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 public class FileVersionStatistics {
 
-    private String commitHash;
+    private String hash;
 
-    private String fileVersionPath;
+    private LocalDate date;
 
-    private String fileVersionUrl;
+    private String path;
 
-    private String fileSize;
+    private String url; // TODO
 
     private Integer totalLines;
 
@@ -23,8 +25,8 @@ public class FileVersionStatistics {
 
     private Integer blankLines;
 
-    // TODO: Add complexity metrics...
+    private Integer complexity;
 
-    // TODO: Add method-level information...
+    private Integer numberOfMethods;
 
 }

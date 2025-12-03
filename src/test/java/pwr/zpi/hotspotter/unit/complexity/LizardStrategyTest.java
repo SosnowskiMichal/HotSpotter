@@ -60,7 +60,7 @@ class LizardStrategyTest {
 
         FileComplexityReport report = result.get("Service");
         assertEquals(5, report.getTotalCCN());
-        assertEquals(1, report.getFunctionsCount());
+        assertEquals(1, report.getMethodsCount());
         assertEquals(5, report.getMaxCCN());
 
         assertEquals("processData", report.getMethods().getFirst().getName());
@@ -83,7 +83,7 @@ class LizardStrategyTest {
 
         FileComplexityReport report = result.get("Service");
         assertEquals(7, report.getTotalCCN());
-        assertEquals(2, report.getFunctionsCount());
+        assertEquals(2, report.getMethodsCount());
     }
 
     @Test

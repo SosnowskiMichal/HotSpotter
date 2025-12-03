@@ -25,6 +25,12 @@ public class FileLogParser {
             "(?<author>[^<]+?)\\s<(?<email>[^>]+)>\\s*\\n" +
             "(?:(?<added>\\d+|-)\\s+(?<removed>\\d+|-)\\s+(?<path>[^\\n]+))?"
     );
+    private static final Pattern FULL_RENAME_PATTERN = Pattern.compile(
+            "^(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)$"
+    );
+    private static final Pattern PARTIAL_RENAME_PATTERN = Pattern.compile(
+            "\\{(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)}"
+    );
 
     public List<FileCommit> parseFileLogs(InputStream inputStream) {
         List<FileCommit> commits = new ArrayList<>();
@@ -43,11 +49,8 @@ public class FileLogParser {
                 String dateStr = matcher.group("date");
                 String author = matcher.group("author").trim();
                 String email = matcher.group("email");
-                String path = matcher.group("path");
-
-                if (path != null) {
-                    path = path.trim();
-                }
+                String rawPath = matcher.group("path");
+                String path = extractNewPath(rawPath);
 
                 LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
 
@@ -70,6 +73,40 @@ public class FileLogParser {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    private String extractNewPath(String rawPath) {
+        if (rawPath == null) {
+            return null;
+        }
+
+        Matcher fullMatcher = FULL_RENAME_PATTERN.matcher(rawPath);
+        if (fullMatcher.matches()) {
+            return normalizePath(fullMatcher.group("current"));
+        }
+
+        Matcher partialMatcher = PARTIAL_RENAME_PATTERN.matcher(rawPath);
+        if (!partialMatcher.find()) {
+            return normalizePath(rawPath);
+        }
+
+        StringBuilder newPath = new StringBuilder();
+        partialMatcher.reset();
+        int lastEnd = 0;
+
+        while (partialMatcher.find()) {
+            newPath.append(rawPath, lastEnd, partialMatcher.start());
+            String newPart = partialMatcher.group("current");
+            newPath.append(newPart != null ? newPart : "");
+            lastEnd = partialMatcher.end();
+        }
+        newPath.append(rawPath.substring(lastEnd));
+
+        return normalizePath(newPath.toString());
+    }
+
+    private String normalizePath(String path) {
+        return path.replaceAll("/{2,}", "/").trim();
     }
 
 }

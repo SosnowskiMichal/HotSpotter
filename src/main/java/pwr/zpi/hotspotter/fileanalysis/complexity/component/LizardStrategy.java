@@ -57,7 +57,7 @@ public class LizardStrategy {
 
                         String key = FilenameUtils.getBaseName(fullFilePath);
                         reportMap.computeIfAbsent(key, _ -> new FileComplexityReport())
-                                .addFunctionStats(functionName, ccn, params, startLine, endLine);
+                                .addMethodStats(functionName, ccn, params, startLine, endLine);
 
                     } catch (Exception e) {
                         log.warn("Parsing error for line: [{}]. Error: {}", line, e.getMessage());

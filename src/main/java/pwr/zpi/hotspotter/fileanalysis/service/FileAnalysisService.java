@@ -20,6 +20,7 @@ import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
 import pwr.zpi.hotspotter.fileanalysis.model.FileAnalysisResult;
+import pwr.zpi.hotspotter.fileanalysis.model.FileVersionStatistics;
 import pwr.zpi.hotspotter.fileanalysis.repository.FileAnalysisResultRepository;
 import pwr.zpi.hotspotter.fileanalysis.versionextraction.FileVersionExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
@@ -27,6 +28,7 @@ import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,12 +103,12 @@ public class FileAnalysisService {
                 analysisInfo.getStartDate(),
                 analysisInfo.getEndDate()
         );
-        List<String> commitHashes = fileCommits.stream()
-                .map(FileCommit::hash)
-                .toList();
+
+        fileAnalysisResult.setFileCommits(fileCommits);
+        fileAnalysisResult.setTotalFileVersions(fileCommits.size());
 
         try {
-            fileVersionExtractor.extractFileVersions(repositoryPath, filePath, commitHashes, outputPath);
+            fileVersionExtractor.extractFileVersions(repositoryPath, fileCommits, outputPath);
 
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
@@ -124,6 +126,9 @@ public class FileAnalysisService {
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
             // TODO: Combine results
+            combineClocResults(fileAnalysisResult, clocResults);
+            combineComplexityResults(fileAnalysisResult, complexityResults);
+            combineCurrentAuthorsResults(fileAnalysisResult, currentAuthors);
 
             fileAnalysisResult.markAsCompleted();
             fileAnalysisResultRepository.save(fileAnalysisResult);
@@ -160,6 +165,60 @@ public class FileAnalysisService {
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             return new HashMap<>();
         }
+    }
+
+    private void combineClocResults(
+            FileAnalysisResult fileAnalysisResult,
+            Map<String, FileLinesData> clocResults
+    ) {
+        String fileExtension = FilenameUtils.getExtension(fileAnalysisResult.getFilePath());
+        List<FileVersionStatistics> statistics = new ArrayList<>();
+
+        for (FileCommit commit : fileAnalysisResult.getFileCommits()) {
+            String fileName = commit.hash() + "." + fileExtension;
+            FileLinesData fileLinesData = clocResults.get(fileName);
+
+            FileVersionStatistics.FileVersionStatisticsBuilder builder = FileVersionStatistics.builder()
+                    .hash(commit.hash())
+                    .date(commit.date())
+                    .path(commit.path());
+
+            if (fileLinesData != null) {
+                builder.totalLines(fileLinesData.total())
+                        .codeLines(fileLinesData.code())
+                        .commentLines(fileLinesData.comment())
+                        .blankLines(fileLinesData.blank());
+            }
+
+            statistics.add(builder.build());
+        }
+
+        fileAnalysisResult.setFileVersionStatistics(statistics);
+    }
+
+    private void combineComplexityResults(
+            FileAnalysisResult fileAnalysisResult,
+            Map<String, FileComplexityReport> complexityResults
+    ) {
+        List<FileVersionStatistics> statistics = fileAnalysisResult.getFileVersionStatistics();
+        if (statistics == null || statistics.isEmpty()) return;
+
+        for (FileVersionStatistics stats : statistics) {
+            FileComplexityReport report = complexityResults.get(stats.getHash());
+
+            if (report != null) {
+                stats.setComplexity(report.getTotalCCN());
+                stats.setNumberOfMethods(report.getMethodsCount());
+            }
+        }
+    }
+
+    private void combineCurrentAuthorsResults(
+            FileAnalysisResult fileAnalysisResult,
+            List<FileAuthorStatistics> currentAuthors
+    ) {
+        fileAnalysisResult.setCurrentAuthors(currentAuthors);
+        fileAnalysisResult.setNumberOfCurrentAuthors(currentAuthors.size());
     }
 
     private void cleanupOutputDirectory(Path outputPath) throws IOException {
