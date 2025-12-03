@@ -12,8 +12,8 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
-import pwr.zpi.hotspotter.repositoryanalysis.util.RepositoryFileUrlBuilder;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
+import pwr.zpi.hotspotter.common.util.RepositoryFileUrlBuilder;
 
 import java.nio.file.Path;
 import java.time.LocalDate;

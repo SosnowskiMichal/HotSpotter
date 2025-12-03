@@ -28,7 +28,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
 import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;

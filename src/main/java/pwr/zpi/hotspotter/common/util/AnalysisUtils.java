@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.repositoryanalysis.util;
+package pwr.zpi.hotspotter.common.util;
 
 import lombok.experimental.UtilityClass;
 import org.eclipse.jgit.api.Git;

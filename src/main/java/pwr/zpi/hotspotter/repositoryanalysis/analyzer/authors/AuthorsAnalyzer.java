@@ -10,7 +10,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatis
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
