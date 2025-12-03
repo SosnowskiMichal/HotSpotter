@@ -25,10 +25,10 @@ class FileLogParserTest {
     void parsesFileCommitsFromInputStream() {
         String log = """
             [abc123] 2024-01-15 John Doe <john@example.com>
-             1 file changed, 5 insertions(+), 3 deletions(-)
+            5 3 src/main/java/File1.java
 
             [def456] 2024-01-16 Jane Smith <jane@example.com>
-             1 file changed, 10 insertions(+), 2 deletions(-)
+            10 2 src/main/java/File2.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
@@ -38,11 +38,13 @@ class FileLogParserTest {
         assertThat(commits.getFirst().date()).isEqualTo(LocalDate.of(2024, 1, 15));
         assertThat(commits.getFirst().author()).isEqualTo("John Doe");
         assertThat(commits.getFirst().email()).isEqualTo("john@example.com");
+        assertThat(commits.getFirst().path()).isEqualTo("src/main/java/File1.java");
         assertThat(commits.getFirst().linesAdded()).isEqualTo(5);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(3);
 
         assertThat(commits.get(1).hash()).isEqualTo("def456");
         assertThat(commits.get(1).date()).isEqualTo(LocalDate.of(2024, 1, 16));
+        assertThat(commits.get(1).path()).isEqualTo("src/main/java/File2.java");
         assertThat(commits.get(1).linesAdded()).isEqualTo(10);
         assertThat(commits.get(1).linesDeleted()).isEqualTo(2);
     }
@@ -51,13 +53,14 @@ class FileLogParserTest {
     void handlesBinaryFileCommit() {
         String log = """
             [bin123] 2024-01-15 Dev <dev@test.com>
-             1 file changed
+            - - binary-file.png
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
 
         assertThat(commits).hasSize(1);
         assertThat(commits.getFirst().hash()).isEqualTo("bin123");
+        assertThat(commits.getFirst().path()).isEqualTo("binary-file.png");
         assertThat(commits.getFirst().linesAdded()).isEqualTo(0);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(0);
     }
@@ -74,23 +77,25 @@ class FileLogParserTest {
             INVALID LINE
 
             [valid] 2024-01-15 Dev <dev@test.com>
-             1 file changed, 1 insertion(+)
+            1 0 src/test/File.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
         assertThat(commits).hasSize(1);
         assertThat(commits.getFirst().hash()).isEqualTo("valid");
+        assertThat(commits.getFirst().path()).isEqualTo("src/test/File.java");
     }
 
     @Test
     void handlesSingularInsertionDeletion() {
         String log = """
             [single] 2024-01-15 Dev <dev@test.com>
-             1 file changed, 1 insertion(+), 1 deletion(-)
+            1 1 src/File.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
         assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/File.java");
         assertThat(commits.getFirst().linesAdded()).isEqualTo(1);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(1);
     }
@@ -99,11 +104,12 @@ class FileLogParserTest {
     void handlesOnlyInsertions() {
         String log = """
             [new] 2024-01-15 Dev <dev@test.com>
-             1 file changed, 100 insertions(+)
+            100 0 src/NewFile.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
         assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/NewFile.java");
         assertThat(commits.getFirst().linesAdded()).isEqualTo(100);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(0);
     }
@@ -112,11 +118,12 @@ class FileLogParserTest {
     void handlesOnlyDeletions() {
         String log = """
             [del] 2024-01-15 Dev <dev@test.com>
-             1 file changed, 50 deletions(-)
+            0 50 src/DeletedFile.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
         assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/DeletedFile.java");
         assertThat(commits.getFirst().linesAdded()).isEqualTo(0);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(50);
     }
@@ -125,7 +132,7 @@ class FileLogParserTest {
     void parsesLocalDateCorrectly() {
         String log = """
             [date] 2024-12-31 Dev <dev@test.com>
-             1 file changed
+            1 0 src/File.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
@@ -137,7 +144,7 @@ class FileLogParserTest {
     void trimsAuthorName() {
         String log = """
             [trim] 2024-01-15 Author With Spaces   <author@test.com>
-             1 file changed, 5 insertions(+)
+            5 0 src/File.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
@@ -149,16 +156,16 @@ class FileLogParserTest {
     void handlesMultipleCommitsWithVariedStats() {
         String log = """
             [commit1] 2024-01-01 Alice <alice@test.com>
-             1 file changed, 10 insertions(+)
+            10 0 src/File1.java
 
             [commit2] 2024-01-02 Bob <bob@test.com>
-             1 file changed, 5 deletions(-)
+            0 5 src/File2.java
 
             [commit3] 2024-01-03 Charlie <charlie@test.com>
-             1 file changed
+            - - binary-file.bin
 
             [commit4] 2024-01-04 Diana <diana@test.com>
-             1 file changed, 3 insertions(+), 7 deletions(-)
+            3 7 src/File4.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
@@ -167,30 +174,34 @@ class FileLogParserTest {
         // Commit 1: only insertions
         assertThat(commits.getFirst().linesAdded()).isEqualTo(10);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(0);
+        assertThat(commits.getFirst().path()).isEqualTo("src/File1.java");
 
         // Commit 2: only deletions
         assertThat(commits.get(1).linesAdded()).isEqualTo(0);
         assertThat(commits.get(1).linesDeleted()).isEqualTo(5);
+        assertThat(commits.get(1).path()).isEqualTo("src/File2.java");
 
         // Commit 3: binary/no stats
         assertThat(commits.get(2).linesAdded()).isEqualTo(0);
         assertThat(commits.get(2).linesDeleted()).isEqualTo(0);
+        assertThat(commits.get(2).path()).isEqualTo("binary-file.bin");
 
         // Commit 4: both insertions and deletions
         assertThat(commits.get(3).linesAdded()).isEqualTo(3);
         assertThat(commits.get(3).linesDeleted()).isEqualTo(7);
+        assertThat(commits.get(3).path()).isEqualTo("src/File4.java");
     }
 
     @Test
     void handlesCommitsWithBlankLinesBetween() {
         String log = """
             [hash1] 2024-01-01 Author <a@test.com>
-             1 file changed, 1 insertion(+)
+            1 0 src/File1.java
 
 
 
             [hash2] 2024-01-02 Author <a@test.com>
-             1 file changed, 2 insertions(+)
+            2 0 src/File2.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
@@ -216,11 +227,12 @@ class FileLogParserTest {
     void parsesPluralInsertionsAndDeletions() {
         String log = """
             [plural] 2024-01-15 Dev <dev@test.com>
-             1 file changed, 42 insertions(+), 13 deletions(-)
+            42 13 src/LargeFile.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
         assertThat(commits).hasSize(1);
+        assertThat(commits.getFirst().path()).isEqualTo("src/LargeFile.java");
         assertThat(commits.getFirst().linesAdded()).isEqualTo(42);
         assertThat(commits.getFirst().linesDeleted()).isEqualTo(13);
     }
@@ -229,7 +241,7 @@ class FileLogParserTest {
     void handlesEmailWithSpecialCharacters() {
         String log = """
             [email] 2024-01-15 User Name <user.name+tag@example.co.uk>
-             1 file changed, 1 insertion(+)
+            1 0 src/File.java
             """;
 
         List<FileCommit> commits = parser.parseFileLogs(toInputStream(log));
