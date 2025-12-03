@@ -23,7 +23,7 @@ public class FileLogParser {
             "\\[(?<hash>[^]]+)]\\s" +
             "(?<date>\\d{4}-\\d{2}-\\d{2})\\s" +
             "(?<author>[^<]+?)\\s<(?<email>[^>]+)>\\s*\\n" +
-            "(?:\\s*1 files? changed(?:, (?<added>\\d+) insertions?\\(\\+\\))?(?:, (?<removed>\\d+) deletions?\\(-\\))?)?"
+            "(?:(?<added>\\d+|-)\\s+(?<removed>\\d+|-)\\s+(?<path>[^\\n]+))?"
     );
 
     public List<FileCommit> parseFileLogs(InputStream inputStream) {
@@ -43,13 +43,18 @@ public class FileLogParser {
                 String dateStr = matcher.group("date");
                 String author = matcher.group("author").trim();
                 String email = matcher.group("email");
+                String path = matcher.group("path");
+
+                if (path != null) {
+                    path = path.trim();
+                }
 
                 LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
 
                 Integer linesAdded = parseInteger(matcher.group("added"));
                 Integer linesDeleted = parseInteger(matcher.group("removed"));
 
-                commits.add(new FileCommit(hash, date, author, email, linesAdded, linesDeleted));
+                commits.add(new FileCommit(hash, date, author, email, path, linesAdded, linesDeleted));
             }
 
         } catch (IOException e) {

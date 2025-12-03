@@ -7,6 +7,7 @@ public record FileCommit(
         LocalDate date,
         String author,
         String email,
+        String path,
         Integer linesAdded,
         Integer linesDeleted
 ) { }
