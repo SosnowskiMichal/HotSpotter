@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  # ==========================================
+  # MONGODB
+  # ==========================================
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-hotspotter
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-net
+
+  # ==========================================
+  # SONARQUBE
+  # ==========================================
+  sonar:
+    image: sonarqube:community
+    container_name: sonar
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonar-data:/opt/sonarqube/data
+      - sonar-extensions:/opt/sonarqube/extensions
+      - sonar-logs:/opt/sonarqube/logs
+    networks:
+      - app-net
+
+  # ==========================================
+  # BACKEND SERVICE
+  # ==========================================
+  backend:
+    build: .
+    container_name: backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+      - sonar
+    environment:
+      # --- Database Configuration ---
+      - MONGODB_URI=mongodb://root:secret@mongodb:27017/hotspotter?authSource=admin
+
+      # --- Integrations ---
+      - SONAR_HOST_URL=http://sonar:9000
+
+      # --- App Configuration ---
+      - HOST_BASE_URL=http://localhost:8080/api
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173
+      - LOGGING_LEVEL=INFO
+
+      # --- Security / Cookies ---
+      # Please generate a secure random base64 string for JWT_SECRET in production using a command like:
+      # openssl rand -base64 128
+      - JWT_SECRET=2G0pyN02dNXV/lBXSUde9jyqFw6TCp2qVUi5sGxMl+OMeEZsin8Mkbs7Cngpnfc85CPHLiXvcIHssquQQ67htcBcavdfy7C0qPnpscnviaxTEi4BTRxqahRuSzRADFyMaOG4YOxrlxi/nKrPP/T4gDresSYEaJ2Bv9k8z5ghtmw=
+      - COOKIE_SECURE=false
+      - COOKIE_DOMAIN=localhost
+      - COOKIE_SAME_SITE=Lax
+
+      # --- Auth & Google (Optional/Secrets) ---
+      # Uncomment and set these variables if using Google OAuth
+      # - GOOGLE_CLIENT_ID=your-google-client-id
+      # - GOOGLE_CLIENT_SECRET=your-google-client-secret
+      # - LOGIN_REDIRECT_URL=http://localhost:5173/auth/callback
+      # - GOOGLE_PROJECT_ID=your-google-project-id
+      # - GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/service-account-file.json
+
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  sonar-data:
+  sonar-extensions:
+  sonar-logs:
