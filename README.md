@@ -129,6 +129,3 @@ This project was developed as an Engineering Thesis.
 -----
 
 © 2025 HotSpotter Team
-
-```
-```
