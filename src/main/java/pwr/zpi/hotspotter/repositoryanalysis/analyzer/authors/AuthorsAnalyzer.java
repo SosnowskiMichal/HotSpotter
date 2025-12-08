@@ -108,6 +108,9 @@ public class AuthorsAnalyzer {
         int daysSinceLastCommit = (int) ChronoUnit.DAYS.between(lastCommitDate, referenceDate);
         int monthsSinceLastCommit = (int) ChronoUnit.MONTHS.between(lastCommitDate, referenceDate);
 
+        daysSinceLastCommit = Math.max(daysSinceLastCommit, 0);
+        monthsSinceLastCommit = Math.max(monthsSinceLastCommit, 0);
+
         authorStatistics.setDaysSinceLastCommit(daysSinceLastCommit);
         authorStatistics.setMonthsSinceLastCommit(monthsSinceLastCommit);
     }

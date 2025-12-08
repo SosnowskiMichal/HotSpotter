@@ -28,6 +28,9 @@ public class AuthorsAnalyzerContext {
                         int daysSinceFirstCommit = (int) ChronoUnit.DAYS.between(date, referenceDate);
                         int monthsSinceFirstCommit = (int) ChronoUnit.MONTHS.between(date, referenceDate);
 
+                        daysSinceFirstCommit = Math.max(daysSinceFirstCommit, 0);
+                        monthsSinceFirstCommit = Math.max(monthsSinceFirstCommit, 0);
+
                         stats = AuthorStatistics.builder()
                                 .analysisId(analysisId)
                                 .name(name)

@@ -110,6 +110,9 @@ public class FileInfoAnalyzer {
         int codeAgeDays = (int) ChronoUnit.DAYS.between(lastCommitDate, referenceDate);
         int codeAgeMonths = (int) ChronoUnit.MONTHS.between(lastCommitDate, referenceDate);
 
+        codeAgeDays = Math.max(codeAgeDays, 0);
+        codeAgeMonths = Math.max(codeAgeMonths, 0);
+
         fileInfo.setCodeAgeDays(codeAgeDays);
         fileInfo.setCodeAgeMonths(codeAgeMonths);
     }
