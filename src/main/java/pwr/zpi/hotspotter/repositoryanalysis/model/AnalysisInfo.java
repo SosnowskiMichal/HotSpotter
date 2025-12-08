@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import pwr.zpi.hotspotter.user.model.User;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -71,6 +72,17 @@ public class AnalysisInfo {
 
     public void markAsFailed() {
         this.status = AnalysisStatus.FAILED;
+    }
+
+    public boolean isPublic() {
+        return this.userId == null;
+    }
+
+    public boolean isOwnedByUser(User user) {
+        if (user == null) {
+            return false;
+        }
+        return !isPublic() && this.userId.equals(user.getId());
     }
 
 }
