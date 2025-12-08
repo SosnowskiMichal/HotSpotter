@@ -32,6 +32,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
+import pwr.zpi.hotspotter.user.model.User;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -58,9 +59,9 @@ public class RepositoryAnalysisService {
     private final CouplingAnalyzer couplingAnalyzer;
     private final AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
-    public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
+    public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter, User user) {
         try {
-            executeRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter);
+            executeRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter, user);
 
         } catch (InvalidRepositoryUrlException e) {
             log.warn("Invalid repository URL {}: {}", repositoryInfo.getRemoteUrl(), e.getMessage());
@@ -87,7 +88,7 @@ public class RepositoryAnalysisService {
         }
     }
 
-    private void executeRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
+    private void executeRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter, User user) {
         log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
 
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
@@ -95,7 +96,7 @@ public class RepositoryAnalysisService {
         LocalDateTime analysisStartedAt = LocalDateTime.now();
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
 
-        AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt);
+        AnalysisInfo analysisInfo = createAnalysisInfo(repositoryInfo, startDate, endDate, analysisStartedAt, user);
         String analysisId = analysisInfo.getId();
         analysisInfoRepository.save(analysisInfo);
 
@@ -162,7 +163,8 @@ public class RepositoryAnalysisService {
             RepositoryInfo repositoryInfo,
             LocalDate startDate,
             LocalDate endDate,
-            LocalDateTime analysisStartedAt
+            LocalDateTime analysisStartedAt,
+            User user
     ) {
         String analysisId = UUID.randomUUID().toString();
         LocalDate nonNullEndDate = endDate != null ? endDate : LocalDate.now();
@@ -172,6 +174,7 @@ public class RepositoryAnalysisService {
 
         return AnalysisInfo.builder()
                 .id(analysisId)
+                .userId(user != null ? user.getId() : null)
                 .repositoryUrl(repositoryInfo.getRemoteUrl())
                 .repositoryName(repositoryInfo.getName())
                 .repositoryOwner(repositoryInfo.getOwner())

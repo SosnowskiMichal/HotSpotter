@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import pwr.zpi.hotspotter.user.model.User;
 
 @Slf4j
 @Component
@@ -60,8 +61,8 @@ public class AnalysisQueue {
         this.analysisQueueTaskFactory.setRepositoryInfoCache(this.repositoryInfoCache);
     }
 
-    public void submitRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter) {
-        AnalysisQueueTask task = analysisQueueTaskFactory.createRepositoryAnalysisTask(repositoryUrl, startDate, endDate, emitter);
+    public void submitRepositoryAnalysis(String repositoryUrl, LocalDate startDate, LocalDate endDate, SseEmitter emitter, User user) {
+        AnalysisQueueTask task = analysisQueueTaskFactory.createRepositoryAnalysisTask(repositoryUrl, startDate, endDate, emitter, user);
         submitAnalysis(task);
     }
 

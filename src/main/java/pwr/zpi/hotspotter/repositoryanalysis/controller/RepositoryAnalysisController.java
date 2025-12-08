@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.analysisqueue.AnalysisQueue;
+import pwr.zpi.hotspotter.authentication.annotation.CurrentUser;
 import pwr.zpi.hotspotter.repositoryanalysis.validation.ValidDateRange;
+import pwr.zpi.hotspotter.user.model.User;
 
 import java.time.LocalDate;
 
@@ -22,14 +24,16 @@ public class RepositoryAnalysisController {
     private final AnalysisQueue analysisQueue;
 
     @GetMapping
-    public SseEmitter startRepositoryAnalysis(@Valid @ModelAttribute AnalysisRequest request) {
+    public SseEmitter startRepositoryAnalysis(@Valid @ModelAttribute AnalysisRequest request,
+                                              @CurrentUser(required = false) User user) {
         SseEmitter emitter = new SseEmitter(0L);
 
         analysisQueue.submitRepositoryAnalysis(
                 request.repositoryUrl(),
                 request.startDate(),
                 request.endDate(),
-                emitter
+                emitter,
+                user
         );
 
         return emitter;
