@@ -8,6 +8,7 @@ import pwr.zpi.hotspotter.sonar.model.fileanalysis.SonarIssueLocation;
 import pwr.zpi.hotspotter.sonar.repository.SonarIssueRepository;
 
 import java.io.IOException;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -42,7 +43,8 @@ public class SonarIssueTranslatorService {
             log.error("Failed to translate sonar issue message.", e);
         }
 
-        for (SonarIssueLocation location : sonarIssue.getLocations()) {
+        List<SonarIssueLocation> locations = sonarIssue.getLocations() != null ? sonarIssue.getLocations() : List.of();
+        for (SonarIssueLocation location : locations) {
             try {
                 String locationMessage = location.getMessage();
                 if (hasLetters(locationMessage)) {

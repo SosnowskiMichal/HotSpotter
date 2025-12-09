@@ -18,7 +18,8 @@ public class SonarIssueMapper {
         String message = targetLanguage == null ? sonarIssue.getMessage() :
                 sonarIssue.getMessageTranslations().getOrDefault(targetLanguage, sonarIssue.getMessage());
 
-        List<SonarIssueDTO.SonarIssueLocationDTO> locationDTOs = sonarIssue.getLocations().stream()
+        List<SonarIssueLocation> locations = sonarIssue.getLocations() != null ? sonarIssue.getLocations() : List.of();
+        List<SonarIssueDTO.SonarIssueLocationDTO> locationDTOs = locations.stream()
                 .map(location -> toDTO(location, targetLanguage))
                 .toList();
 
