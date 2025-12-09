@@ -37,6 +37,7 @@ import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisComponent;
 import pwr.zpi.hotspotter.sonar.model.repoanalysis.SonarRepoAnalysisResult;
 import pwr.zpi.hotspotter.sonar.service.SonarResultDownloader;
 import pwr.zpi.hotspotter.sonar.service.SonarService;
+import pwr.zpi.hotspotter.user.model.User;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -80,6 +81,7 @@ public class RepositoryAnalysisServiceTest {
         when(repositoryInfo.getOwner()).thenReturn("repo-owner");
         when(repositoryInfo.getPlatform()).thenReturn("GitHub");
 
+        User user = mock(User.class);
         LocalDate startDate = LocalDate.of(2023, 1, 1);
         SseEmitter emitter = mock(SseEmitter.class);
 
@@ -115,7 +117,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, user);
 
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
         verify(ssePublisher).sendProgress(emitter, AnalysisSseStatus.ANALYZING);
@@ -164,7 +166,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
         verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
@@ -216,7 +218,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(customPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(logExtractor).extractAndParseCommits(eq(customPath), eq(startDate), eq(null));
         verify(knowledgeAnalyzer).startAnalysis(anyString(), eq(customPath));
@@ -266,7 +268,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(endDate)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter, null);
 
         verify(knowledgeAnalyzer).startAnalysis(anyString(), eq(repositoryPath));
         verify(authorsAnalyzer).startAnalysis(anyString(), eq(endDate));
@@ -325,7 +327,7 @@ public class RepositoryAnalysisServiceTest {
         when(analysisFileFilter.filterCommit(commit2)).thenReturn(commit2);
         when(analysisFileFilter.filterCommit(commit3)).thenReturn(commit3);
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(knowledgeAnalyzer, times(3)).processCommit(any(Commit.class), eq(knowledgeContext));
         verify(authorsAnalyzer, times(3)).processCommit(any(Commit.class), eq(authorsContext));
@@ -375,7 +377,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(knowledgeAnalyzer).enrichAnalysisData(eq(knowledgeContext));
         verify(authorsAnalyzer).enrichAnalysisData(eq(authorsContext));
@@ -415,7 +417,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendSuccess(eq(emitter), anyString());
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
@@ -458,7 +460,7 @@ public class RepositoryAnalysisServiceTest {
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendSuccess(eq(emitter), anyString());
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
@@ -484,7 +486,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new InvalidRepositoryUrlException("Invalid URL"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendError(emitter, "Invalid URL");
         verify(emitter).complete();
@@ -507,7 +509,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RepositoryCloneException("Clone failed"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendError(emitter, "Clone failed");
         verify(emitter).complete();
@@ -530,7 +532,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RepositoryUpdateException("Update failed"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendError(emitter, "Update failed");
         verify(emitter).complete();
@@ -554,7 +556,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new LogProcessingException("Log processing failed"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendError(emitter, "Log processing failed");
         verify(emitter).complete();
@@ -578,7 +580,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Parsing failed"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendError(emitter, "Parsing failed");
         verify(emitter).complete();
@@ -601,7 +603,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         verify(ssePublisher).sendError(emitter, "Unexpected error");
         verify(emitter).complete();
@@ -627,7 +629,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new LogProcessingException("Log extraction failed"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
         verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
@@ -660,7 +662,7 @@ public class RepositoryAnalysisServiceTest {
         when(logExtractor.extractAndParseCommits(eq(repositoryPath), eq(startDate), eq(null)))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
-        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter);
+        repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, null, emitter, null);
 
         ArgumentCaptor<AnalysisInfo> captor = ArgumentCaptor.forClass(AnalysisInfo.class);
         verify(analysisInfoRepository, atLeastOnce()).save(captor.capture());
