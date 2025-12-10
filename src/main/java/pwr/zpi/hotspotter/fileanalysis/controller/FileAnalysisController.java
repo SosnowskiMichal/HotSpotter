@@ -1,6 +1,7 @@
 package pwr.zpi.hotspotter.fileanalysis.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pwr.zpi.hotspotter.analysisqueue.AnalysisQueue;
@@ -19,6 +20,7 @@ public class FileAnalysisController {
     private final FileAnalysisResultsService fileAnalysisResultsService;
 
     @GetMapping("/{analysisId}/x-ray")
+    @PreAuthorize("@analysisSecurity.canRead(authentication, #analysisId)")
     public ResponseEntity<FileAnalysisResultDTO> startFileAnalysis(@PathVariable String analysisId, @RequestParam String path) {
         if (fileAnalysisResultsService.checkIfFileAnalysisCompleted(analysisId, path)) {
             FileAnalysisResultDTO analysisResult = fileAnalysisResultsService.getFileAnalysisResult(analysisId, path);

@@ -36,9 +36,17 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            throw new BadCredentialsException("User is not authenticated");
+        boolean isAnonymous = authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken;
+
+        CurrentUser annotation = parameter.getParameterAnnotation(CurrentUser.class);
+
+        if (isAnonymous) {
+            if (annotation != null && annotation.required()) {
+                throw new BadCredentialsException("User is not authenticated");
+            }
+            return null;
         }
 
         String email = authentication.getName();

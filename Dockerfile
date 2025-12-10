@@ -16,8 +16,21 @@ ARG SONAR_SCANNER_VERSION=7.3.0.5189
 ARG SONAR_SCANNER_HOME=/opt/sonar-scanner
 
 RUN apt-get update \
- && apt-get install -y curl gnupg ca-certificates python3 python3-venv unzip \
+ && apt-get install -y \
+    curl gnupg ca-certificates python3 python3-venv unzip cloc git \
+    gcc make pkg-config autoconf automake \
+    python3-docutils libseccomp-dev libjansson-dev libyaml-dev libxml2-dev \
  && python3 -m venv /opt/venv \
+ && curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash - \
+ && apt-get install -y nodejs \
+ && git clone https://github.com/universal-ctags/ctags.git /tmp/ctags \
+ && cd /tmp/ctags \
+ && ./autogen.sh \
+ && ./configure --prefix=/usr/local \
+ && make \
+ && make install \
+ && cd / \
+ && rm -rf /tmp/ctags \
  && /opt/venv/bin/pip install --no-cache-dir lizard \
  && ln -s /opt/venv/bin/lizard /usr/local/bin/lizard \
  && rm -rf /var/lib/apt/lists/* \

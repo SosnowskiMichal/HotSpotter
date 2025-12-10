@@ -12,6 +12,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.repository.AnalysisInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.repository.FileInfoRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.service.RepositoryAnalysisService;
 import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
+import pwr.zpi.hotspotter.user.model.User;
 
 import java.time.LocalDate;
 import java.util.concurrent.CompletableFuture;
@@ -34,14 +35,15 @@ public class AnalysisQueueTaskFactory {
             String repositoryUrl,
             LocalDate startDate,
             LocalDate endDate,
-            SseEmitter emitter
+            SseEmitter emitter,
+            User user
     ) {
         log.debug("Creating repository analysis task for: {}", repositoryUrl);
 
         Runnable analysisTask = () -> {
             RepositoryInfo repositoryInfo = repositoryInfoCache.get(repositoryUrl);
             if (repositoryInfo != null) {
-                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter);
+                repositoryAnalysisService.runRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter, user);
             } else {
                 log.error("Repository info not found in cache for repository: {}", repositoryUrl);
                 throw new AnalysisException("Repository information not available");

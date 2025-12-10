@@ -36,7 +36,7 @@ public class SonarResultDownloader {
             "duplicated_lines_density",
             "complexity"
     );
-    public final static List<String> FILE_PROBLEM_TYPES = List.of("BUG", "CODE_SMELL");
+    public final static List<String> FILE_PROBLEM_TYPES = List.of("BUG", "CODE_SMELL", "VULNERABILITY");
     public final static List<String> FILE_SEVERITIES = List.of("MAJOR", "CRITICAL");
     private final static int DEFAULT_PAGE_SIZE = 500;
     private final static int MAX_API_RESULTS = 10000;
