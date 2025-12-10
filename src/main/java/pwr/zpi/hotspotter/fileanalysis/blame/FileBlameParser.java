@@ -31,8 +31,6 @@ public class FileBlameParser {
                     currentAuthor = line.substring("author ".length()).trim();
 
                 } else if (line.startsWith("\t")) {
-                    // This is the actual line content - count it for the current author
-                    // String codeLine = line.substring(1);
                     if (currentAuthor != null) {
                         authorsMap.merge(currentAuthor, 1, Integer::sum);
                     }

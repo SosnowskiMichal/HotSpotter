@@ -19,8 +19,10 @@ import pwr.zpi.hotspotter.fileanalysis.complexity.service.FileComplexityService;
 import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
+import pwr.zpi.hotspotter.fileanalysis.methods.MethodsAnalyzer;
+import pwr.zpi.hotspotter.fileanalysis.methods.model.MethodStatistics;
 import pwr.zpi.hotspotter.fileanalysis.model.FileAnalysisResult;
-import pwr.zpi.hotspotter.fileanalysis.model.FileVersionStatistics;
+import pwr.zpi.hotspotter.fileanalysis.versionextraction.model.FileVersionStatistics;
 import pwr.zpi.hotspotter.fileanalysis.repository.FileAnalysisResultRepository;
 import pwr.zpi.hotspotter.fileanalysis.versionextraction.FileVersionExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
@@ -47,6 +49,7 @@ public class FileAnalysisService {
     private final FileComplexityService fileComplexityService;
     private final ClocService clocService;
     private final FileBlameExtractor fileBlameExtractor;
+    private final MethodsAnalyzer methodsAnalyzer;
     private final FileAnalysisResultRepository fileAnalysisResultRepository;
 
     public void runFileAnalysis(
@@ -57,8 +60,6 @@ public class FileAnalysisService {
     ) {
         try {
             executeFileAnalysis(repositoryInfo, analysisInfo, filePath, emitter);
-
-            // TODO: Custom exception handling
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid argument in file analysis: {}", e.getMessage());
@@ -118,17 +119,19 @@ public class FileAnalysisService {
 
             List<FileAuthorStatistics> currentAuthors = fileBlameExtractor.extractCurrentAuthors(currentFilePath);
 
-            // TODO: Collect information about methods and changes
-
             Map<String, FileLinesData> clocResults = collectFutureResults(clocFuture, "cloc");
             Map<String, FileComplexityReport> complexityResults = collectFutureResults(complexityFuture, "complexity");
 
+            List<MethodStatistics> methodsStatistics = methodsAnalyzer.analyzeMethods(
+                    repositoryPath, fileCommits, complexityResults, analysisInfo.getEndDate()
+            );
+
             ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
 
-            // TODO: Combine results
             combineClocResults(fileAnalysisResult, clocResults);
             combineComplexityResults(fileAnalysisResult, complexityResults);
             combineCurrentAuthorsResults(fileAnalysisResult, currentAuthors);
+            combineMethodsStatisticsResults(fileAnalysisResult, methodsStatistics);
 
             fileAnalysisResult.markAsCompleted();
             fileAnalysisResultRepository.save(fileAnalysisResult);
@@ -219,6 +222,13 @@ public class FileAnalysisService {
     ) {
         fileAnalysisResult.setCurrentAuthors(currentAuthors);
         fileAnalysisResult.setNumberOfCurrentAuthors(currentAuthors.size());
+    }
+
+    private void combineMethodsStatisticsResults(
+            FileAnalysisResult fileAnalysisResult,
+            List<MethodStatistics> methodsStatistics
+    ) {
+        fileAnalysisResult.setMethodStatistics(methodsStatistics);
     }
 
     private void cleanupOutputDirectory(Path outputPath) throws IOException {

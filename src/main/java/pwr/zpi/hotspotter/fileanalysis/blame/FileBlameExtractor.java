@@ -2,7 +2,7 @@ package pwr.zpi.hotspotter.fileanalysis.blame;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
 public class FileBlameExtractor {
 

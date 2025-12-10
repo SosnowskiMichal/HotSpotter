@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.fileanalysis.model;
+package pwr.zpi.hotspotter.fileanalysis.versionextraction.model;
 
 import lombok.Builder;
 import lombok.Data;

@@ -10,6 +10,8 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
+import pwr.zpi.hotspotter.fileanalysis.methods.model.MethodStatistics;
+import pwr.zpi.hotspotter.fileanalysis.versionextraction.model.FileVersionStatistics;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -44,15 +46,13 @@ public class FileAnalysisResult {
 
     private Integer totalFileVersions;
 
-    List<FileVersionStatistics> fileVersionStatistics;
+    private List<FileVersionStatistics> fileVersionStatistics;
 
-    // TODO: Current methods statistics and metrics for each file version
+    private List<MethodStatistics> methodStatistics;
 
     private Integer numberOfCurrentAuthors;
 
     private List<FileAuthorStatistics> currentAuthors;
-
-    // TODO: Add more fields...
 
     public void markAsCompleted() {
         this.analysisFinishedAt = LocalDateTime.now();

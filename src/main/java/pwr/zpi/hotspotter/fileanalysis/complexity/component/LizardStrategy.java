@@ -50,7 +50,7 @@ public class LizardStrategy {
                         int ccn = parseSafeInt(parts[CCN_INDEX]);
                         int params = parseSafeInt(parts[PARAM_INDEX]);
                         String fullFilePath = parts[FILE_PATH_INDEX].trim();
-                        String functionName = parts[FUNCTION_NAME_INDEX].trim();
+                        String functionName = parts[FUNCTION_NAME_INDEX].trim().replaceAll("^\"|\"$", "");
 
                         int startLine = (parts.length >= START_LINE_INDEX) ? parseSafeInt(parts[START_LINE_INDEX]) : 0;
                         int endLine = (parts.length >= END_LINE_INDEX) ? parseSafeInt(parts[END_LINE_INDEX]) : 0;
