@@ -6,16 +6,19 @@ import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Component;
 import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class LizardStrategy {
-
-    private final LizardRunner lizardRunner;
 
     private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
             "c", "cpp", "cc", "h", "hpp", "cxx", "m", "mm", "java", "kt", "kts",
@@ -23,13 +26,19 @@ public class LizardStrategy {
             "lua", "rs", "go", "sol", "gd"
     );
 
-    private static final int MIN_PARTS_LENGTH = 8;
-    private static final int CCN_INDEX = 1;
-    private static final int PARAM_INDEX = 3;
-    private static final int FILE_PATH_INDEX = 6;
-    private static final int FUNCTION_NAME_INDEX = 7;
-    private static final int START_LINE_INDEX = 9;
-    private static final int END_LINE_INDEX = 10;
+    private static final Pattern LIZARD_LINE_PATTERN = Pattern.compile(
+            "^\\d+," +
+            "(?<ccn>\\d+)," +
+            "\\d+," +
+            "(?<params>\\d+)," +
+            "\\d+," +
+            "\"[^\"]*\"," +
+            "\"(?<filePath>[^\"]*)\"," +
+            "\"(?<functionName>[^\"]*)\"," +
+            "\"[^\"]*\"," +
+            "(?<startLine>\\d+)," +
+            "(?<endLine>\\d+)$"
+    );
 
     public boolean isSupported(String extension) {
         return SUPPORTED_EXTENSIONS.contains(extension.toLowerCase());
@@ -39,32 +48,29 @@ public class LizardStrategy {
         Map<String, FileComplexityReport> reportMap = new HashMap<>();
 
         try {
-            List<String> lizardOutput = lizardRunner.runLizard(path);
+            ProcessBuilder pb = new ProcessBuilder("lizard", "--csv", ".");
+            pb.directory(path.toFile());
+            pb.redirectErrorStream(true);
 
-            for (String line : lizardOutput) {
-                if (!isDataLine(line)) continue;
+            Process process = pb.start();
+            InputStream inputStream = process.getInputStream();
 
-                String[] parts = line.split(",");
-                if (parts.length >= MIN_PARTS_LENGTH) {
-                    try {
-                        int ccn = parseSafeInt(parts[CCN_INDEX]);
-                        int params = parseSafeInt(parts[PARAM_INDEX]);
-                        String fullFilePath = parts[FILE_PATH_INDEX].trim();
-                        String functionName = parts[FUNCTION_NAME_INDEX].trim().replaceAll("^\"|\"$", "");
-
-                        int startLine = (parts.length >= START_LINE_INDEX) ? parseSafeInt(parts[START_LINE_INDEX]) : 0;
-                        int endLine = (parts.length >= END_LINE_INDEX) ? parseSafeInt(parts[END_LINE_INDEX]) : 0;
-
-                        String key = FilenameUtils.getBaseName(fullFilePath);
-                        reportMap.computeIfAbsent(key, _ -> new FileComplexityReport())
-                                .addMethodStats(functionName, ccn, params, startLine, endLine);
-
-                    } catch (Exception e) {
-                        log.warn("Parsing error for line: [{}]. Error: {}", line, e.getMessage());
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (isDataLine(line)) {
+                        processLine(line, reportMap);
                     }
                 }
             }
-        } catch (IOException e) {
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new RuntimeException("Lizard process exited with code: " + exitCode);
+            }
+
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
             throw new RuntimeException("Lizard analysis failed", e);
         }
 
@@ -75,11 +81,24 @@ public class LizardStrategy {
         return line != null && !line.trim().isEmpty() && Character.isDigit(line.trim().charAt(0));
     }
 
-    private int parseSafeInt(String value) {
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return 0;
+    private void processLine(String line, Map<String, FileComplexityReport> reportMap) {
+        Matcher matcher = LIZARD_LINE_PATTERN.matcher(line);
+
+        if (matcher.matches()) {
+            try {
+                int ccn = Integer.parseInt(matcher.group("ccn"));
+                int params = Integer.parseInt(matcher.group("params"));
+                String fullFilePath = matcher.group("filePath");
+                String functionName = matcher.group("functionName");
+                int startLine = Integer.parseInt(matcher.group("startLine"));
+                int endLine = Integer.parseInt(matcher.group("endLine"));
+
+                String key = FilenameUtils.getBaseName(fullFilePath);
+                reportMap.computeIfAbsent(key, _ -> new FileComplexityReport())
+                        .addMethodStats(functionName, ccn, params, startLine, endLine);
+
+            } catch (Exception _) { }
         }
     }
+
 }

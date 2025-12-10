@@ -11,7 +11,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
 import pwr.zpi.hotspotter.fileanalysis.methods.model.MethodStatistics;
-import pwr.zpi.hotspotter.fileanalysis.versionextraction.model.FileVersionStatistics;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -54,9 +53,18 @@ public class FileAnalysisResult {
 
     private List<FileAuthorStatistics> currentAuthors;
 
+    @Builder.Default
+    private FileAnalysisStatus status = FileAnalysisStatus.IN_PROGRESS;
+
     public void markAsCompleted() {
+        this.status = FileAnalysisStatus.COMPLETED;
         this.analysisFinishedAt = LocalDateTime.now();
         this.analysisTimeInSeconds = Duration.between(analysisStartedAt, analysisFinishedAt).getSeconds();
+    }
+
+    public enum FileAnalysisStatus {
+        IN_PROGRESS,
+        COMPLETED,
     }
 
 }

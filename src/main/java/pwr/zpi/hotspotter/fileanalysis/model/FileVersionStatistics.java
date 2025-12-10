@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.fileanalysis.versionextraction.model;
+package pwr.zpi.hotspotter.fileanalysis.model;
 
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +15,7 @@ public class FileVersionStatistics {
 
     private String path;
 
-    private String url; // TODO
+    private String url;
 
     private Integer totalLines;
 

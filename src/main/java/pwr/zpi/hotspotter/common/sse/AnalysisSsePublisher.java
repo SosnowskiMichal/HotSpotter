@@ -9,6 +9,7 @@ import java.io.IOException;
 public class AnalysisSsePublisher {
 
     public void sendProgress(SseEmitter emitter, AnalysisSseStatus status) {
+        if (emitter == null) return;
         sendEvent(emitter, "progress", status);
     }
 

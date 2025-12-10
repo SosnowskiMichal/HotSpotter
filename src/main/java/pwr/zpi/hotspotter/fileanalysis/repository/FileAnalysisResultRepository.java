@@ -13,6 +13,12 @@ public interface FileAnalysisResultRepository extends MongoRepository<FileAnalys
 
     boolean existsByAnalysisIdAndFilePath(String analysisId, String filePath);
 
+    boolean existsByAnalysisIdAndFilePathAndStatus(String analysisId, String filePath, FileAnalysisResult.FileAnalysisStatus status);
+
+    default boolean isAnalysisCompleted(String analysisId, String filePath) {
+        return existsByAnalysisIdAndFilePathAndStatus(analysisId, filePath, FileAnalysisResult.FileAnalysisStatus.COMPLETED);
+    }
+
     void deleteByAnalysisId(String analysisId);
 
 }

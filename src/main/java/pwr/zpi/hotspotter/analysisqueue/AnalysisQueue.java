@@ -65,9 +65,11 @@ public class AnalysisQueue {
         submitAnalysis(task);
     }
 
-    public void submitFileAnalysis(String analysisId, String filePath, SseEmitter emitter) {
-        AnalysisQueueTask task = analysisQueueTaskFactory.createFileAnalysisTask(analysisId, filePath, emitter);
+    public CompletableFuture<Void> submitFileAnalysis(String analysisId, String filePath) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        AnalysisQueueTask task = analysisQueueTaskFactory.createFileAnalysisTask(analysisId, filePath, future);
         submitAnalysis(task);
+        return future;
     }
 
     private void submitAnalysis(AnalysisQueueTask task) {

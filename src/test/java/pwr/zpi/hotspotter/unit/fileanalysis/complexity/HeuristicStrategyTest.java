@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.complexity;
+package pwr.zpi.hotspotter.unit.fileanalysis.complexity;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

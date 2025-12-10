@@ -7,6 +7,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.knowledge.repository.FileK
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileKnowledgeDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileKnowledgeLossRiskDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.FileLeadAuthorDTO;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.AuthorContributionDTO;
 
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class FileKnowledgeMapper {
     public FileKnowledgeDTO toDTO(FileKnowledge fileKnowledge) {
         if (fileKnowledge == null) return null;
 
-        List<FileKnowledgeDTO.AuthorContributionDTO> contributionsDTOs = fileKnowledge.getAuthorContributions().stream()
+        List<AuthorContributionDTO> contributionsDTOs = fileKnowledge.getAuthorContributions().stream()
                 .map(this::toAuthorContributionDTO)
                 .toList();
 
@@ -37,7 +38,7 @@ public class FileKnowledgeMapper {
     public FileKnowledgeDTO toReducedDTO(FileKnowledge fileKnowledge) {
         if (fileKnowledge == null) return null;
 
-        List<FileKnowledgeDTO.AuthorContributionDTO> contributionsDTOs = fileKnowledge.getAuthorContributions().stream()
+        List<AuthorContributionDTO> contributionsDTOs = fileKnowledge.getAuthorContributions().stream()
                 .limit(CONTRIBUTIONS_MAX_SIZE)
                 .map(this::toAuthorContributionDTO)
                 .toList();
@@ -74,8 +75,8 @@ public class FileKnowledgeMapper {
         );
     }
 
-    private FileKnowledgeDTO.AuthorContributionDTO toAuthorContributionDTO(AuthorContribution contribution) {
-        return new FileKnowledgeDTO.AuthorContributionDTO(
+    public AuthorContributionDTO toAuthorContributionDTO(AuthorContribution contribution) {
+        return new AuthorContributionDTO(
                 contribution.getName(),
                 contribution.getLinesAdded(),
                 contribution.getCommits(),

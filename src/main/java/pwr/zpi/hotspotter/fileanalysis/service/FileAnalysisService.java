@@ -5,13 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import pwr.zpi.hotspotter.common.cloc.ClocService;
 import pwr.zpi.hotspotter.common.cloc.model.FileLinesData;
 import pwr.zpi.hotspotter.common.exception.AnalysisException;
 import pwr.zpi.hotspotter.common.exception.LogProcessingException;
-import pwr.zpi.hotspotter.common.sse.AnalysisSsePublisher;
-import pwr.zpi.hotspotter.common.sse.AnalysisSseStatus;
+import pwr.zpi.hotspotter.common.util.RepositoryFileUrlBuilder;
 import pwr.zpi.hotspotter.fileanalysis.blame.FileBlameExtractor;
 import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
@@ -22,7 +20,7 @@ import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
 import pwr.zpi.hotspotter.fileanalysis.methods.MethodsAnalyzer;
 import pwr.zpi.hotspotter.fileanalysis.methods.model.MethodStatistics;
 import pwr.zpi.hotspotter.fileanalysis.model.FileAnalysisResult;
-import pwr.zpi.hotspotter.fileanalysis.versionextraction.model.FileVersionStatistics;
+import pwr.zpi.hotspotter.fileanalysis.model.FileVersionStatistics;
 import pwr.zpi.hotspotter.fileanalysis.repository.FileAnalysisResultRepository;
 import pwr.zpi.hotspotter.fileanalysis.versionextraction.FileVersionExtractor;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
@@ -42,7 +40,6 @@ import java.util.concurrent.ExecutionException;
 @RequiredArgsConstructor
 public class FileAnalysisService {
 
-    private final AnalysisSsePublisher ssePublisher;
     private final FileAnalysisConfig fileAnalysisConfig;
     private final FileLogExtractor fileLogExtractor;
     private final FileVersionExtractor fileVersionExtractor;
@@ -55,44 +52,39 @@ public class FileAnalysisService {
     public void runFileAnalysis(
             RepositoryInfo repositoryInfo,
             AnalysisInfo analysisInfo,
-            String filePath,
-            SseEmitter emitter
+            String filePath
     ) {
         try {
-            executeFileAnalysis(repositoryInfo, analysisInfo, filePath, emitter);
+            executeFileAnalysis(repositoryInfo, analysisInfo, filePath);
 
         } catch (IllegalArgumentException e) {
             log.warn("Invalid argument in file analysis: {}", e.getMessage());
-            ssePublisher.sendError(emitter, e.getMessage());
+            throw e;
 
         } catch (LogProcessingException e) {
             log.error("Log processing failed for file {}: {}", filePath, e.getMessage());
-            ssePublisher.sendError(emitter, e.getMessage());
+            throw e;
 
         } catch (AnalysisException e) {
             log.error("Analysis failed for file {}: {}", filePath, e.getMessage());
-            ssePublisher.sendError(emitter, e.getMessage());
+            throw e;
 
         } catch (Exception e) {
             log.error("Unexpected error during file analysis for file {}: {}", filePath, e.getMessage());
-            ssePublisher.sendError(emitter, e.getMessage());
-
-        } finally {
-            emitter.complete();
+            throw e;
         }
     }
 
     private void executeFileAnalysis(
             RepositoryInfo repositoryInfo,
             AnalysisInfo analysisInfo,
-            String filePath,
-            SseEmitter emitter
+            String filePath
     ) {
         log.info("Starting analysis for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
 
-        ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
-
         FileAnalysisResult fileAnalysisResult = createFileAnalysisResult(analysisInfo.getId(), filePath);
+        fileAnalysisResultRepository.save(fileAnalysisResult);
+
         Path repositoryPath = Path.of(repositoryInfo.getLocalPath());
         Path outputPath = getOutputPath(analysisInfo.getId(), filePath);
         Path currentFilePath = repositoryPath.resolve(filePath);
@@ -105,13 +97,13 @@ public class FileAnalysisService {
                 analysisInfo.getEndDate()
         );
 
+        String lastCommitHash = fileCommits.getLast().hash();
+
         fileAnalysisResult.setFileCommits(fileCommits);
         fileAnalysisResult.setTotalFileVersions(fileCommits.size());
 
         try {
             fileVersionExtractor.extractFileVersions(repositoryPath, fileCommits, outputPath);
-
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.ANALYZING);
 
             CompletableFuture<Map<String, FileComplexityReport>> complexityFuture =
                     fileComplexityService.analyze(outputPath, fileExtension);
@@ -126,18 +118,15 @@ public class FileAnalysisService {
                     repositoryPath, fileCommits, complexityResults, analysisInfo.getEndDate()
             );
 
-            ssePublisher.sendProgress(emitter, AnalysisSseStatus.FINALIZING);
-
-            combineClocResults(fileAnalysisResult, clocResults);
+            combineClocResults(fileAnalysisResult, clocResults, repositoryInfo);
             combineComplexityResults(fileAnalysisResult, complexityResults);
             combineCurrentAuthorsResults(fileAnalysisResult, currentAuthors);
-            combineMethodsStatisticsResults(fileAnalysisResult, methodsStatistics);
+            combineMethodsStatisticsResults(fileAnalysisResult, methodsStatistics, repositoryInfo, filePath, lastCommitHash);
 
             fileAnalysisResult.markAsCompleted();
             fileAnalysisResultRepository.save(fileAnalysisResult);
 
             log.info("Analysis completed for file {} in repository: {}", filePath, repositoryInfo.getRemoteUrl());
-            ssePublisher.sendSuccess(emitter, analysisInfo.getId());
 
         } finally {
             try {
@@ -172,7 +161,8 @@ public class FileAnalysisService {
 
     private void combineClocResults(
             FileAnalysisResult fileAnalysisResult,
-            Map<String, FileLinesData> clocResults
+            Map<String, FileLinesData> clocResults,
+            RepositoryInfo repositoryInfo
     ) {
         String fileExtension = FilenameUtils.getExtension(fileAnalysisResult.getFilePath());
         List<FileVersionStatistics> statistics = new ArrayList<>();
@@ -181,10 +171,18 @@ public class FileAnalysisService {
             String fileName = commit.hash() + "." + fileExtension;
             FileLinesData fileLinesData = clocResults.get(fileName);
 
+            String url = RepositoryFileUrlBuilder.buildFileUrl(
+                    repositoryInfo.getPlatform(),
+                    repositoryInfo.getRemoteUrl(),
+                    commit.path(),
+                    commit.hash()
+            );
+
             FileVersionStatistics.FileVersionStatisticsBuilder builder = FileVersionStatistics.builder()
                     .hash(commit.hash())
                     .date(commit.date())
-                    .path(commit.path());
+                    .path(commit.path())
+                    .url(url);
 
             if (fileLinesData != null) {
                 builder.totalLines(fileLinesData.total())
@@ -226,8 +224,23 @@ public class FileAnalysisService {
 
     private void combineMethodsStatisticsResults(
             FileAnalysisResult fileAnalysisResult,
-            List<MethodStatistics> methodsStatistics
+            List<MethodStatistics> methodsStatistics,
+            RepositoryInfo repositoryInfo,
+            String filePath,
+            String lastCommitHash
     ) {
+        for (MethodStatistics stats : methodsStatistics) {
+            String url = RepositoryFileUrlBuilder.buildFileUrl(
+                    repositoryInfo.getPlatform(),
+                    repositoryInfo.getRemoteUrl(),
+                    filePath,
+                    lastCommitHash,
+                    stats.getStartLine(),
+                    stats.getEndLine()
+            );
+            stats.setUrl(url);
+        }
+
         fileAnalysisResult.setMethodStatistics(methodsStatistics);
     }
 
