@@ -10,7 +10,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.model.AuthorStatis
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.authors.repository.AuthorStatisticsRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -107,6 +107,9 @@ public class AuthorsAnalyzer {
 
         int daysSinceLastCommit = (int) ChronoUnit.DAYS.between(lastCommitDate, referenceDate);
         int monthsSinceLastCommit = (int) ChronoUnit.MONTHS.between(lastCommitDate, referenceDate);
+
+        daysSinceLastCommit = Math.max(daysSinceLastCommit, 0);
+        monthsSinceLastCommit = Math.max(monthsSinceLastCommit, 0);
 
         authorStatistics.setDaysSinceLastCommit(daysSinceLastCommit);
         authorStatistics.setMonthsSinceLastCommit(monthsSinceLastCommit);

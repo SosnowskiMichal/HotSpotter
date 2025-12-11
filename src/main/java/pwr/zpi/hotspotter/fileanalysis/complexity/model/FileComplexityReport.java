@@ -7,23 +7,23 @@ import java.util.List;
 
 @Data
 public class FileComplexityReport {
+
     private int totalCCN;
     private double averageCCN;
     private int maxCCN;
-    private int functionsCount;
+    private int methodsCount;
     private List<MethodComplexity> methods = new ArrayList<>();
 
-    public void addFunctionStats(int ccn) {
+    public void updateCcnStats(int ccn) {
         this.totalCCN += ccn;
-        this.functionsCount++;
-        if (ccn > this.maxCCN) {
-            this.maxCCN = ccn;
-        }
-        this.averageCCN = (double) totalCCN / functionsCount;
+        this.methodsCount++;
+        this.maxCCN = Math.max(this.maxCCN, ccn);
+        this.averageCCN = (double) totalCCN / methodsCount;
     }
 
-    public void addFunctionStats(String name, int ccn, int params, int start, int end) {
-        addFunctionStats(ccn);
+    public void addMethodStats(String name, int ccn, int params, int start, int end) {
+        updateCcnStats(ccn);
         this.methods.add(new MethodComplexity(name, ccn, params, start, end));
     }
+
 }

@@ -13,11 +13,4 @@ public record FileKnowledgeDTO(
     Double knowledgeLoss,
     KnowledgeRisk knowledgeRisk,
     List<AuthorContributionDTO> contributions
-) {
-    public record AuthorContributionDTO(
-        String name,
-        Integer linesAdded,
-        Integer commits,
-        Double percentage
-    ) { }
-}
+) { }

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pwr.zpi.hotspotter.common.cloc.model.FileLinesData;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzer;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
@@ -13,12 +14,12 @@ import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
 import pwr.zpi.hotspotter.repositoryanalysis.filter.AnalysisFileFilter;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
-import pwr.zpi.hotspotter.repositoryanalysis.util.RepositoryFileUrlBuilder;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -31,7 +32,7 @@ class FileInfoAnalyzerTest {
     @Mock
     private AnalysisFileFilter analysisFileFilter;
     @Mock
-    private Process clocProcess;
+    private CompletableFuture<Map<String, FileLinesData>> clocFuture;
 
     @InjectMocks
     private FileInfoAnalyzer analyzer;
@@ -47,7 +48,7 @@ class FileInfoAnalyzerTest {
         when(commit.changedFiles()).thenReturn(List.of(f1, f2));
 
         FileInfoAnalyzerContext ctx =
-                new FileInfoAnalyzerContext("A1", Path.of("/repo"), LocalDate.of(2024, 1, 20), clocProcess);
+                new FileInfoAnalyzerContext("A1", Path.of("/repo"), LocalDate.of(2024, 1, 20), clocFuture);
 
         analyzer.processCommit(commit, ctx);
 
@@ -60,7 +61,14 @@ class FileInfoAnalyzerTest {
         LocalDate ref = LocalDate.of(2024, 1, 20);
         Path repoPath = Path.of("/repo");
 
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", repoPath, ref, clocProcess);
+        Map<String, FileLinesData> clocData = new HashMap<>();
+        clocData.put("src/X.java", new FileLinesData("Java", 3, 2, 1));
+
+        @SuppressWarnings("unchecked")
+        CompletableFuture<Map<String, FileLinesData>> mockFuture = mock(CompletableFuture.class);
+        when(mockFuture.get()).thenReturn(clocData);
+
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", repoPath, ref, mockFuture);
         ctx.recordContribution("src/X.java", ref.minusDays(3));
 
         try (MockedStatic<AnalysisUtils> utils = mockStatic(AnalysisUtils.class);
@@ -75,23 +83,6 @@ class FileInfoAnalyzerTest {
             fileUtils.when(() -> FileUtils.sizeOf(any())).thenReturn(100L);
             fileUtils.when(() -> FileUtils.byteCountToDisplaySize(100L)).thenReturn("100 B");
 
-            when(clocProcess.getInputStream())
-                    .thenReturn(new java.io.ByteArrayInputStream(
-                            ("""
-                                    language,file,blank,comment,code
-                                    Java,./src/X.java,1,2,3
-                                    SUM,0,0,0,0
-                            """).getBytes()
-                    ));
-            when(clocProcess.waitFor()).thenReturn(0);
-
-            MockedConstruction<ProcessBuilder> processBuilderMock =
-                    mockConstruction(ProcessBuilder.class, (pb, _) -> {
-                        when(pb.start()).thenReturn(clocProcess);
-                        when(pb.directory(any())).thenReturn(pb);
-                        when(pb.redirectErrorStream(true)).thenReturn(pb);
-                    });
-
             AnalysisInfo analysisInfo = AnalysisInfo.builder()
                     .id("A1")
                     .repositoryPlatform("github")
@@ -102,7 +93,6 @@ class FileInfoAnalyzerTest {
                     .build();
 
             analyzer.finishAnalysis(ctx, analysisInfo);
-            processBuilderMock.close();
         }
 
         FileInfo info = ctx.getFileInfos().get("src/X.java");

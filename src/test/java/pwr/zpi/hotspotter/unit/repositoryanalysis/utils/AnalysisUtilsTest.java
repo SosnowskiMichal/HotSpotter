@@ -6,7 +6,7 @@ import org.eclipse.jgit.dircache.DirCacheEntry;
 import org.eclipse.jgit.lib.Repository;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.repository.CrudRepository;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;

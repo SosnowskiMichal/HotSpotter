@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Service
 public class RepositoryStructureService {
 
-    private static final double DIMENSION_STEP = 0.05;
+    private static final double DIMENSION_STEP = 0.01;
 
     public RepositoryStructureNode buildRepositoryStructure(Collection<FileInfo> fileInfoData) {
         Map<String, FileInfo> fileInfoMap = fileInfoData.stream()

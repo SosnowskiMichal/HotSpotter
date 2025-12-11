@@ -4,11 +4,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pwr.zpi.hotspotter.common.cloc.model.FileLinesData;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.FileInfoAnalyzerContext;
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.fileinfo.model.FileInfo;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,12 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FileInfoAnalyzerContextTest {
 
     @Mock
-    Process clocProcess;
+    CompletableFuture<Map<String, FileLinesData>> clocFuture;
 
     @Test
     void recordContribution_shouldCreateNewEntry() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocFuture);
 
         ctx.recordContribution("src/Main.java", ref.minusDays(3));
 
@@ -37,7 +40,7 @@ class FileInfoAnalyzerContextTest {
     @Test
     void recordContribution_shouldUpdateCountersCorrectly() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocFuture);
 
         ctx.recordContribution("file.txt", ref.minusDays(10));
         ctx.recordContribution("file.txt", ref.minusMonths(3));
@@ -54,7 +57,7 @@ class FileInfoAnalyzerContextTest {
     @Test
     void updateFilePath_shouldMoveEntryToNewKey() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocFuture);
 
         ctx.recordContribution("old/File.java", ref.minusDays(1));
 
@@ -70,11 +73,12 @@ class FileInfoAnalyzerContextTest {
     @Test
     void updateFilePath_shouldRemoveWhenNewPathNull() {
         LocalDate ref = LocalDate.of(2024, 1, 20);
-        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocProcess);
+        FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", Path.of("/repo"), ref, clocFuture);
 
         ctx.recordContribution("file.txt", ref.minusDays(1));
         ctx.updateFilePath("file.txt", null);
 
         assertThat(ctx.getFileInfos()).doesNotContainKey("file.txt");
     }
+
 }

@@ -13,7 +13,7 @@ import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.Author
 import pwr.zpi.hotspotter.repositoryanalysis.analyzer.coupling.repository.FileCouplingRepository;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.Commit;
 import pwr.zpi.hotspotter.repositoryanalysis.logprocessing.model.FileChange;
-import pwr.zpi.hotspotter.repositoryanalysis.util.AnalysisUtils;
+import pwr.zpi.hotspotter.common.util.AnalysisUtils;
 
 import java.nio.file.Path;
 import java.time.LocalDate;

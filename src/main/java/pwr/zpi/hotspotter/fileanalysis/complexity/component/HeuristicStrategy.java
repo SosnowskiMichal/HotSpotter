@@ -58,7 +58,7 @@ public class HeuristicStrategy {
             int complexity = countKeywords(content) + 1;
             String key = FilenameUtils.getBaseName(path.toString());
             FileComplexityReport report = reportMap.computeIfAbsent(key, _ -> new FileComplexityReport());
-            report.addFunctionStats(complexity);
+            report.updateCcnStats(complexity);
 
         } catch (IOException e) {
             log.error("Error while analyzing file {}", path, e);

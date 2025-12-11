@@ -64,7 +64,7 @@ public class FileLogExtractor {
         List<String> command = Stream.of(
                     "git", "log",
                     "--pretty=format:" + FILE_GIT_LOG_FORMAT,
-                    "--shortstat",
+                    "--numstat",
                     "--date=short",
                     "--follow",
                     sinceDate != null ? "--since=" + sinceDate.format(DateTimeFormatter.ISO_LOCAL_DATE) : null,

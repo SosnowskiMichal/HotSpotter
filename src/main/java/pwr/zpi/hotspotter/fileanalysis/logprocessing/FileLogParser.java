@@ -23,7 +23,13 @@ public class FileLogParser {
             "\\[(?<hash>[^]]+)]\\s" +
             "(?<date>\\d{4}-\\d{2}-\\d{2})\\s" +
             "(?<author>[^<]+?)\\s<(?<email>[^>]+)>\\s*\\n" +
-            "(?:\\s*1 files? changed(?:, (?<added>\\d+) insertions?\\(\\+\\))?(?:, (?<removed>\\d+) deletions?\\(-\\))?)?"
+            "(?:(?<added>\\d+|-)\\s+(?<removed>\\d+|-)\\s+(?<path>[^\\n]+))?"
+    );
+    private static final Pattern FULL_RENAME_PATTERN = Pattern.compile(
+            "^(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)$"
+    );
+    private static final Pattern PARTIAL_RENAME_PATTERN = Pattern.compile(
+            "\\{(?<old>[^{}]*?)\\s=>\\s(?<current>[^{}]*?)}"
     );
 
     public List<FileCommit> parseFileLogs(InputStream inputStream) {
@@ -43,13 +49,15 @@ public class FileLogParser {
                 String dateStr = matcher.group("date");
                 String author = matcher.group("author").trim();
                 String email = matcher.group("email");
+                String rawPath = matcher.group("path");
+                String path = extractNewPath(rawPath);
 
                 LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
 
                 Integer linesAdded = parseInteger(matcher.group("added"));
                 Integer linesDeleted = parseInteger(matcher.group("removed"));
 
-                commits.add(new FileCommit(hash, date, author, email, linesAdded, linesDeleted));
+                commits.add(new FileCommit(hash, date, author, email, path, linesAdded, linesDeleted));
             }
 
         } catch (IOException e) {
@@ -65,6 +73,40 @@ public class FileLogParser {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    private String extractNewPath(String rawPath) {
+        if (rawPath == null) {
+            return null;
+        }
+
+        Matcher fullMatcher = FULL_RENAME_PATTERN.matcher(rawPath);
+        if (fullMatcher.matches()) {
+            return normalizePath(fullMatcher.group("current"));
+        }
+
+        Matcher partialMatcher = PARTIAL_RENAME_PATTERN.matcher(rawPath);
+        if (!partialMatcher.find()) {
+            return normalizePath(rawPath);
+        }
+
+        StringBuilder newPath = new StringBuilder();
+        partialMatcher.reset();
+        int lastEnd = 0;
+
+        while (partialMatcher.find()) {
+            newPath.append(rawPath, lastEnd, partialMatcher.start());
+            String newPart = partialMatcher.group("current");
+            newPath.append(newPart != null ? newPart : "");
+            lastEnd = partialMatcher.end();
+        }
+        newPath.append(rawPath.substring(lastEnd));
+
+        return normalizePath(newPath.toString());
+    }
+
+    private String normalizePath(String path) {
+        return path.replaceAll("/{2,}", "/").trim();
     }
 
 }

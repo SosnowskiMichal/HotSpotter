@@ -15,6 +15,7 @@ import pwr.zpi.hotspotter.repositorymanagement.model.RepositoryInfo;
 import pwr.zpi.hotspotter.user.model.User;
 
 import java.time.LocalDate;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -52,7 +53,7 @@ public class AnalysisQueueTaskFactory {
         return new AnalysisQueueTask(repositoryUrl, endDate, emitter, analysisTask);
     }
 
-    public AnalysisQueueTask createFileAnalysisTask(String analysisId, String filePath, SseEmitter emitter) {
+    public AnalysisQueueTask createFileAnalysisTask(String analysisId, String filePath, CompletableFuture<Void> future) {
         log.debug("Creating file analysis task for analysisId: {}, file: {}", analysisId, filePath);
 
         AnalysisInfo analysisInfo = analysisInfoRepository.findById(analysisId)
@@ -77,14 +78,17 @@ public class AnalysisQueueTaskFactory {
         Runnable analysisTask = () -> {
             RepositoryInfo repositoryInfo = repositoryInfoCache.get(analysisInfo.getRepositoryUrl());
             if (repositoryInfo != null) {
-                fileAnalysisService.runFileAnalysis(repositoryInfo, analysisInfo, filePath, emitter);
+                fileAnalysisService.runFileAnalysis(repositoryInfo, analysisInfo, filePath);
+                future.complete(null);
             } else {
                 log.error("Repository info not found in cache for analysis ID: {}", analysisId);
-                throw new AnalysisException("Repository information not available");
+                future.completeExceptionally(
+                        new AnalysisException("Repository information not available")
+                );
             }
         };
 
-        return new AnalysisQueueTask(analysisInfo.getRepositoryUrl(), endDate, emitter, analysisTask);
+        return new AnalysisQueueTask(analysisInfo.getRepositoryUrl(), endDate, analysisTask);
     }
 
 }

@@ -1,4 +1,4 @@
-package pwr.zpi.hotspotter.unit.complexity;
+package pwr.zpi.hotspotter.unit.fileanalysis.complexity;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -129,7 +129,7 @@ class HeuristicStrategyTest {
 
         FileComplexityReport report = result.get("Test");
         assertEquals(5, report.getTotalCCN());
-        assertEquals(2, report.getFunctionsCount());
+        assertEquals(2, report.getMethodsCount());
     }
 
     @Test
