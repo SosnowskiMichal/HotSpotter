@@ -49,7 +49,7 @@ public class FileAnalysisResultMapper {
                 fileVersionStatisticsDTOs.size(),
 
                 methodStatisticsDTOs,
-                fileAnalysisResult.getMethodStatistics().size(),
+                fileAnalysisResult.getNumberOfMethods(),
 
                 currentAuthorStatisticsDTOs,
                 currentAuthorStatisticsDTOs.size()

@@ -47,6 +47,8 @@ public class FileAnalysisResult {
 
     private List<FileVersionStatistics> fileVersionStatistics;
 
+    private Integer numberOfMethods;
+
     private List<MethodStatistics> methodStatistics;
 
     private Integer numberOfCurrentAuthors;
