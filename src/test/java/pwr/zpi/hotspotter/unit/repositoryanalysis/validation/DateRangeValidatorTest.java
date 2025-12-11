@@ -113,7 +113,7 @@ class DateRangeValidatorTest {
         RepositoryAnalysisController.AnalysisRequest request =
                 new RepositoryAnalysisController.AnalysisRequest(
                         "url",
-                        LocalDate.of(2005, 1, 1),
+                        LocalDate.of(2000, 1, 1),
                         LocalDate.of(2024, 12, 31)
                 );
 
@@ -129,7 +129,7 @@ class DateRangeValidatorTest {
         RepositoryAnalysisController.AnalysisRequest request =
                 new RepositoryAnalysisController.AnalysisRequest(
                         "url",
-                        LocalDate.of(2004, 12, 31),
+                        LocalDate.of(1999, 12, 31),
                         LocalDate.of(2024, 12, 31)
                 );
 
@@ -167,8 +167,8 @@ class DateRangeValidatorTest {
         RepositoryAnalysisController.AnalysisRequest request =
                 new RepositoryAnalysisController.AnalysisRequest(
                         "url",
-                        LocalDate.of(2004, 12, 31),
-                        LocalDate.of(2004, 6, 1)
+                        LocalDate.of(1999, 12, 31),
+                        LocalDate.of(1999, 6, 1)
                 );
 
         boolean result = validator.isValid(request, context);
@@ -189,7 +189,7 @@ class DateRangeValidatorTest {
         RepositoryAnalysisController.AnalysisRequest request =
                 new RepositoryAnalysisController.AnalysisRequest(
                         "url",
-                        LocalDate.of(2004, 12, 31),
+                        LocalDate.of(1999, 12, 31),
                         LocalDate.of(2024, 12, 31)
                 );
 
@@ -203,7 +203,7 @@ class DateRangeValidatorTest {
         RepositoryAnalysisController.AnalysisRequest request =
                 new RepositoryAnalysisController.AnalysisRequest(
                         "url",
-                        LocalDate.of(2005, 1, 2),
+                        LocalDate.of(2000, 1, 2),
                         LocalDate.of(2024, 12, 31)
                 );
 

@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 public class DateRangeValidator implements ConstraintValidator<ValidDateRange, RepositoryAnalysisController.AnalysisRequest> {
 
-    private static final LocalDate MIN_START_DATE = LocalDate.of(2005, 1, 1);
+    private static final LocalDate MIN_START_DATE = LocalDate.of(2000, 1, 1);
 
     @Override
     public boolean isValid(RepositoryAnalysisController.AnalysisRequest request, ConstraintValidatorContext context) {
