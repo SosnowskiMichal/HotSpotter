@@ -16,11 +16,10 @@ class ActivityTrendsContextTest {
     @Test
     void allGetters_areCoveredForLombok() {
         LocalDate refDate = LocalDate.of(2024, 1, 5);
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate, 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate);
 
         assertThat(ctx.getAnalysisId()).isEqualTo("A1");
         assertThat(ctx.getReferenceDate()).isEqualTo(refDate);
-        assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(2);
         assertThat(ctx.getLastDate()).isNull();
         assertThat(ctx.getFirstCommitDate()).isNull();
         assertThat(ctx.getActivityTrendsDailyStats()).isNotNull();
@@ -31,11 +30,10 @@ class ActivityTrendsContextTest {
     @Test
     void constructor_withValidReferenceDate_setsAllFields() {
         LocalDate refDate = LocalDate.of(2024, 1, 5);
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate, 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate);
 
         assertThat(ctx.getAnalysisId()).isEqualTo("A1");
         assertThat(ctx.getReferenceDate()).isEqualTo(refDate);
-        assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(2);
         assertThat(ctx.getLastDate()).isNull();
         assertThat(ctx.getFirstCommitDate()).isNull();
         assertThat(ctx.getActivityTrendsDailyStats()).isEmpty();
@@ -45,14 +43,14 @@ class ActivityTrendsContextTest {
 
     @Test
     void constructor_withNullReferenceDate_usesCurrentDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", null, 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", null);
 
         assertThat(ctx.getReferenceDate()).isEqualTo(LocalDate.now());
     }
 
     @Test
     void recordContribution_firstContribution_createsStatsWithoutAggregation() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
 
@@ -67,7 +65,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void recordContribution_sameDayMultipleContributions_aggregatesWithoutGapFilling() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "Jane", 5, 3);
@@ -81,7 +79,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void recordContribution_earlierDate_doesNotTriggerAggregation() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "B", 3, 2);
@@ -95,7 +93,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void recordContribution_laterDate_triggersAggregation() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 4), "B", 3, 0);
@@ -110,7 +108,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void finishAnalysis_fillsMissingDaysUpToReferenceDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.finishAnalysis();
@@ -126,7 +124,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void finishAnalysis_whenLastDateAfterReferenceDate_loopNotEntered() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 1), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 1));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "A", 5, 1);
         ctx.finishAnalysis();
@@ -136,7 +134,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void aggregateStats_existingDailyStats_updatesAuthorCounts() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "B", 3, 0);
@@ -151,7 +149,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void aggregateStats_gapDays_createsNewDailyStats() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 4), "A", 3, 0);
@@ -166,7 +164,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void aggregateStats_clearsUniqueAuthorsAfterEachDay() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "B", 3, 1);
@@ -183,9 +181,9 @@ class ActivityTrendsContextTest {
 
     @Test
     void removeInactiveAuthors_removesStaleEntries() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 2, 10), 1);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 2, 10));
 
-        ctx.recordContribution(LocalDate.of(2023, 12, 1), "A", 1, 1);
+        ctx.recordContribution(LocalDate.of(2023, 6, 1), "A", 1, 1);
         ctx.recordContribution(LocalDate.of(2024, 2, 5), "B", 1, 1);
 
         assertThat(ctx.getAuthorLastActivity()).containsOnlyKeys("B");
@@ -193,7 +191,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void removeInactiveAuthors_keepsActiveAuthors() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 1, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 2), "B", 1, 1);
@@ -206,9 +204,9 @@ class ActivityTrendsContextTest {
 
     @Test
     void removeInactiveAuthors_authorBecomesInactiveOverTime() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 3, 15), 1);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 3, 15));
 
-        ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 1, 1);
+        ctx.recordContribution(LocalDate.of(2023, 6, 1), "A", 1, 1);
         ctx.recordContribution(LocalDate.of(2024, 3, 1), "B", 1, 1);
 
         ctx.finishAnalysis();
@@ -219,7 +217,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void sameAuthorMultipleContributionsSameDay_countedOnce() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 5, 1);
@@ -230,7 +228,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void authorActivityUpdated_onNewContribution() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "John", 5, 1);
@@ -240,7 +238,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void fullWorkflow_multipleAuthorsAndDays() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("analysis-123", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("analysis-123", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "Alice", 100, 10);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "Bob", 50, 5);
@@ -264,14 +262,14 @@ class ActivityTrendsContextTest {
 
     @Test
     void getFirstCommitDate_emptyContext_returnsNull() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         assertThat(ctx.getFirstCommitDate()).isNull();
     }
 
     @Test
     void getFirstCommitDate_singleContribution_returnsDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "Alice", 10, 2);
 
@@ -280,7 +278,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void getFirstCommitDate_afterFinishAnalysis_remainsConsistent() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "Alice", 10, 2);
         LocalDate firstDateBeforeFinish = ctx.getFirstCommitDate();
@@ -294,7 +292,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void getFirstCommitDate_chronologicalContributions_returnsEarliestDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "Alice", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "Bob", 5, 1);

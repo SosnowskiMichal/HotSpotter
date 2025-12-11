@@ -9,9 +9,10 @@ import java.util.*;
 @Getter
 public class ActivityTrendsContext {
 
+    private static final int AUTHOR_INACTIVITY_THRESHOLD_MONTHS = 6;
+
     private final String analysisId;
     private final LocalDate referenceDate;
-    private final int authorInactivityThresholdMonths;
     private final Map<LocalDate, ActivityTrendsDailyStats> activityTrendsDailyStats;
 
     private LocalDate lastDate;
@@ -19,10 +20,9 @@ public class ActivityTrendsContext {
     private final Set<String> uniqueAuthors;
     private final Map<String, LocalDate> authorLastActivity;
 
-    public ActivityTrendsContext(String analysisId, LocalDate referenceDate, int authorInactivityThresholdMonths) {
+    public ActivityTrendsContext(String analysisId, LocalDate referenceDate) {
         this.analysisId = analysisId;
         this.referenceDate = referenceDate != null ? referenceDate : LocalDate.now();
-        this.authorInactivityThresholdMonths = authorInactivityThresholdMonths;
         this.activityTrendsDailyStats = new LinkedHashMap<>();
 
         this.lastDate = null;
@@ -92,7 +92,7 @@ public class ActivityTrendsContext {
     }
 
     private void removeInactiveAuthors(LocalDate date) {
-        LocalDate inactivityThreshold = date.minusMonths(authorInactivityThresholdMonths);
+        LocalDate inactivityThreshold = date.minusMonths(AUTHOR_INACTIVITY_THRESHOLD_MONTHS);
         authorLastActivity.entrySet().removeIf(entry ->
                 entry.getValue().isBefore(inactivityThreshold)
         );

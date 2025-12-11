@@ -19,9 +19,9 @@ public class ActivityTrendsAnalyzer {
 
     private final ActivityTrendsRepository activityTrendsRepository;
 
-    public ActivityTrendsContext startAnalysis(String analysisId, LocalDate referenceDate, int authorInactivityThresholdMonths) {
+    public ActivityTrendsContext startAnalysis(String analysisId, LocalDate referenceDate) {
         log.debug("Starting activity trends analysis for ID: {}", analysisId);
-        return new ActivityTrendsContext(analysisId, referenceDate, authorInactivityThresholdMonths);
+        return new ActivityTrendsContext(analysisId, referenceDate);
     }
 
     public void processCommit(Commit commit, ActivityTrendsContext context) {

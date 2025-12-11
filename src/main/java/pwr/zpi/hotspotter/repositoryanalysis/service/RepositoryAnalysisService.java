@@ -59,7 +59,13 @@ public class RepositoryAnalysisService {
     private final CouplingAnalyzer couplingAnalyzer;
     private final AnalysisStatisticsCalculator analysisStatisticsCalculator;
 
-    public void runRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter, User user) {
+    public void runRepositoryAnalysis(
+            RepositoryInfo repositoryInfo,
+            LocalDate startDate,
+            LocalDate endDate,
+            SseEmitter emitter,
+            User user
+    ) {
         try {
             executeRepositoryAnalysis(repositoryInfo, startDate, endDate, emitter, user);
 
@@ -88,7 +94,13 @@ public class RepositoryAnalysisService {
         }
     }
 
-    private void executeRepositoryAnalysis(RepositoryInfo repositoryInfo, LocalDate startDate, LocalDate endDate, SseEmitter emitter, User user) {
+    private void executeRepositoryAnalysis(
+            RepositoryInfo repositoryInfo,
+            LocalDate startDate,
+            LocalDate endDate,
+            SseEmitter emitter,
+            User user
+    ) {
         log.info("Starting analysis for repository: {}, time range: ({} - {})", repositoryInfo.getRemoteUrl(), startDate, endDate);
 
         ssePublisher.sendProgress(emitter, AnalysisSseStatus.PROCESSING_DATA);
@@ -109,7 +121,7 @@ public class RepositoryAnalysisService {
             KnowledgeAnalyzerContext knowledgeContext = knowledgeAnalyzer.startAnalysis(analysisId, repositoryPath);
             AuthorsAnalyzerContext authorsContext = authorsAnalyzer.startAnalysis(analysisId, endDate);
             FileInfoAnalyzerContext fileInfoContext = fileInfoAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
-            ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, endDate, 6);
+            ActivityTrendsContext activityTrendsContext = activityTrendsAnalyzer.startAnalysis(analysisId, endDate);
             CouplingAnalyzerContext couplingContext = couplingAnalyzer.startAnalysis(analysisId, repositoryPath, endDate);
 
             try (CommitStream commitStream = logExtractor.extractAndParseCommits(repositoryPath, startDate, endDate)) {

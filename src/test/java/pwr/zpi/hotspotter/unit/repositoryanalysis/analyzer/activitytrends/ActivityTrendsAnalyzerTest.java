@@ -33,17 +33,16 @@ class ActivityTrendsAnalyzerTest {
     void startAnalysis_createsContext() {
         LocalDate ref = LocalDate.of(2024, 1, 1);
 
-        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", ref, 3);
+        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", ref);
 
         assertThat(ctx.getAnalysisId()).isEqualTo("A1");
         assertThat(ctx.getReferenceDate()).isEqualTo(ref);
-        assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(3);
         assertThat(ctx.getActivityTrendsDailyStats()).isEmpty();
     }
 
     @Test
     void processCommit_addsStatsToContext() {
-        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", LocalDate.of(2024,1,10), 2);
+        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", LocalDate.of(2024,1,10));
 
         Commit commit = new Commit(
                 "id1",
@@ -67,7 +66,7 @@ class ActivityTrendsAnalyzerTest {
 
     @Test
     void finishAnalysis_savesActivityTrends() {
-        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", LocalDate.of(2024,1,5), 1);
+        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", LocalDate.of(2024,1,5));
 
         ctx.recordContribution(LocalDate.of(2024,1,1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024,1,2), "A", 3, 0);
@@ -85,7 +84,7 @@ class ActivityTrendsAnalyzerTest {
 
     @Test
     void finishAnalysis_handlesExceptionGracefully() {
-        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", LocalDate.now(), 1);
+        ActivityTrendsContext ctx = analyzer.startAnalysis("A1", LocalDate.now());
 
         doThrow(new RuntimeException("fail")).when(repository).save(any());
 
@@ -93,4 +92,5 @@ class ActivityTrendsAnalyzerTest {
 
         verify(repository).save(any());
     }
+
 }
