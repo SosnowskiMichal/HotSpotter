@@ -63,13 +63,9 @@ public class FileInfoAnalyzer {
 
         Set<String> existingFiles = AnalysisUtils.getFilteredExistingFileNames(context.getRepositoryPath(), analysisFileFilter);
 
-        // TODO: Verify
         Map<String, FileLinesData> fileLinesData;
         try {
-            fileLinesData = context.getClocFuture().get(120, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            log.warn("Cloc analysis timed out for analysis {}", context.getAnalysisId());
-            fileLinesData = new HashMap<>();
+            fileLinesData = context.getClocFuture().get();
         } catch (InterruptedException | ExecutionException e) {
             log.error("Error retrieving cloc results for analysis {}: {}", context.getAnalysisId(), e.getMessage(), e);
             if (e instanceof InterruptedException) Thread.currentThread().interrupt();

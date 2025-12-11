@@ -13,6 +13,7 @@ import pwr.zpi.hotspotter.common.util.RepositoryFileUrlBuilder;
 import pwr.zpi.hotspotter.fileanalysis.blame.FileBlameExtractor;
 import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 import pwr.zpi.hotspotter.fileanalysis.complexity.model.FileComplexityReport;
+import pwr.zpi.hotspotter.fileanalysis.complexity.model.MethodComplexity;
 import pwr.zpi.hotspotter.fileanalysis.complexity.service.FileComplexityService;
 import pwr.zpi.hotspotter.fileanalysis.config.FileAnalysisConfig;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.FileLogExtractor;
@@ -32,8 +33,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -121,7 +124,9 @@ public class FileAnalysisService {
             combineClocResults(fileAnalysisResult, clocResults, repositoryInfo);
             combineComplexityResults(fileAnalysisResult, complexityResults);
             combineCurrentAuthorsResults(fileAnalysisResult, currentAuthors);
-            combineMethodsStatisticsResults(fileAnalysisResult, methodsStatistics, repositoryInfo, filePath, lastCommitHash);
+            combineMethodsStatisticsResults(
+                    fileAnalysisResult, methodsStatistics, repositoryInfo, filePath, lastCommitHash, complexityResults
+            );
 
             fileAnalysisResult.markAsCompleted();
             fileAnalysisResultRepository.save(fileAnalysisResult);
@@ -227,9 +232,25 @@ public class FileAnalysisService {
             List<MethodStatistics> methodsStatistics,
             RepositoryInfo repositoryInfo,
             String filePath,
-            String lastCommitHash
+            String lastCommitHash,
+            Map<String, FileComplexityReport> complexityResults
     ) {
-        for (MethodStatistics stats : methodsStatistics) {
+        FileComplexityReport lastCommitReport = complexityResults.get(lastCommitHash);
+
+        if (lastCommitReport == null || lastCommitReport.getMethods() == null) {
+            fileAnalysisResult.setMethodStatistics(List.of());
+            return;
+        }
+
+        Set<String> validMethodNames = lastCommitReport.getMethods().stream()
+                .map(MethodComplexity::getName)
+                .collect(Collectors.toSet());
+
+        List<MethodStatistics> filteredMethodsStatistics = methodsStatistics.stream()
+                .filter(stats -> validMethodNames.contains(stats.getName()))
+                .toList();
+
+        for (MethodStatistics stats : filteredMethodsStatistics) {
             String url = RepositoryFileUrlBuilder.buildFileUrl(
                     repositoryInfo.getPlatform(),
                     repositoryInfo.getRemoteUrl(),
@@ -241,7 +262,7 @@ public class FileAnalysisService {
             stats.setUrl(url);
         }
 
-        fileAnalysisResult.setMethodStatistics(methodsStatistics);
+        fileAnalysisResult.setMethodStatistics(filteredMethodsStatistics);
     }
 
     private void cleanupOutputDirectory(Path outputPath) throws IOException {
