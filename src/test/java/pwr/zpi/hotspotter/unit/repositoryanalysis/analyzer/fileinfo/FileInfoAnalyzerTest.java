@@ -20,7 +20,6 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -67,7 +66,7 @@ class FileInfoAnalyzerTest {
 
         @SuppressWarnings("unchecked")
         CompletableFuture<Map<String, FileLinesData>> mockFuture = mock(CompletableFuture.class);
-        when(mockFuture.get(anyLong(), any(TimeUnit.class))).thenReturn(clocData);
+        when(mockFuture.get()).thenReturn(clocData);
 
         FileInfoAnalyzerContext ctx = new FileInfoAnalyzerContext("A1", repoPath, ref, mockFuture);
         ctx.recordContribution("src/X.java", ref.minusDays(3));
