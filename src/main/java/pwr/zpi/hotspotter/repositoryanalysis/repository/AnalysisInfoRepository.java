@@ -1,5 +1,7 @@
 package pwr.zpi.hotspotter.repositoryanalysis.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
@@ -10,6 +12,8 @@ import java.util.List;
 public interface AnalysisInfoRepository extends MongoRepository<AnalysisInfo, String> {
 
     List<AnalysisInfo> findByRepositoryUrl(String repositoryUrl);
+
+    Page<AnalysisInfo> findByUserId(String userId, Pageable pageable);
 
     boolean existsByIdAndStatus(String id, AnalysisInfo.AnalysisStatus status);
 

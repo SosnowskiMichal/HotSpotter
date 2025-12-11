@@ -1,6 +1,7 @@
 package pwr.zpi.hotspotter.repositoryanalysis.mapper;
 
 import org.springframework.stereotype.Component;
+import pwr.zpi.hotspotter.repositoryanalysis.dto.AnalysisHistoryEntryDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.dto.AnalysisInfoDTO;
 import pwr.zpi.hotspotter.repositoryanalysis.model.AnalysisInfo;
 
@@ -21,6 +22,19 @@ public class AnalysisInfoMapper {
                 analysisInfo.getAnalysisStartedAt(),
                 analysisInfo.getAnalysisFinishedAt(),
                 analysisInfo.getAnalysisTimeInSeconds()
+        );
+    }
+
+    public AnalysisHistoryEntryDTO toHistoryDTO(AnalysisInfo analysisInfo) {
+        if (analysisInfo == null) return null;
+
+        return new AnalysisHistoryEntryDTO(
+                analysisInfo.getId(),
+                analysisInfo.getRepositoryUrl(),
+                analysisInfo.getAnalysisStartedAt(),
+                analysisInfo.getStartDate(),
+                analysisInfo.getEndDate(),
+                analysisInfo.getStatus().name()
         );
     }
 

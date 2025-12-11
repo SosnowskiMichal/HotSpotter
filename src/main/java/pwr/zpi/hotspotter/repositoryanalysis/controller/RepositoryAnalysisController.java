@@ -24,8 +24,10 @@ public class RepositoryAnalysisController {
     private final AnalysisQueue analysisQueue;
 
     @GetMapping
-    public SseEmitter startRepositoryAnalysis(@Valid @ModelAttribute AnalysisRequest request,
-                                              @CurrentUser(required = false) User user) {
+    public SseEmitter startRepositoryAnalysis(
+            @Valid @ModelAttribute AnalysisRequest request,
+            @CurrentUser(required = false) User user
+    ) {
         SseEmitter emitter = new SseEmitter(0L);
 
         analysisQueue.submitRepositoryAnalysis(
