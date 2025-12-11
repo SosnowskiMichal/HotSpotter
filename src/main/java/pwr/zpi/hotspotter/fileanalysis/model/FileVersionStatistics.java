@@ -17,16 +17,22 @@ public class FileVersionStatistics {
 
     private String url;
 
-    private Integer totalLines;
+    @Builder.Default
+    private Integer totalLines = 0;
 
-    private Integer codeLines;
+    @Builder.Default
+    private Integer codeLines = 0;
 
-    private Integer commentLines;
+    @Builder.Default
+    private Integer commentLines = 0;
 
-    private Integer blankLines;
+    @Builder.Default
+    private Integer blankLines = 0;
 
-    private Integer complexity;
+    @Builder.Default
+    private Integer complexity = 1;
 
-    private Integer numberOfMethods;
+    @Builder.Default
+    private Integer numberOfMethods = 0;
 
 }
