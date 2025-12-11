@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import pwr.zpi.hotspotter.fileanalysis.blame.model.FileAuthorStatistics;
 import pwr.zpi.hotspotter.fileanalysis.logprocessing.model.FileCommit;
@@ -27,9 +28,11 @@ public class FileAnalysisResult {
     @Id
     private String id;
 
+    @Indexed
     @NotNull(message = "Analysis ID is required")
     private String analysisId;
 
+    @Indexed
     @NotNull(message = "File path is required")
     private String filePath;
 
@@ -46,6 +49,8 @@ public class FileAnalysisResult {
     private Integer totalFileVersions;
 
     private List<FileVersionStatistics> fileVersionStatistics;
+
+    private Integer numberOfMethods;
 
     private List<MethodStatistics> methodStatistics;
 

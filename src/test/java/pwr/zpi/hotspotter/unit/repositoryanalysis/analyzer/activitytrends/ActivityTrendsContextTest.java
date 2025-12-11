@@ -16,43 +16,39 @@ class ActivityTrendsContextTest {
     @Test
     void allGetters_areCoveredForLombok() {
         LocalDate refDate = LocalDate.of(2024, 1, 5);
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate, 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate);
 
         assertThat(ctx.getAnalysisId()).isEqualTo("A1");
         assertThat(ctx.getReferenceDate()).isEqualTo(refDate);
-        assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(2);
-        assertThat(ctx.getLastDate()).isNull();
         assertThat(ctx.getFirstCommitDate()).isNull();
         assertThat(ctx.getActivityTrendsDailyStats()).isNotNull();
-        assertThat(ctx.getUniqueAuthors()).isNotNull();
+        assertThat(ctx.getDailyUniqueAuthors()).isNotNull();
         assertThat(ctx.getAuthorLastActivity()).isNotNull();
     }
 
     @Test
     void constructor_withValidReferenceDate_setsAllFields() {
         LocalDate refDate = LocalDate.of(2024, 1, 5);
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate, 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", refDate);
 
         assertThat(ctx.getAnalysisId()).isEqualTo("A1");
         assertThat(ctx.getReferenceDate()).isEqualTo(refDate);
-        assertThat(ctx.getAuthorInactivityThresholdMonths()).isEqualTo(2);
-        assertThat(ctx.getLastDate()).isNull();
         assertThat(ctx.getFirstCommitDate()).isNull();
         assertThat(ctx.getActivityTrendsDailyStats()).isEmpty();
-        assertThat(ctx.getUniqueAuthors()).isEmpty();
+        assertThat(ctx.getDailyUniqueAuthors()).isEmpty();
         assertThat(ctx.getAuthorLastActivity()).isEmpty();
     }
 
     @Test
     void constructor_withNullReferenceDate_usesCurrentDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", null, 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", null);
 
         assertThat(ctx.getReferenceDate()).isEqualTo(LocalDate.now());
     }
 
     @Test
     void recordContribution_firstContribution_createsStatsWithoutAggregation() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
 
@@ -60,14 +56,13 @@ class ActivityTrendsContextTest {
         assertThat(stats.getCommits()).isEqualTo(1);
         assertThat(stats.getLinesAdded()).isEqualTo(10);
         assertThat(stats.getLinesDeleted()).isEqualTo(2);
-        assertThat(ctx.getLastDate()).isEqualTo(LocalDate.of(2024, 1, 1));
-        assertThat(ctx.getUniqueAuthors()).containsExactly("John");
+        assertThat(ctx.getDailyUniqueAuthors().get(LocalDate.of(2024, 1, 1))).containsExactly("John");
         assertThat(ctx.getAuthorLastActivity()).containsEntry("John", LocalDate.of(2024, 1, 1));
     }
 
     @Test
     void recordContribution_sameDayMultipleContributions_aggregatesWithoutGapFilling() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "Jane", 5, 3);
@@ -81,7 +76,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void recordContribution_earlierDate_doesNotTriggerAggregation() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "B", 3, 2);
@@ -94,12 +89,21 @@ class ActivityTrendsContextTest {
     }
 
     @Test
-    void recordContribution_laterDate_triggersAggregation() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+    void recordContribution_laterDate_doesNotTriggerAggregationUntilFinish() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 4), "B", 3, 0);
 
+        // Before finishAnalysis, only days with commits are present
+        assertThat(ctx.getActivityTrendsDailyStats()).containsOnlyKeys(
+                LocalDate.of(2024, 1, 1),
+                LocalDate.of(2024, 1, 4)
+        );
+
+        ctx.finishAnalysis();
+
+        // After finishAnalysis, gaps are filled
         assertThat(ctx.getActivityTrendsDailyStats()).containsKeys(
                 LocalDate.of(2024, 1, 1),
                 LocalDate.of(2024, 1, 2),
@@ -110,7 +114,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void finishAnalysis_fillsMissingDaysUpToReferenceDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.finishAnalysis();
@@ -126,7 +130,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void finishAnalysis_whenLastDateAfterReferenceDate_loopNotEntered() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 1), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 1));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "A", 5, 1);
         ctx.finishAnalysis();
@@ -136,7 +140,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void aggregateStats_existingDailyStats_updatesAuthorCounts() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "B", 3, 0);
@@ -151,7 +155,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void aggregateStats_gapDays_createsNewDailyStats() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 4), "A", 3, 0);
@@ -166,7 +170,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void aggregateStats_clearsUniqueAuthorsAfterEachDay() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "B", 3, 1);
@@ -183,17 +187,26 @@ class ActivityTrendsContextTest {
 
     @Test
     void removeInactiveAuthors_removesStaleEntries() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 2, 10), 1);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 2, 10));
 
-        ctx.recordContribution(LocalDate.of(2023, 12, 1), "A", 1, 1);
+        ctx.recordContribution(LocalDate.of(2023, 6, 1), "A", 1, 1);
         ctx.recordContribution(LocalDate.of(2024, 2, 5), "B", 1, 1);
 
-        assertThat(ctx.getAuthorLastActivity()).containsOnlyKeys("B");
+        // Inactive authors are tracked until finishAnalysis
+        assertThat(ctx.getAuthorLastActivity()).containsOnlyKeys("A", "B");
+
+        ctx.finishAnalysis();
+
+        // After finishAnalysis, only active authors remain in the last processed date
+        // Since we finish at 2024-02-10, author A (last seen 2023-06-01) should be removed during aggregation
+        // Check the stats for the last day to verify active authors count
+        ActivityTrendsDailyStats lastStats = ctx.getActivityTrendsDailyStats().get(LocalDate.of(2024, 2, 10));
+        assertThat(lastStats.getActiveAuthors()).isEqualTo(1);  // Only B is active
     }
 
     @Test
     void removeInactiveAuthors_keepsActiveAuthors() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 1, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 2), "B", 1, 1);
@@ -206,9 +219,9 @@ class ActivityTrendsContextTest {
 
     @Test
     void removeInactiveAuthors_authorBecomesInactiveOverTime() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 3, 15), 1);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 3, 15));
 
-        ctx.recordContribution(LocalDate.of(2024, 1, 1), "A", 1, 1);
+        ctx.recordContribution(LocalDate.of(2023, 6, 1), "A", 1, 1);
         ctx.recordContribution(LocalDate.of(2024, 3, 1), "B", 1, 1);
 
         ctx.finishAnalysis();
@@ -219,18 +232,18 @@ class ActivityTrendsContextTest {
 
     @Test
     void sameAuthorMultipleContributionsSameDay_countedOnce() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 5));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 5, 1);
 
-        assertThat(ctx.getUniqueAuthors()).hasSize(1);
+        assertThat(ctx.getDailyUniqueAuthors().get(LocalDate.of(2024, 1, 1))).hasSize(1);
         assertThat(ctx.getAuthorLastActivity()).hasSize(1);
     }
 
     @Test
     void authorActivityUpdated_onNewContribution() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "John", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "John", 5, 1);
@@ -240,7 +253,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void fullWorkflow_multipleAuthorsAndDays() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("analysis-123", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("analysis-123", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "Alice", 100, 10);
         ctx.recordContribution(LocalDate.of(2024, 1, 1), "Bob", 50, 5);
@@ -264,14 +277,14 @@ class ActivityTrendsContextTest {
 
     @Test
     void getFirstCommitDate_emptyContext_returnsNull() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         assertThat(ctx.getFirstCommitDate()).isNull();
     }
 
     @Test
     void getFirstCommitDate_singleContribution_returnsDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "Alice", 10, 2);
 
@@ -280,7 +293,7 @@ class ActivityTrendsContextTest {
 
     @Test
     void getFirstCommitDate_afterFinishAnalysis_remainsConsistent() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "Alice", 10, 2);
         LocalDate firstDateBeforeFinish = ctx.getFirstCommitDate();
@@ -294,12 +307,83 @@ class ActivityTrendsContextTest {
 
     @Test
     void getFirstCommitDate_chronologicalContributions_returnsEarliestDate() {
-        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10), 2);
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
 
         ctx.recordContribution(LocalDate.of(2024, 1, 3), "Alice", 10, 2);
         ctx.recordContribution(LocalDate.of(2024, 1, 5), "Bob", 5, 1);
         ctx.recordContribution(LocalDate.of(2024, 1, 7), "Charlie", 8, 3);
 
+        assertThat(ctx.getFirstCommitDate()).isEqualTo(LocalDate.of(2024, 1, 3));
+    }
+
+    @Test
+    void outOfOrderCommits_handledCorrectly() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
+
+        // Process commits in non-chronological order
+        ctx.recordContribution(LocalDate.of(2024, 1, 5), "A", 10, 1);
+        ctx.recordContribution(LocalDate.of(2024, 1, 2), "B", 5, 2);
+        ctx.recordContribution(LocalDate.of(2024, 1, 8), "A", 8, 0);
+        ctx.recordContribution(LocalDate.of(2024, 1, 2), "C", 3, 1);
+
+        ctx.finishAnalysis();
+
+        // Verify firstCommitDate is earliest
+        assertThat(ctx.getFirstCommitDate()).isEqualTo(LocalDate.of(2024, 1, 2));
+
+        // Verify all days from Jan 2 to Jan 10 are present
+        assertThat(ctx.getActivityTrendsDailyStats()).hasSize(9);
+
+        // Verify Jan 2 has correct unique authors (B and C)
+        assertThat(ctx.getActivityTrendsDailyStats().get(LocalDate.of(2024, 1, 2)).getUniqueAuthors()).isEqualTo(2);
+
+        // Verify authorLastActivity has latest dates
+        assertThat(ctx.getAuthorLastActivity().get("A")).isEqualTo(LocalDate.of(2024, 1, 8));
+    }
+
+    @Test
+    void authorLastActivity_outOfOrderCommits_keepsLatestDate() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
+
+        ctx.recordContribution(LocalDate.of(2024, 1, 5), "Alice", 10, 1);
+        ctx.recordContribution(LocalDate.of(2024, 1, 2), "Alice", 5, 0);  // Earlier commit processed later
+
+        // Should keep Jan 5 as the latest activity
+        assertThat(ctx.getAuthorLastActivity().get("Alice")).isEqualTo(LocalDate.of(2024, 1, 5));
+    }
+
+    @Test
+    void gapFilling_outOfOrderCommits_fillsCorrectly() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
+
+        ctx.recordContribution(LocalDate.of(2024, 1, 7), "A", 5, 1);
+        ctx.recordContribution(LocalDate.of(2024, 1, 3), "B", 3, 0);
+
+        ctx.finishAnalysis();
+
+        // Gaps should be filled from Jan 3 (earliest) to Jan 10 (reference)
+        assertThat(ctx.getActivityTrendsDailyStats()).containsKeys(
+                LocalDate.of(2024, 1, 3),
+                LocalDate.of(2024, 1, 4),  // gap
+                LocalDate.of(2024, 1, 5),  // gap
+                LocalDate.of(2024, 1, 6),  // gap
+                LocalDate.of(2024, 1, 7),
+                LocalDate.of(2024, 1, 8),  // gap
+                LocalDate.of(2024, 1, 9),  // gap
+                LocalDate.of(2024, 1, 10)  // gap
+        );
+    }
+
+    @Test
+    void firstCommitDate_nonChronologicalOrder_returnsEarliest() {
+        ActivityTrendsContext ctx = new ActivityTrendsContext("A1", LocalDate.of(2024, 1, 10));
+
+        // Process commits in order [Jan 5, Jan 3, Jan 7]
+        ctx.recordContribution(LocalDate.of(2024, 1, 5), "Alice", 10, 2);
+        ctx.recordContribution(LocalDate.of(2024, 1, 3), "Bob", 5, 1);
+        ctx.recordContribution(LocalDate.of(2024, 1, 7), "Charlie", 8, 3);
+
+        // Verify firstCommitDate is Jan 3 (earliest), not Jan 5 (first processed)
         assertThat(ctx.getFirstCommitDate()).isEqualTo(LocalDate.of(2024, 1, 3));
     }
 

@@ -262,6 +262,7 @@ public class FileAnalysisService {
             stats.setUrl(url);
         }
 
+        fileAnalysisResult.setNumberOfMethods(lastCommitReport.getMethodsCount());
         fileAnalysisResult.setMethodStatistics(filteredMethodsStatistics);
     }
 

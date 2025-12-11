@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -25,9 +26,11 @@ public class AuthorStatistics {
     @Id
     private String id;
 
+    @Indexed
     @NotBlank(message = "Analysis ID is required")
     private String analysisId;
 
+    @Indexed
     @NotBlank(message = "Name is required")
     private String name;
 

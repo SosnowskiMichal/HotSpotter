@@ -112,7 +112,7 @@ public class RepositoryAnalysisServiceTest {
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
@@ -161,7 +161,7 @@ public class RepositoryAnalysisServiceTest {
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
@@ -213,7 +213,7 @@ public class RepositoryAnalysisServiceTest {
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(customPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(customPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
@@ -263,7 +263,7 @@ public class RepositoryAnalysisServiceTest {
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(endDate)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(endDate), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(endDate)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(endDate)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
@@ -273,7 +273,7 @@ public class RepositoryAnalysisServiceTest {
         verify(knowledgeAnalyzer).startAnalysis(anyString(), eq(repositoryPath));
         verify(authorsAnalyzer).startAnalysis(anyString(), eq(endDate));
         verify(fileInfoAnalyzer).startAnalysis(anyString(), eq(repositoryPath), eq(endDate));
-        verify(activityTrendsAnalyzer).startAnalysis(anyString(), eq(endDate), eq(6));
+        verify(activityTrendsAnalyzer).startAnalysis(anyString(), eq(endDate));
         verify(couplingAnalyzer).startAnalysis(anyString(), eq(repositoryPath), eq(endDate));
     }
 
@@ -320,7 +320,7 @@ public class RepositoryAnalysisServiceTest {
         when(knowledgeAnalyzer.startAnalysis(anyString(), eq(repositoryPath))).thenReturn(knowledgeContext);
         when(authorsAnalyzer.startAnalysis(anyString(), eq(null))).thenReturn(authorsContext);
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null))).thenReturn(fileInfoContext);
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6))).thenReturn(activityTrendsContext);
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null))).thenReturn(activityTrendsContext);
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null))).thenReturn(couplingContext);
 
         when(analysisFileFilter.filterCommit(commit1)).thenReturn(commit1);
@@ -372,7 +372,7 @@ public class RepositoryAnalysisServiceTest {
         when(authorsAnalyzer.startAnalysis(anyString(), eq(null))).thenReturn(authorsContext);
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
@@ -412,7 +412,7 @@ public class RepositoryAnalysisServiceTest {
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
@@ -455,7 +455,7 @@ public class RepositoryAnalysisServiceTest {
                 .thenReturn(mock(AuthorsAnalyzerContext.class));
         when(fileInfoAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(FileInfoAnalyzerContext.class));
-        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null), eq(6)))
+        when(activityTrendsAnalyzer.startAnalysis(anyString(), eq(null)))
                 .thenReturn(mock(ActivityTrendsContext.class));
         when(couplingAnalyzer.startAnalysis(anyString(), eq(repositoryPath), eq(null)))
                 .thenReturn(mock(CouplingAnalyzerContext.class));
