@@ -48,6 +48,7 @@ public class AnalysisFileFilter {
         // Build artifacts and compiled files
         patterns.add(".*\\.(class|jar|war|ear|nar)$");
         patterns.add(".*\\.(exe|dll|so|dylib|o|a|lib|obj)$");
+        patterns.add(".*\\.(bin)$");
         patterns.add(".*\\.(pyc|pyo|pyd)$");
         patterns.add(".*\\.(beam|boot)$");
         patterns.add(".*\\.min\\.(js|css)$");
@@ -101,6 +102,7 @@ public class AnalysisFileFilter {
         patterns.add("(.*/)?build/.*");
         patterns.add("(.*/)?dist/.*");
         patterns.add("(.*/)?out/.*");
+        patterns.add("(.*/)?bin/.*");
         patterns.add("(.*/)?__pycache__/.*");
         patterns.add("(.*/)?\\.gradle/.*");
         patterns.add("(.*/)?\\.mvn/.*");
