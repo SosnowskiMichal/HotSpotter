@@ -9,6 +9,8 @@
 
 This repository contains the **Backend** source code for the HotSpotter system. The application processes Version Control System (Git) history, integrates structural metrics with behavioral data, and exposes analysis results via a REST API.
 
+🔗 **Live Demo:** [https://www.hotspotter.net.pl](https://www.hotspotter.net.pl/)
+
 🔗 **Frontend Repository:** [https://github.com/marg4ryn/HotSpotter.git](https://github.com/marg4ryn/HotSpotter.git)
 
 ---
