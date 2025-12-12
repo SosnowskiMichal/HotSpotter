@@ -194,6 +194,12 @@ public class FileAnalysisService {
                         .codeLines(fileLinesData.code())
                         .commentLines(fileLinesData.comment())
                         .blankLines(fileLinesData.blank());
+            } else if (!statistics.isEmpty()) {
+                FileVersionStatistics previousStats = statistics.getLast();
+                builder.totalLines(previousStats.getTotalLines())
+                        .codeLines(previousStats.getCodeLines())
+                        .commentLines(previousStats.getCommentLines())
+                        .blankLines(previousStats.getBlankLines());
             }
 
             statistics.add(builder.build());
@@ -209,12 +215,17 @@ public class FileAnalysisService {
         List<FileVersionStatistics> statistics = fileAnalysisResult.getFileVersionStatistics();
         if (statistics == null || statistics.isEmpty()) return;
 
-        for (FileVersionStatistics stats : statistics) {
+        for (int i = 0; i < statistics.size(); i++) {
+            FileVersionStatistics stats = statistics.get(i);
             FileComplexityReport report = complexityResults.get(stats.getHash());
 
             if (report != null) {
                 stats.setComplexity(report.getTotalCCN());
                 stats.setNumberOfMethods(report.getMethodsCount());
+            } else if (i > 0) {
+                FileVersionStatistics previousStats = statistics.get(i - 1);
+                stats.setComplexity(previousStats.getComplexity());
+                stats.setNumberOfMethods(previousStats.getNumberOfMethods());
             }
         }
     }
