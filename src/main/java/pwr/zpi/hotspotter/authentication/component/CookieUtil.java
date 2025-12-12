@@ -42,6 +42,10 @@ public class CookieUtil {
     @SuppressWarnings("SameParameterValue")
     private Cookie createCookie(String name, String value, int maxAge, String path, HttpServletRequest request) {
         String origin = request.getHeader("Origin");
+        if (origin == null || origin.isEmpty()) {
+            origin = (request.isSecure() ? "https://" : "http://") + request.getServerName();
+        }
+
         String domain = determineDomain(origin);
         boolean shouldBeSecure = determineSecure(origin);
 
